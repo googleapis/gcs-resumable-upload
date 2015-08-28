@@ -1,0 +1,128 @@
+# gcs-resumable-upload
+> Upload a file to Google Cloud Storage with built-in resumable behavior
+
+```sh
+$ npm install --save gcs-resumable-upload
+```
+```js
+var upload = require('gcs-resumable-upload');
+var fs = require('fs');
+
+fs.createReadStream('titanic.mov')
+  .pipe(upload({ bucket: 'legally-owned-movies', file: 'titanic.mov' }))
+  .on('finish', function () {
+    // Uploaded!
+  });
+```
+
+Or from the command line:
+
+```sh
+$ npm install -g gcs-resumable-upload
+$ cat titanic.mov | gcs-upload legally-owned-movies titanic.mov
+```
+
+If somewhere during the operation, you lose your connection to the internet or your tough-guy brother slammed your laptop shut when he saw what you were uploading, the next time you try to upload to that file, it will resume automatically from where you left off.
+
+## How it works
+
+This module stores a file using [ConfigStore](http://gitnpm.com/configstore) that is written to when you first start an upload. It is aliased by the file name you are uploading to and holds the first 16kb chunk of data* as well as the unique resumable upload URI. ([Resumable uploads are complicated](https://cloud.google.com/storage/docs/json_api/v1/how-tos/upload#resumable))
+
+If your upload was interrupted, next time you run the code, we ask the API how much data it has already, then simply dump all of the data coming through the pipe that it already has.
+
+After the upload completes, the entry in the config file is removed. Done!
+
+\* The first 16kb chunk is stored to validate if you are sending the same data when you resume the upload. If not, a new resumable upload is started with the new data.
+
+## Authentication
+
+Oh, right. This module uses [google-auto-auth](http://gitnpm.com/google-auto-auth) and accepts all of the configuration that module does to strike up a connection as `config.authConfig`. See [`authConfig`](https://github.com/stephenplusplus/google-auto-auth#authconfig).
+
+## API
+
+### upload = require('gcs-resumable-upload')
+
+#### upload(config)
+
+- Returns: [`Duplexify`](http://gitnpm.com/duplexify)
+
+##### config.authClient
+
+- Type: [`GoogleAutoAuth`](http://gitnpm.com/google-auto-auth)
+- *Optional*
+
+If you want to re-use an auth client from [google-auto-auth](http://gitnpm.com/google-auto-auth), pass an instance here.
+
+##### config.authConfig
+
+- Type: `object`
+- *Optional*
+
+See [`authConfig`](https://github.com/stephenplusplus/google-auto-auth#authconfig).
+
+##### config.bucket
+
+- Type: `string`
+- **Required**
+
+The name of the destination bucket.
+
+##### config.file
+
+- Type: `string`
+- **Required**
+
+The name of the destination file.
+
+##### config.generation
+
+- Type: `number`
+- *Optional*
+
+If you wish to only upload to a specific generation/version of this file, provide the generation number here.
+
+##### config.metadata
+
+- Type: `object`
+- *Optional*
+
+Any metadata you wish to set on the object.
+
+###### config.metadata.contentType
+
+Set the content type of the incoming data.
+
+##### config.uri
+
+- Type: `String`
+- *Optional*
+
+If you already have a resumable URI from a previously-created resumable upload, just pass it in here and we'll use that.
+
+## Events
+
+#### .on('error', function (err) {})
+
+##### err
+
+- Type: `Error`
+
+Invoked if the authorization failed, the request failed, or the file wasn't successfully uploaded.
+
+#### .on('response', function (resp, metadata) {})
+
+##### resp
+
+- Type: `Object`
+
+The HTTP response from [`request`](http://gitnpm.com/request).
+
+##### metadata
+
+- Type: `Object`
+
+The file's new metadata.
+
+#### .on('finish', function () {})
+
+The file was uploaded successfully.
