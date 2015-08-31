@@ -41,15 +41,28 @@ function Upload (cfg) {
   this.numRetries = 0
 
   this.once('writing', function () {
-    if (self.uri) self.continueUploading()
-    else self.createResumableUpload()
+    if (self.uri) {
+      self.continueUploading()
+    } else {
+      self.createURI(function (err, uri) {
+        if (err) return self.destroy(err)
+        self.uri = uri
+        self.set({ uri: uri })
+        self.offset = 0
+        self.startUploading()
+      })
+    }
   })
 }
 
 util.inherits(Upload, Pumpify)
 
-Upload.prototype.createResumableUpload = function () {
-  var self = this
+Upload.createURI = function (cfg, callback) {
+  var up = new Upload(cfg)
+  up.createURI(callback)
+}
+
+Upload.prototype.createURI = function (callback) {
   var metadata = this.metadata
 
   var reqOpts = {
@@ -73,13 +86,8 @@ Upload.prototype.createResumableUpload = function () {
   }
 
   this.makeRequest(reqOpts, function (err, resp) {
-    if (err) return
-
-    self.uri = resp.headers.location
-    self.set({ uri: self.uri })
-
-    self.offset = 0
-    self.startUploading()
+    if (err) return callback(err)
+    callback(null, resp.headers.location)
   })
 }
 
@@ -111,9 +119,7 @@ Upload.prototype.startUploading = function () {
     requestStream.on('complete', function (resp) {
       var body = resp.body
 
-      try {
-        body = JSON.parse(body)
-      } catch (e) {}
+      try { body = JSON.parse(body) } catch (e) {}
 
       self.emit('response', resp, body)
 
@@ -181,7 +187,7 @@ Upload.prototype.getAndSetOffset = function (callback) {
       'Content-Range': 'bytes */*'
     }
   }, function (err, resp) {
-    if (err) return
+    if (err) return self.destroy(err)
 
     if (resp.statusCode === RESUMABLE_INCOMPLETE_STATUS_CODE) {
       if (resp.headers.range) {
@@ -197,16 +203,16 @@ Upload.prototype.getAndSetOffset = function (callback) {
 }
 
 Upload.prototype.makeRequest = function (reqOpts, callback) {
-  var self = this
-
   this.authClient.authorizeRequest(reqOpts, function (err, authorizedReqOpts) {
-    if (err) return self.destroy(err)
+    if (err) return callback(err)
 
     request(authorizedReqOpts, function (err, resp, body) {
-      if (err) return self.destroy(err)
-
-      var shouldContinue = self.onResponse(resp)
-      if (shouldContinue) callback(err, resp, body)
+      var error = err
+      try { body = JSON.parse(body) } catch (e) {}
+      if (resp.statusCode < 200 || resp.statusCode > 299) error = new Error(resp.body)
+      if (body && body.error) error = body.error
+      if (error) return callback(error)
+      callback(null, resp, body)
     })
   })
 }

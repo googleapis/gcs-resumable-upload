@@ -42,87 +42,116 @@ Oh, right. This module uses [google-auto-auth](http://gitnpm.com/google-auto-aut
 
 ### upload = require('gcs-resumable-upload')
 
+---
+
 #### upload(config)
 
 - Returns: [`Duplexify`](http://gitnpm.com/duplexify)
 
-##### config.authClient
+<a name="config"></a>
+##### config
+
+- Type: `Object`
+
+Configuration object.
+
+###### config.authClient
 
 - Type: [`GoogleAutoAuth`](http://gitnpm.com/google-auto-auth)
 - *Optional*
 
 If you want to re-use an auth client from [google-auto-auth](http://gitnpm.com/google-auto-auth), pass an instance here.
 
-##### config.authConfig
+###### config.authConfig
 
 - Type: `object`
 - *Optional*
 
 See [`authConfig`](https://github.com/stephenplusplus/google-auto-auth#authconfig).
 
-##### config.bucket
+###### config.bucket
 
 - Type: `string`
 - **Required**
 
 The name of the destination bucket.
 
-##### config.file
+###### config.file
 
 - Type: `string`
 - **Required**
 
 The name of the destination file.
 
-##### config.generation
+###### config.generation
 
 - Type: `number`
 - *Optional*
 
 If you wish to only upload to a specific generation/version of this file, provide the generation number here.
 
-##### config.metadata
+###### config.metadata
 
 - Type: `object`
 - *Optional*
 
 Any metadata you wish to set on the object.
 
-###### config.metadata.contentType
+###### *config.metadata.contentType*
 
 Set the content type of the incoming data.
 
-##### config.uri
+###### config.uri
 
 - Type: `String`
 - *Optional*
 
 If you already have a resumable URI from a previously-created resumable upload, just pass it in here and we'll use that.
 
-## Events
+--
 
-#### .on('error', function (err) {})
+#### Events
 
-##### err
+##### .on('error', function (err) {})
+
+###### err
 
 - Type: `Error`
 
 Invoked if the authorization failed, the request failed, or the file wasn't successfully uploaded.
 
-#### .on('response', function (resp, metadata) {})
+##### .on('response', function (resp, metadata) {})
 
-##### resp
+###### resp
 
 - Type: `Object`
 
 The HTTP response from [`request`](http://gitnpm.com/request).
 
-##### metadata
+###### metadata
 
 - Type: `Object`
 
 The file's new metadata.
 
-#### .on('finish', function () {})
+##### .on('finish', function () {})
 
 The file was uploaded successfully.
+
+---
+
+#### upload.createURI([config](#config), callback)
+
+##### callback(err, resumableURI)
+
+###### callback.err
+
+- Type: `Error`
+
+Invoked if the authorization failed or the request to start a resumable session failed.
+
+###### callback.resumableURI
+
+- Type: `String`
+
+The resumable upload session URI.

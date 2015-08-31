@@ -8,7 +8,7 @@ var mockery = require('mockery')
 var through = require('through2')
 
 var configData = {}
-function ConfigStore() {
+function ConfigStore () {
   this.del = function (key) { delete configData[key] }
   this.get = function (key) { return configData[key] }
   this.set = function (key, value) { configData[key] = value }
@@ -82,6 +82,16 @@ describe('gcs-resumable-upload', function () {
       })
   })
 
+  it('should just make an upload URI', function (done) {
+    upload.createURI({
+      bucket: 'stephen-has-a-new-bucket',
+      file: 'daw.jpg',
+      metadata: {
+        contentType: 'image/jpg'
+      }
+    }, done)
+  })
+
   describe('ctor', function () {
     it('should throw if a bucket or file is not given', function () {
       assert.throws(function () {
@@ -124,20 +134,81 @@ describe('gcs-resumable-upload', function () {
     })
 
     describe('on write', function () {
+      var URI = 'uri'
+
       it('should continue uploading', function (done) {
-        up.uri = 'http://'
+        up.uri = URI
         up.continueUploading = done
         up.emit('writing')
       })
 
       it('should create an upload', function (done) {
-        up.createResumableUpload = done
+        up.startUploading = done
+
+        up.createURI = function (callback) {
+          callback()
+        }
+
+        up.emit('writing')
+      })
+
+      it('should destroy the stream from an error', function (done) {
+        var error = new Error(':(')
+
+        up.destroy = function (err) {
+          assert.strictEqual(err, error)
+          done()
+        }
+
+        up.createURI = function (callback) {
+          callback(error)
+        }
+
+        up.emit('writing')
+      })
+
+      it('should localize the uri', function (done) {
+        up.startUploading = function () {
+          assert.strictEqual(up.uri, URI)
+          done()
+        }
+
+        up.createURI = function (callback) {
+          callback(null, URI)
+        }
+
+        up.emit('writing')
+      })
+
+      it('should save the uri to config', function (done) {
+        up.set = function (props) {
+          assert.deepEqual(props, { uri: URI })
+          done()
+        }
+
+        up.createURI = function (callback) {
+          callback(null, URI)
+        }
+
+        up.emit('writing')
+      })
+
+      it('should set the offset 0', function (done) {
+        up.startUploading = function () {
+          assert.strictEqual(up.offset, 0)
+          done()
+        }
+
+        up.createURI = function (callback) {
+          callback(null, URI)
+        }
+
         up.emit('writing')
       })
     })
   })
 
-  describe('#createResumableUpload', function () {
+  describe('#createURI', function () {
     it('should make the correct request', function (done) {
       up.makeRequest = function (reqOpts) {
         assert.strictEqual(reqOpts.method, 'POST')
@@ -155,7 +226,24 @@ describe('gcs-resumable-upload', function () {
         done()
       }
 
-      up.createResumableUpload()
+      up.createURI()
+    })
+
+    describe('error', function () {
+      var error = new Error(':(')
+
+      beforeEach(function () {
+        up.makeRequest = function (reqOpts, callback) {
+          callback(error)
+        }
+      })
+
+      it('should exec callback with error', function (done) {
+        up.createURI(function (err) {
+          assert.strictEqual(err, error)
+          done()
+        })
+      })
     })
 
     describe('success', function () {
@@ -172,28 +260,12 @@ describe('gcs-resumable-upload', function () {
         }
       })
 
-      it('should localize the uri', function () {
-        up.createResumableUpload()
-        assert.strictEqual(up.uri, URI)
-      })
-
-      it('should save the uri to config', function (done) {
-        up.set = function (props) {
-          assert.deepEqual(props, { uri: URI })
+      it('should exec callback with URI', function (done) {
+        up.createURI(function (err, uri) {
+          assert.ifError(err)
+          assert.strictEqual(uri, URI)
           done()
-        }
-
-        up.createResumableUpload()
-      })
-
-      it('should set the offset 0', function () {
-        up.createResumableUpload()
-        assert.strictEqual(up.offset, 0)
-      })
-
-      it('should start uploading', function (done) {
-        up.startUploading = done
-        up.createResumableUpload()
+        })
       })
     })
   })
@@ -538,13 +610,8 @@ describe('gcs-resumable-upload', function () {
       up.makeRequest(REQ_OPTS)
     })
 
-    it('should destroy the stream if an error occurred', function (done) {
+    it('should execute the callback with error if one occurred', function (done) {
       var error = new Error(':(')
-
-      up.destroy = function (err) {
-        assert.strictEqual(err, error)
-        done()
-      }
 
       up.authClient = {
         authorizeRequest: function (reqOpts, callback) {
@@ -552,7 +619,10 @@ describe('gcs-resumable-upload', function () {
         }
       }
 
-      up.makeRequest()
+      up.makeRequest({}, function (err) {
+        assert.strictEqual(err, error)
+        done()
+      })
     })
 
     it('should make the correct request', function (done) {
@@ -569,7 +639,7 @@ describe('gcs-resumable-upload', function () {
         done()
       }
 
-      up.makeRequest(REQ_OPTS)
+      up.makeRequest(REQ_OPTS, function () {})
     })
 
     it('should destroy the stream if there was an error', function (done) {
@@ -581,40 +651,17 @@ describe('gcs-resumable-upload', function () {
         }
       }
 
-      up.destroy = function (err) {
+      requestMock = function (opts, callback) {
+        callback(error, {})
+      }
+
+      up.makeRequest(REQ_OPTS, function (err) {
         assert.strictEqual(err, error)
         done()
-      }
-
-      requestMock = function (opts, callback) {
-        callback(error)
-      }
-
-      up.makeRequest(REQ_OPTS)
+      })
     })
 
-    it('should check if it should retry', function (done) {
-      var res = {}
-
-      up.authClient = {
-        authorizeRequest: function (reqOpts, callback) {
-          callback()
-        }
-      }
-
-      up.onResponse = function (resp) {
-        assert.strictEqual(res, resp)
-        done()
-      }
-
-      requestMock = function (opts, callback) {
-        callback(null, res)
-      }
-
-      up.makeRequest(REQ_OPTS)
-    })
-
-    it('should execute the callback if it does not retry', function (done) {
+    it('should execute the callback', function (done) {
       var res = {}
       var body = 'body'
 
