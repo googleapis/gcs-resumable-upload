@@ -17,7 +17,7 @@ function ConfigStore () {
 var requestMock
 var _request = require('request')
 var request = function () {
-  return (requestMock || _request).apply(null, arguments)
+  return (requestMock || function () {}).apply(null, arguments)
 }
 
 describe('gcs-resumable-upload', function () {
@@ -63,6 +63,8 @@ describe('gcs-resumable-upload', function () {
 
     var uploadSucceeded = false
 
+    requestMock = _request
+
     fs.createReadStream('daw.jpg')
       .on('error', done)
       .pipe(upload({
@@ -86,6 +88,8 @@ describe('gcs-resumable-upload', function () {
   })
 
   it('should just make an upload URI', function (done) {
+    requestMock = _request
+
     upload.createURI({
       bucket: 'stephen-has-a-new-bucket',
       file: 'daw.jpg',
