@@ -1,4 +1,4 @@
-# gcs-resumable-upload
+# gcs-resumable-upload [![Build Status](https://travis-ci.org/stephenplusplus/gcs-resumable-upload.svg?branch=master)](https://travis-ci.org/stephenplusplus/gcs-resumable-upload)
 > Upload a file to Google Cloud Storage with built-in resumable behavior
 
 ```sh

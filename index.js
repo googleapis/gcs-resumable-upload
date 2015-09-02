@@ -13,6 +13,10 @@ var BASE_URI = 'https://www.googleapis.com/upload/storage/v1/b'
 var RESUMABLE_INCOMPLETE_STATUS_CODE = 308
 var RETRY_LIMIT = 5
 
+var wrapError = function (message, err) {
+  return new Error([message, err.message].join('\n'))
+}
+
 function Upload (cfg) {
   if (!(this instanceof Upload)) return new Upload(cfg)
 
@@ -204,7 +208,7 @@ Upload.prototype.getAndSetOffset = function (callback) {
 
 Upload.prototype.makeRequest = function (reqOpts, callback) {
   this.authClient.authorizeRequest(reqOpts, function (err, authorizedReqOpts) {
-    if (err) return callback(err)
+    if (err) return callback(wrapError('Could not authenticate request', err))
 
     request(authorizedReqOpts, function (err, resp, body) {
       var error = err
@@ -221,7 +225,7 @@ Upload.prototype.getRequestStream = function (reqOpts, callback) {
   var self = this
 
   this.authClient.authorizeRequest(reqOpts, function (err, authorizedReqOpts) {
-    if (err) return self.destroy(err)
+    if (err) return self.destroy(wrapError('Could not authenticate request', err))
 
     var requestStream = request(authorizedReqOpts)
     requestStream.on('error', self.destroy.bind(self))

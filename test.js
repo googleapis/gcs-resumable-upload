@@ -70,6 +70,9 @@ describe('gcs-resumable-upload', function () {
         file: 'daw.jpg',
         metadata: {
           contentType: 'image/jpg'
+        },
+        authConfig: {
+          credentials: require('./key.json')
         }
       }))
       .on('error', done)
@@ -86,6 +89,9 @@ describe('gcs-resumable-upload', function () {
     upload.createURI({
       bucket: 'stephen-has-a-new-bucket',
       file: 'daw.jpg',
+      authConfig: {
+        credentials: require('./key.json')
+      },
       metadata: {
         contentType: 'image/jpg'
       }
@@ -156,7 +162,7 @@ describe('gcs-resumable-upload', function () {
         var error = new Error(':(')
 
         up.destroy = function (err) {
-          assert.strictEqual(err, error)
+          assert(err.message.indexOf(error.message) > -1)
           done()
         }
 
@@ -441,7 +447,7 @@ describe('gcs-resumable-upload', function () {
 
       it('should get the first chunk', function (done) {
         up.get = function (prop) {
-          assert.strictEqual(prop, 'firstChunk');
+          assert.strictEqual(prop, 'firstChunk')
           done()
         }
 
@@ -620,7 +626,7 @@ describe('gcs-resumable-upload', function () {
       }
 
       up.makeRequest({}, function (err) {
-        assert.strictEqual(err, error)
+        assert(err.message.indexOf(error.message) > -1)
         done()
       })
     })
@@ -706,7 +712,7 @@ describe('gcs-resumable-upload', function () {
       var error = new Error(':(')
 
       up.destroy = function (err) {
-        assert.strictEqual(err, error)
+        assert(err.message.indexOf(error.message) > -1)
         done()
       }
 

@@ -7,7 +7,7 @@
     "gcs-upload": "./cli.js"
   },
   "scripts": {
-    "test": "mocha"
+    "test": "standard && mocha"
   },
   "keywords": [
     "google",
