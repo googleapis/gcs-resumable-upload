@@ -1,7 +1,8 @@
 language: node_js
 node_js:
-  - 4.0
-  - 0.12
+  - 4
 before_install:
   - openssl aes-256-cbc -K $encrypted_4ef436d4f4bd_key -iv $encrypted_4ef436d4f4bd_iv
     -in key.json.enc -out key.json -d
+  - export CXX=g++-4.8
+  - $CXX --version
