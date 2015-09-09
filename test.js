@@ -19,6 +19,7 @@ var _request = require('request')
 var request = function () {
   return (requestMock || function () {}).apply(null, arguments)
 }
+request.defaults = _request.defaults
 
 describe('gcs-resumable-upload', function () {
   var upload
@@ -85,6 +86,60 @@ describe('gcs-resumable-upload', function () {
         assert.strictEqual(uploadSucceeded, true)
         done()
       })
+  })
+
+  it('should resume an interrupted upload', function (done) {
+    this.timeout(10000)
+
+    requestMock = _request
+
+    fs.stat('daw.jpg', function (err, fd) {
+      assert.ifError(err)
+
+      var size = fd.size
+
+      var doUpload = function (opts, callback) {
+        var sizeStreamed = 0
+        var destroyed = false
+
+        var ws = upload({
+          bucket: 'stephen-has-a-new-bucket',
+          file: 'daw.jpg',
+          metadata: {
+            contentType: 'image/jpg'
+          },
+          authConfig: {
+            credentials: require('./key.json')
+          }
+        })
+
+        fs.createReadStream('daw.jpg')
+          .on('error', callback)
+          .on('data', function (chunk) {
+            sizeStreamed += chunk.length
+
+            if (!destroyed && opts.interrupt && sizeStreamed >= size / 2) {
+              // stop sending data half way through
+              destroyed = true
+              this.destroy()
+              ws.destroy(new Error('Interrupted'))
+            }
+          })
+          .pipe(ws)
+          .on('error', callback)
+          .on('response', callback.bind(null, null))
+      }
+
+      doUpload({ interrupt: true }, function (err) {
+        assert.strictEqual(err.message, 'Interrupted')
+
+        doUpload({ interrupt: false }, function (err, resp, metadata) {
+          assert.ifError(err)
+          assert.equal(metadata.size, size)
+          done()
+        })
+      })
+    })
   })
 
   it('should just make an upload URI', function (done) {
@@ -373,9 +428,7 @@ describe('gcs-resumable-upload', function () {
 
     it('should emit the response and body', function (done) {
       var BODY = { hi: 1 }
-      var RESP = {
-        body: JSON.stringify(BODY)
-      }
+      var RESP = { body: BODY }
 
       var requestStream = through()
 
@@ -384,7 +437,7 @@ describe('gcs-resumable-upload', function () {
 
         up.on('response', function (resp, body) {
           assert.strictEqual(resp, RESP)
-          assert.deepEqual(body, BODY)
+          assert.strictEqual(body, BODY)
           done()
         })
 
@@ -636,7 +689,11 @@ describe('gcs-resumable-upload', function () {
     })
 
     it('should make the correct request', function (done) {
-      var authorizedReqOpts = { uri: 'http://uri', headers: {} }
+      var authorizedReqOpts = {
+        uri: 'http://uri',
+        headers: {},
+        json: true
+      }
 
       up.authClient = {
         authorizeRequest: function (reqOpts, callback) {
@@ -645,7 +702,9 @@ describe('gcs-resumable-upload', function () {
       }
 
       requestMock = function (opts) {
-        assert.strictEqual(opts, authorizedReqOpts)
+        assert.strictEqual(opts.uri, authorizedReqOpts.uri)
+        assert.deepEqual(opts.headers, authorizedReqOpts.headers)
+        assert.strictEqual(opts.json, authorizedReqOpts.json)
         done()
       }
 
@@ -672,7 +731,7 @@ describe('gcs-resumable-upload', function () {
     })
 
     it('should execute the callback', function (done) {
-      var res = {}
+      var res = { statusCode: 200 }
       var body = 'body'
 
       up.authClient = {
@@ -730,7 +789,11 @@ describe('gcs-resumable-upload', function () {
     })
 
     it('should make the correct request', function (done) {
-      var authorizedReqOpts = { uri: 'http://uri', headers: {} }
+      var authorizedReqOpts = {
+        uri: 'http://uri',
+        headers: {},
+        json: true
+      }
 
       up.authClient = {
         authorizeRequest: function (reqOpts, callback) {
@@ -739,7 +802,9 @@ describe('gcs-resumable-upload', function () {
       }
 
       requestMock = function (opts) {
-        assert.strictEqual(opts, authorizedReqOpts)
+        assert.strictEqual(opts.uri, authorizedReqOpts.uri)
+        assert.deepEqual(opts.headers, authorizedReqOpts.headers)
+        assert.strictEqual(opts.json, authorizedReqOpts.json)
         setImmediate(done)
         return through()
       }
@@ -798,7 +863,7 @@ describe('gcs-resumable-upload', function () {
         return through()
       }
 
-      var res = {}
+      var res = { statusCode: 200 }
 
       up.onResponse = function (resp) {
         assert.strictEqual(this, up)

@@ -4,7 +4,7 @@ var bufferEqual = require('buffer-equal')
 var ConfigStore = require('configstore')
 var googleAuth = require('google-auto-auth')
 var Pumpify = require('pumpify')
-var request = require('request')
+var request = require('request').defaults({ json: true })
 var StreamEvents = require('stream-events')
 var through = require('through2')
 var util = require('util')
@@ -123,8 +123,6 @@ Upload.prototype.startUploading = function () {
     requestStream.on('complete', function (resp) {
       var body = resp.body
 
-      try { body = JSON.parse(body) } catch (e) {}
-
       self.emit('response', resp, body)
 
       if (resp.statusCode < 200 || resp.statusCode > 299) {
@@ -211,11 +209,15 @@ Upload.prototype.makeRequest = function (reqOpts, callback) {
     if (err) return callback(wrapError('Could not authenticate request', err))
 
     request(authorizedReqOpts, function (err, resp, body) {
-      var error = err
-      try { body = JSON.parse(body) } catch (e) {}
-      if (resp.statusCode < 200 || resp.statusCode > 299) error = new Error(resp.body)
-      if (body && body.error) error = body.error
-      if (error) return callback(error)
+      if (err) return callback(err)
+
+      if (body && body.error) return callback(body.error)
+
+      var nonSuccess = Math.floor(resp.statusCode / 100) !== 2 // 200-299 status code
+      if (nonSuccess && resp.statusCode !== RESUMABLE_INCOMPLETE_STATUS_CODE) {
+        return callback(new Error(body))
+      }
+
       callback(null, resp, body)
     })
   })
