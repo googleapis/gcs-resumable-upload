@@ -125,13 +125,13 @@ describe('gcs-resumable-upload', function () {
           })
           .pipe(ws)
           .on('error', callback)
-          .on('response', callback.bind(null, null))
+          .on('metadata', callback.bind(null, null))
       }
 
       doUpload({ interrupt: true }, function (err) {
         assert.strictEqual(err.message, 'Interrupted')
 
-        doUpload({ interrupt: false }, function (err, resp, metadata) {
+        doUpload({ interrupt: false }, function (err, metadata) {
           assert.ifError(err)
           assert.equal(metadata.size, size)
           done()
