@@ -60,8 +60,6 @@ describe('gcs-resumable-upload', function () {
   })
 
   it('should work', function (done) {
-    this.timeout(90000)
-
     var uploadSucceeded = false
 
     requestMock = _request
