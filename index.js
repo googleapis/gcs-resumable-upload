@@ -123,7 +123,7 @@ Upload.prototype.startUploading = function () {
     requestStream.on('complete', function (resp) {
       var body = resp.body
 
-      self.emit('response', resp, body)
+      self.emit('metadata', body)
 
       if (resp.statusCode < 200 || resp.statusCode > 299) {
         self.destroy(new Error('Upload failed'))
@@ -285,6 +285,8 @@ Upload.prototype.onResponse = function (resp) {
     }
     return false
   }
+
+  this.emit('response', resp)
 
   return true
 }

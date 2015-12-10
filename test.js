@@ -60,7 +60,7 @@ describe('gcs-resumable-upload', function () {
   })
 
   it('should work', function (done) {
-    this.timeout(10000)
+    this.timeout(90000)
 
     var uploadSucceeded = false
 
@@ -426,7 +426,7 @@ describe('gcs-resumable-upload', function () {
       up.startUploading()
     })
 
-    it('should emit the response and body', function (done) {
+    it('should emit the metadata', function (done) {
       var BODY = { hi: 1 }
       var RESP = { body: BODY }
 
@@ -435,8 +435,7 @@ describe('gcs-resumable-upload', function () {
       up.getRequestStream = function (reqOpts, callback) {
         callback(requestStream)
 
-        up.on('response', function (resp, body) {
-          assert.strictEqual(resp, RESP)
+        up.on('metadata', function (body) {
           assert.strictEqual(body, BODY)
           done()
         })
@@ -1068,6 +1067,23 @@ describe('gcs-resumable-upload', function () {
         })
 
         up.onResponse(RESP)
+      })
+    })
+
+    describe('all others', function () {
+      var RESP = { statusCode: 200 }
+
+      it('should emit the response on the stream', function (done) {
+        up.on('response', function (resp) {
+          assert.strictEqual(resp, RESP)
+          done()
+        })
+
+        up.onResponse(RESP)
+      })
+
+      it('should return true', function () {
+        assert.strictEqual(up.onResponse(RESP), true)
       })
     })
   })
