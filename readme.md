@@ -101,6 +101,13 @@ Any metadata you wish to set on the object.
 
 Set the content type of the incoming data.
 
+###### config.origin
+
+- Type: `string`
+- *Optional*
+
+Set an Origin header when creating the resumable upload URI.
+
 ###### config.uri
 
 - Type: `String`

@@ -38,6 +38,7 @@ function Upload (cfg) {
   this.file = cfg.file
   this.generation = cfg.generation
   this.metadata = cfg.metadata || {}
+  this.origin = cfg.origin
 
   this.configStore = new ConfigStore('gcs-resumable-upload')
   this.uri = cfg.uri || this.get('uri')
@@ -76,17 +77,20 @@ Upload.prototype.createURI = function (callback) {
       name: this.file,
       uploadType: 'resumable'
     },
-    json: metadata
+    json: metadata,
+    headers: {}
   }
 
   if (metadata.contentType) {
-    reqOpts.headers = {
-      'X-Upload-Content-Type': metadata.contentType
-    }
+    reqOpts.headers['X-Upload-Content-Type'] = metadata.contentType
   }
 
   if (this.generation) {
     reqOpts.qs.ifGenerationMatch = this.generation
+  }
+
+  if (this.origin) {
+    reqOpts.headers.Origin = this.origin
   }
 
   this.makeRequest(reqOpts, function (err, resp) {

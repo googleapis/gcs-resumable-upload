@@ -29,6 +29,7 @@ describe('gcs-resumable-upload', function () {
   var FILE = 'file-name'
   var GENERATION = Date.now()
   var METADATA = { contentType: 'application/json' }
+  var ORIGIN = '*'
 
   before(function () {
     mockery.registerMock('configstore', ConfigStore)
@@ -50,7 +51,8 @@ describe('gcs-resumable-upload', function () {
       bucket: BUCKET,
       file: FILE,
       generation: GENERATION,
-      metadata: METADATA
+      metadata: METADATA,
+      origin: ORIGIN
     })
   })
 
@@ -182,6 +184,10 @@ describe('gcs-resumable-upload', function () {
       assert.deepEqual(upWithoutMetadata.metadata, {})
     })
 
+    it('should localize the origin', function () {
+      assert.strictEqual(up.origin, ORIGIN)
+    })
+
     it('should set numBytesWritten to 0', function () {
       assert.strictEqual(up.numBytesWritten, 0)
     })
@@ -287,7 +293,8 @@ describe('gcs-resumable-upload', function () {
         })
         assert.strictEqual(reqOpts.json, up.metadata)
         assert.deepEqual(reqOpts.headers, {
-          'X-Upload-Content-Type': METADATA.contentType
+          'X-Upload-Content-Type': METADATA.contentType,
+          Origin: ORIGIN
         })
 
         done()
