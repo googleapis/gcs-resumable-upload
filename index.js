@@ -4,7 +4,12 @@ var bufferEqual = require('buffer-equal')
 var ConfigStore = require('configstore')
 var googleAuth = require('google-auto-auth')
 var Pumpify = require('pumpify')
-var request = require('request').defaults({ json: true })
+var request = require('request').defaults({
+  json: true,
+  pool: {
+    maxSockets: Infinity
+  }
+})
 var StreamEvents = require('stream-events')
 var through = require('through2')
 var util = require('util')
