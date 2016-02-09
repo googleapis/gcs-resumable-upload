@@ -88,7 +88,7 @@ The name of the destination file.
 - Type: `number`
 - *Optional*
 
-If you wish to only upload to a specific generation/version of this file, provide the generation number here.
+This will cause the upload to fail if the current generation of the remote object does not match the one provided here.
 
 ###### config.metadata
 
