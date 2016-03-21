@@ -28,7 +28,10 @@ describe('gcs-resumable-upload', function () {
   var BUCKET = 'bucket-name'
   var FILE = 'file-name'
   var GENERATION = Date.now()
-  var METADATA = { contentType: 'application/json' }
+  var METADATA = {
+    contentLength: 1024,
+    contentType: 'application/json'
+  }
   var ORIGIN = '*'
 
   before(function () {
@@ -293,6 +296,7 @@ describe('gcs-resumable-upload', function () {
         })
         assert.strictEqual(reqOpts.json, up.metadata)
         assert.deepEqual(reqOpts.headers, {
+          'X-Upload-Content-Length': METADATA.contentLength,
           'X-Upload-Content-Type': METADATA.contentType,
           Origin: ORIGIN
         })

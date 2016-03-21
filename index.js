@@ -86,6 +86,10 @@ Upload.prototype.createURI = function (callback) {
     headers: {}
   }
 
+  if (metadata.contentLength) {
+    reqOpts.headers['X-Upload-Content-Length'] = metadata.contentLength
+  }
+
   if (metadata.contentType) {
     reqOpts.headers['X-Upload-Content-Type'] = metadata.contentType
   }
