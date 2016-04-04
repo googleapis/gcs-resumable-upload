@@ -46,6 +46,7 @@ function Upload (cfg) {
   this.origin = cfg.origin
 
   this.configStore = new ConfigStore('gcs-resumable-upload')
+  this.uriProvidedManually = !!cfg.uri
   this.uri = cfg.uri || this.get('uri')
   this.numBytesWritten = 0
   this.numRetries = 0
@@ -202,7 +203,18 @@ Upload.prototype.getAndSetOffset = function (callback) {
       'Content-Range': 'bytes */*'
     }
   }, function (err, resp) {
-    if (err) return self.destroy(err)
+    if (err) {
+      if (resp && resp.statusCode === 404 && !self.uriProvidedManually) {
+        // only return the error if the user provided the resumable URI
+        // themselves. if we're just using the configstore file to tell us that
+        // this file exists, and it turns out that it doesn't, that's probably
+        // stale config data.
+        self.restart()
+      } else {
+        self.destroy(err)
+      }
+      return
+    }
 
     if (resp.statusCode === RESUMABLE_INCOMPLETE_STATUS_CODE) {
       if (resp.headers.range) {
@@ -222,7 +234,7 @@ Upload.prototype.makeRequest = function (reqOpts, callback) {
     if (err) return callback(wrapError('Could not authenticate request', err))
 
     request(authorizedReqOpts, function (err, resp, body) {
-      if (err) return callback(err)
+      if (err) return callback(err, resp)
 
       if (body && body.error) return callback(body.error)
 
