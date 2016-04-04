@@ -202,10 +202,12 @@ describe('gcs-resumable-upload', function () {
     it('should localize the uri or get one from config', function () {
       var uri = 'http://www.blah.com/'
       var upWithUri = upload({ bucket: BUCKET, file: FILE, uri: uri })
+      assert.strictEqual(upWithUri.uriProvidedManually, true)
       assert.strictEqual(upWithUri.uri, uri)
 
       configData[FILE] = { uri: 'fake-uri' }
       var up = upload({ bucket: BUCKET, file: FILE })
+      assert.strictEqual(up.uriProvidedManually, false)
       assert.strictEqual(up.uri, 'fake-uri')
     })
 
@@ -648,6 +650,34 @@ describe('gcs-resumable-upload', function () {
       up.getAndSetOffset()
     })
 
+    describe('restart on 404', function () {
+      var ERROR = new Error(':(')
+      var RESP = {
+        statusCode: 404
+      }
+
+      beforeEach(function () {
+        up.makeRequest = function (reqOpts, callback) {
+          callback(ERROR, RESP)
+        }
+      })
+
+      it('should restart the upload', function (done) {
+        up.restart = done
+        up.getAndSetOffset()
+      })
+
+      it('should not restart if URI provided manually', function (done) {
+        up.uriProvidedManually = true
+        up.restart = done // will cause test to fail
+        up.on('error', function (err) {
+          assert.strictEqual(err, ERROR)
+          done()
+        })
+        up.getAndSetOffset()
+      })
+    })
+
     it('should set the offset from the range', function (done) {
       up.makeRequest = function (reqOpts, callback) {
         callback(null, RESP)
@@ -725,6 +755,7 @@ describe('gcs-resumable-upload', function () {
 
     it('should destroy the stream if there was an error', function (done) {
       var error = new Error(':(')
+      var response = {}
 
       up.authClient = {
         authorizeRequest: function (reqOpts, callback) {
@@ -733,11 +764,12 @@ describe('gcs-resumable-upload', function () {
       }
 
       requestMock = function (opts, callback) {
-        callback(error, {})
+        callback(error, response)
       }
 
-      up.makeRequest(REQ_OPTS, function (err) {
+      up.makeRequest(REQ_OPTS, function (err, resp) {
         assert.strictEqual(err, error)
+        assert.strictEqual(resp, response)
         done()
       })
     })
