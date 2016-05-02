@@ -33,6 +33,7 @@ describe('gcs-resumable-upload', function () {
     contentType: 'application/json'
   }
   var ORIGIN = '*'
+  var PREDEFINED_ACL = 'authenticatedRead'
 
   before(function () {
     mockery.registerMock('configstore', ConfigStore)
@@ -55,7 +56,8 @@ describe('gcs-resumable-upload', function () {
       file: FILE,
       generation: GENERATION,
       metadata: METADATA,
-      origin: ORIGIN
+      origin: ORIGIN,
+      predefinedAcl: PREDEFINED_ACL
     })
   })
 
@@ -191,6 +193,20 @@ describe('gcs-resumable-upload', function () {
       assert.strictEqual(up.origin, ORIGIN)
     })
 
+    it('should localize the predefinedAcl', function () {
+      assert.strictEqual(up.predefinedAcl, PREDEFINED_ACL)
+    })
+
+    it('should set the predefinedAcl with public: true', function () {
+      var up = upload({ bucket: BUCKET, file: FILE, public: true })
+      assert.strictEqual(up.predefinedAcl, 'publicRead')
+    })
+
+    it('should set the predefinedAcl with private: true', function () {
+      var up = upload({ bucket: BUCKET, file: FILE, private: true })
+      assert.strictEqual(up.predefinedAcl, 'private')
+    })
+
     it('should set numBytesWritten to 0', function () {
       assert.strictEqual(up.numBytesWritten, 0)
     })
@@ -292,6 +308,7 @@ describe('gcs-resumable-upload', function () {
         assert.strictEqual(reqOpts.method, 'POST')
         assert.strictEqual(reqOpts.uri, 'https://www.googleapis.com/upload/storage/v1/b/' + BUCKET + '/o')
         assert.deepEqual(reqOpts.qs, {
+          predefinedAcl: up.predefinedAcl,
           name: FILE,
           uploadType: 'resumable',
           ifGenerationMatch: GENERATION

@@ -108,6 +108,36 @@ Set the content type of the incoming data.
 
 Set an Origin header when creating the resumable upload URI.
 
+###### config.predefinedAcl
+
+- Type: `string`
+- *Optional*
+
+Apply a predefined set of access controls to the created file.
+
+Acceptable values are:
+
+  - **`authenticatedRead`** - Object owner gets `OWNER` access, and `allAuthenticatedUsers` get `READER` access.
+  - **`bucketOwnerFullControl`** - Object owner gets `OWNER` access, and project team owners get `OWNER` access.
+  - **`bucketOwnerRead`** - Object owner gets `OWNER` access, and project team owners get `READER` access.
+  - **`private`** - Object owner gets `OWNER` access.
+  - **`projectPrivate`** - Object owner gets `OWNER` access, and project team members get access according to their roles.
+  - **`publicRead`** - Object owner gets `OWNER` access, and `allUsers` get `READER` access.
+
+###### config.private
+
+- Type: `boolean`
+- *Optional*
+
+Make the uploaded file private. (Alias for `config.predefinedAcl = 'private'`)
+
+###### config.public
+
+- Type: `boolean`
+- *Optional*
+
+Make the uploaded file public. (Alias for `config.predefinedAcl = 'publicRead'`)
+
 ###### config.uri
 
 - Type: `String`

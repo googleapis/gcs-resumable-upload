@@ -45,6 +45,10 @@ function Upload (cfg) {
   this.metadata = cfg.metadata || {}
   this.origin = cfg.origin
 
+  this.predefinedAcl = cfg.predefinedAcl
+  if (cfg.private) this.predefinedAcl = 'private'
+  if (cfg.public) this.predefinedAcl = 'publicRead'
+
   this.configStore = new ConfigStore('gcs-resumable-upload')
   this.uriProvidedManually = !!cfg.uri
   this.uri = cfg.uri || this.get('uri')
@@ -97,6 +101,10 @@ Upload.prototype.createURI = function (callback) {
 
   if (this.generation) {
     reqOpts.qs.ifGenerationMatch = this.generation
+  }
+
+  if (this.predefinedAcl) {
+    reqOpts.qs.predefinedAcl = this.predefinedAcl
   }
 
   if (this.origin) {
