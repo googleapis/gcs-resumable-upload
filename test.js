@@ -287,9 +287,24 @@ describe('gcs-resumable-upload', function () {
         up.emit('writing')
       })
 
-      it('should set the offset 0', function (done) {
+      it('should default the offset to 0', function (done) {
         up.startUploading = function () {
           assert.strictEqual(up.offset, 0)
+          done()
+        }
+
+        up.createURI = function (callback) {
+          callback(null, URI)
+        }
+
+        up.emit('writing')
+      })
+
+      it('should set the offset if it is provided', function (done) {
+        var OFFSET = 10
+        var up = upload({ bucket: BUCKET, file: FILE, offset: OFFSET })
+        up.startUploading = function () {
+          assert.strictEqual(up.offset, OFFSET)
           done()
         }
 
