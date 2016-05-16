@@ -215,6 +215,16 @@ describe('gcs-resumable-upload', function () {
       assert.strictEqual(up.numRetries, 0)
     })
 
+    it('should set the contentLength if provided', function () {
+      var up = upload({ bucket: BUCKET, file: FILE, metadata: { contentLength: METADATA.contentLength } })
+      assert.strictEqual(up.contentLength, METADATA.contentLength)
+    })
+
+    it('should default the contentLength to *', function () {
+      var up = upload({ bucket: BUCKET, file: FILE })
+      assert.strictEqual(up.contentLength, '*')
+    })
+
     it('should localize the uri or get one from config', function () {
       var uri = 'http://www.blah.com/'
       var upWithUri = upload({ bucket: BUCKET, file: FILE, uri: uri })
