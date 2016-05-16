@@ -402,7 +402,7 @@ describe('gcs-resumable-upload', function () {
         assert.strictEqual(reqOpts.method, 'PUT')
         assert.strictEqual(reqOpts.uri, up.uri)
         assert.deepEqual(reqOpts.headers, {
-          'Content-Range': 'bytes ' + OFFSET + '-*/*'
+          'Content-Range': 'bytes ' + OFFSET + '-*/' + up.contentLength
         })
 
         done()
