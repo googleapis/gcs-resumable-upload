@@ -55,11 +55,11 @@ function Upload (cfg) {
   this.numBytesWritten = 0
   this.numRetries = 0
 
-  cfg.offset = parseInt(cfg.offset, 10);
-  cfg.offset = isNaN(cfg.offset) ? 0 : cfg.offset;
+  cfg.offset = parseInt(cfg.offset, 10)
+  cfg.offset = isNaN(cfg.offset) ? 0 : cfg.offset
 
-  var contentLength = cfg.metadata ? parseInt(cfg.metadata.contentLength, 10) : NaN;
-  this.contentLength = isNaN(contentLength) ? '*' : contentLength;
+  var contentLength = cfg.metadata ? parseInt(cfg.metadata.contentLength, 10) : NaN
+  this.contentLength = isNaN(contentLength) ? '*' : contentLength
 
   this.once('writing', function () {
     if (self.uri) {
