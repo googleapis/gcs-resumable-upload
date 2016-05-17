@@ -145,6 +145,13 @@ Make the uploaded file public. (Alias for `config.predefinedAcl = 'publicRead'`)
 
 If you already have a resumable URI from a previously-created resumable upload, just pass it in here and we'll use that.
 
+###### config.offset
+
+- Type: `number`
+- *Optional*
+
+The starting byte of the upload stream, for [resuming an interrupted upload](https://cloud.google.com/storage/docs/json_api/v1/how-tos/resumable-upload#resume-upload).
+
 --
 
 #### Events

@@ -215,6 +215,16 @@ describe('gcs-resumable-upload', function () {
       assert.strictEqual(up.numRetries, 0)
     })
 
+    it('should set the contentLength if provided', function () {
+      var up = upload({ bucket: BUCKET, file: FILE, metadata: { contentLength: METADATA.contentLength } })
+      assert.strictEqual(up.contentLength, METADATA.contentLength)
+    })
+
+    it('should default the contentLength to *', function () {
+      var up = upload({ bucket: BUCKET, file: FILE })
+      assert.strictEqual(up.contentLength, '*')
+    })
+
     it('should localize the uri or get one from config', function () {
       var uri = 'http://www.blah.com/'
       var upWithUri = upload({ bucket: BUCKET, file: FILE, uri: uri })
@@ -287,9 +297,24 @@ describe('gcs-resumable-upload', function () {
         up.emit('writing')
       })
 
-      it('should set the offset 0', function (done) {
+      it('should default the offset to 0', function (done) {
         up.startUploading = function () {
           assert.strictEqual(up.offset, 0)
+          done()
+        }
+
+        up.createURI = function (callback) {
+          callback(null, URI)
+        }
+
+        up.emit('writing')
+      })
+
+      it('should set the offset if it is provided', function (done) {
+        var OFFSET = 10
+        var up = upload({ bucket: BUCKET, file: FILE, offset: OFFSET })
+        up.startUploading = function () {
+          assert.strictEqual(up.offset, OFFSET)
           done()
         }
 
@@ -402,7 +427,7 @@ describe('gcs-resumable-upload', function () {
         assert.strictEqual(reqOpts.method, 'PUT')
         assert.strictEqual(reqOpts.uri, up.uri)
         assert.deepEqual(reqOpts.headers, {
-          'Content-Range': 'bytes ' + OFFSET + '-*/*'
+          'Content-Range': 'bytes ' + OFFSET + '-*/' + up.contentLength
         })
 
         done()
