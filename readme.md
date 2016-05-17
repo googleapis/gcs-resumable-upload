@@ -97,9 +97,20 @@ This will cause the upload to fail if the current generation of the remote objec
 
 Any metadata you wish to set on the object.
 
+###### *config.metadata.contentLength*
+
+Set the length of the file being uploaded.
+
 ###### *config.metadata.contentType*
 
 Set the content type of the incoming data.
+
+###### config.offset
+
+- Type: `number`
+- *Optional*
+
+The starting byte of the upload stream, for [resuming an interrupted upload](https://cloud.google.com/storage/docs/json_api/v1/how-tos/resumable-upload#resume-upload).
 
 ###### config.origin
 
@@ -144,13 +155,6 @@ Make the uploaded file public. (Alias for `config.predefinedAcl = 'publicRead'`)
 - *Optional*
 
 If you already have a resumable URI from a previously-created resumable upload, just pass it in here and we'll use that.
-
-###### config.offset
-
-- Type: `number`
-- *Optional*
-
-The starting byte of the upload stream, for [resuming an interrupted upload](https://cloud.google.com/storage/docs/json_api/v1/how-tos/resumable-upload#resume-upload).
 
 --
 
