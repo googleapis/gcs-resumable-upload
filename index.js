@@ -43,6 +43,7 @@ function Upload (cfg) {
   this.file = cfg.file
   this.generation = cfg.generation
   this.metadata = cfg.metadata || {}
+  this.offset = cfg.offset
   this.origin = cfg.origin
 
   this.predefinedAcl = cfg.predefinedAcl
@@ -55,9 +56,6 @@ function Upload (cfg) {
   this.numBytesWritten = 0
   this.numRetries = 0
 
-  cfg.offset = parseInt(cfg.offset, 10)
-  cfg.offset = isNaN(cfg.offset) ? 0 : cfg.offset
-
   var contentLength = cfg.metadata ? parseInt(cfg.metadata.contentLength, 10) : NaN
   this.contentLength = isNaN(contentLength) ? '*' : contentLength
 
@@ -69,7 +67,7 @@ function Upload (cfg) {
         if (err) return self.destroy(err)
         self.uri = uri
         self.set({ uri: uri })
-        self.offset = cfg.offset
+        self.offset = 0
         self.startUploading()
       })
     }
@@ -124,6 +122,7 @@ Upload.prototype.createURI = function (callback) {
 }
 
 Upload.prototype.continueUploading = function () {
+  if (typeof this.offset === 'number') return this.startUploading()
   this.getAndSetOffset(this.startUploading.bind(this))
 }
 
