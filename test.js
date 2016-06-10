@@ -2,6 +2,7 @@
 
 var assert = require('assert')
 var bufferEqual = require('buffer-equal')
+var crypto = require('crypto')
 var fs = require('fs')
 var isStream = require('is-stream')
 var mockery = require('mockery')
@@ -191,6 +192,20 @@ describe('gcs-resumable-upload', function () {
 
     it('should localize the origin', function () {
       assert.strictEqual(up.origin, ORIGIN)
+    })
+
+    it('should localize an encryption object from a key', function () {
+      var key = crypto.randomBytes(32)
+
+      var up = upload({ bucket: BUCKET, file: FILE, key: key })
+
+      var expectedKey = key.toString('base64')
+      var expectedHash = crypto.createHash('sha256').update(expectedKey, 'base64').digest('base64')
+
+      assert.deepEqual(up.encryption, {
+        key: expectedKey,
+        hash: expectedHash
+      })
     })
 
     it('should localize the predefinedAcl', function () {
@@ -747,6 +762,24 @@ describe('gcs-resumable-upload', function () {
 
   describe('#makeRequest', function () {
     var REQ_OPTS = { uri: 'http://uri' }
+
+    it('should set encryption headers', function (done) {
+      var key = crypto.randomBytes(32)
+      var up = upload({ bucket: 'BUCKET', file: FILE, key: key })
+
+      up.authClient = {
+        authorizeRequest: function (reqOpts) {
+          assert.deepEqual(reqOpts.headers, {
+            'x-goog-encryption-algorithm': 'AES256',
+            'x-goog-encryption-key': up.encryption.key,
+            'x-goog-encryption-key-sha256': up.encryption.hash
+          })
+          done()
+        }
+      }
+
+      up.makeRequest(REQ_OPTS)
+    })
 
     it('should authorize the request', function (done) {
       up.authClient = {

@@ -2,6 +2,7 @@
 
 var bufferEqual = require('buffer-equal')
 var ConfigStore = require('configstore')
+var crypto = require('crypto')
 var googleAuth = require('google-auto-auth')
 var Pumpify = require('pumpify')
 var request = require('request').defaults({
@@ -45,6 +46,14 @@ function Upload (cfg) {
   this.metadata = cfg.metadata || {}
   this.offset = cfg.offset
   this.origin = cfg.origin
+
+  if (cfg.key) {
+    var base64Key = new Buffer(cfg.key).toString('base64')
+    this.encryption = {
+      key: base64Key,
+      hash: crypto.createHash('sha256').update(base64Key, 'base64').digest('base64')
+    }
+  }
 
   this.predefinedAcl = cfg.predefinedAcl
   if (cfg.private) this.predefinedAcl = 'private'
@@ -105,6 +114,12 @@ Upload.prototype.createURI = function (callback) {
 
   if (this.generation) {
     reqOpts.qs.ifGenerationMatch = this.generation
+  }
+
+  if (this.encryption) {
+    reqOpts.headers['x-goog-encryption-algorithm'] = 'AES256'
+    reqOpts.headers['x-goog-encryption-key'] = this.encryption.key
+    reqOpts.headers['x-goog-encryption-key-sha256'] = this.encryption.hash
   }
 
   if (this.predefinedAcl) {
@@ -243,6 +258,13 @@ Upload.prototype.getAndSetOffset = function (callback) {
 }
 
 Upload.prototype.makeRequest = function (reqOpts, callback) {
+  if (this.encryption) {
+    reqOpts.headers = reqOpts.headers || {}
+    reqOpts.headers['x-goog-encryption-algorithm'] = 'AES256'
+    reqOpts.headers['x-goog-encryption-key'] = this.encryption.key
+    reqOpts.headers['x-goog-encryption-key-sha256'] = this.encryption.hash
+  }
+
   this.authClient.authorizeRequest(reqOpts, function (err, authorizedReqOpts) {
     if (err) return callback(wrapError('Could not authenticate request', err))
 

@@ -51,7 +51,7 @@ Oh, right. This module uses [google-auto-auth](http://gitnpm.com/google-auto-aut
 <a name="config"></a>
 ##### config
 
-- Type: `Object`
+- Type: `object`
 
 Configuration object.
 
@@ -89,6 +89,13 @@ The name of the destination file.
 - *Optional*
 
 This will cause the upload to fail if the current generation of the remote object does not match the one provided here.
+
+###### config.key
+
+- Type: `string|buffer`
+- *Optional*
+
+A [customer-supplied encryption key](https://cloud.google.com/storage/docs/encryption#customer-supplied).
 
 ###### config.metadata
 
@@ -151,7 +158,7 @@ Make the uploaded file public. (Alias for `config.predefinedAcl = 'publicRead'`)
 
 ###### config.uri
 
-- Type: `String`
+- Type: `string`
 - *Optional*
 
 If you already have a resumable URI from a previously-created resumable upload, just pass it in here and we'll use that.
