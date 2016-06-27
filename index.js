@@ -72,11 +72,8 @@ function Upload (cfg) {
     if (self.uri) {
       self.continueUploading()
     } else {
-      self.createURI(function (err, uri) {
+      self.createURI(function (err) {
         if (err) return self.destroy(err)
-        self.uri = uri
-        self.set({ uri: uri })
-        self.offset = 0
         self.startUploading()
       })
     }
@@ -91,6 +88,7 @@ Upload.createURI = function (cfg, callback) {
 }
 
 Upload.prototype.createURI = function (callback) {
+  var self = this
   var metadata = this.metadata
 
   var reqOpts = {
@@ -116,12 +114,6 @@ Upload.prototype.createURI = function (callback) {
     reqOpts.qs.ifGenerationMatch = this.generation
   }
 
-  if (this.encryption) {
-    reqOpts.headers['x-goog-encryption-algorithm'] = 'AES256'
-    reqOpts.headers['x-goog-encryption-key'] = this.encryption.key
-    reqOpts.headers['x-goog-encryption-key-sha256'] = this.encryption.hash
-  }
-
   if (this.predefinedAcl) {
     reqOpts.qs.predefinedAcl = this.predefinedAcl
   }
@@ -132,7 +124,13 @@ Upload.prototype.createURI = function (callback) {
 
   this.makeRequest(reqOpts, function (err, resp) {
     if (err) return callback(err)
-    callback(null, resp.headers.location)
+
+    var uri = resp.headers.location
+    self.uri = uri
+    self.set({ uri: uri })
+    self.offset = 0
+
+    callback(null, uri)
   })
 }
 
@@ -163,14 +161,12 @@ Upload.prototype.startUploading = function () {
     delayStream.on('prefinish', function () { self.cork() })
 
     requestStream.on('complete', function (resp) {
-      var body = resp.body
-
-      self.emit('metadata', body)
-
       if (resp.statusCode < 200 || resp.statusCode > 299) {
         self.destroy(new Error('Upload failed'))
         return
       }
+
+      self.emit('metadata', resp.body)
 
       self.deleteConfig()
       self.uncork()
@@ -271,7 +267,7 @@ Upload.prototype.makeRequest = function (reqOpts, callback) {
     request(authorizedReqOpts, function (err, resp, body) {
       if (err) return callback(err, resp)
 
-      if (body && body.error) return callback(body.error)
+      if (body && body.error) return callback(body.error, resp)
 
       var nonSuccess = Math.floor(resp.statusCode / 100) !== 2 // 200-299 status code
       if (nonSuccess && resp.statusCode !== RESUMABLE_INCOMPLETE_STATUS_CODE) {
@@ -292,6 +288,10 @@ Upload.prototype.getRequestStream = function (reqOpts, callback) {
     var requestStream = request(authorizedReqOpts)
     requestStream.on('error', self.destroy.bind(self))
     requestStream.on('response', self.onResponse.bind(self))
+    requestStream.on('complete', function (resp) {
+      var body = resp.body
+      if (body && body.error) self.destroy(body.error)
+    })
 
     // this makes the response body come back in the response (weird?)
     requestStream.callback = function () {}
@@ -301,9 +301,13 @@ Upload.prototype.getRequestStream = function (reqOpts, callback) {
 }
 
 Upload.prototype.restart = function () {
+  var self = this
   this.numBytesWritten = 0
   this.deleteConfig()
-  this.startUploading()
+  this.createURI(function (err) {
+    if (err) return self.destroy(err)
+    self.startUploading()
+  })
 }
 
 Upload.prototype.get = function (prop) {

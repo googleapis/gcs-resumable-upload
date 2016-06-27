@@ -190,6 +190,13 @@ describe('gcs-resumable-upload', function () {
       assert.deepEqual(upWithoutMetadata.metadata, {})
     })
 
+    it('should set the offset if it is provided', function () {
+      var offset = 10
+      var up = upload({ bucket: BUCKET, file: FILE, offset: offset })
+
+      assert.strictEqual(up.offset, offset)
+    })
+
     it('should localize the origin', function () {
       assert.strictEqual(up.origin, ORIGIN)
     })
@@ -285,52 +292,6 @@ describe('gcs-resumable-upload', function () {
 
         up.emit('writing')
       })
-
-      it('should localize the uri', function (done) {
-        up.startUploading = function () {
-          assert.strictEqual(up.uri, URI)
-          done()
-        }
-
-        up.createURI = function (callback) {
-          callback(null, URI)
-        }
-
-        up.emit('writing')
-      })
-
-      it('should save the uri to config', function (done) {
-        up.set = function (props) {
-          assert.deepEqual(props, { uri: URI })
-          done()
-        }
-
-        up.createURI = function (callback) {
-          callback(null, URI)
-        }
-
-        up.emit('writing')
-      })
-
-      it('should default the offset to 0', function (done) {
-        up.startUploading = function () {
-          assert.strictEqual(up.offset, 0)
-          done()
-        }
-
-        up.createURI = function (callback) {
-          callback(null, URI)
-        }
-
-        up.emit('writing')
-      })
-
-      it('should set the offset if it is provided', function () {
-        var offset = 10
-        var up = upload({ bucket: BUCKET, file: FILE, offset: offset })
-
-        assert.strictEqual(up.offset, offset)
-      })
     })
   })
 
@@ -346,12 +307,6 @@ describe('gcs-resumable-upload', function () {
           ifGenerationMatch: GENERATION
         })
         assert.strictEqual(reqOpts.json, up.metadata)
-        assert.deepEqual(reqOpts.headers, {
-          'X-Upload-Content-Length': METADATA.contentLength,
-          'X-Upload-Content-Type': METADATA.contentType,
-          Origin: ORIGIN
-        })
-
         done()
       }
 
@@ -387,6 +342,32 @@ describe('gcs-resumable-upload', function () {
         up.makeRequest = function (reqOpts, callback) {
           callback(null, RESP)
         }
+      })
+
+      it('should localize the uri', function (done) {
+        up.createURI(function (err) {
+          assert.ifError(err)
+          assert.strictEqual(up.uri, URI)
+          assert.strictEqual(up.offset, 0)
+          done()
+        })
+      })
+
+      it('should save the uri to config', function (done) {
+        up.set = function (props) {
+          assert.deepEqual(props, { uri: URI })
+          done()
+        }
+
+        up.createURI(assert.ifError)
+      })
+
+      it('should default the offset to 0', function (done) {
+        up.createURI(function (err) {
+          assert.ifError(err)
+          assert.strictEqual(up.offset, 0)
+          done()
+        })
       })
 
       it('should exec callback with URI', function (done) {
@@ -526,6 +507,9 @@ describe('gcs-resumable-upload', function () {
 
       up.getRequestStream = function (reqOpts, callback) {
         callback(requestStream)
+
+        // metadata shouldn't be emitted... will blow up test if called
+        up.on('metadata', done)
 
         up.destroy = function (err) {
           assert.strictEqual(err.message, 'Upload failed')
@@ -792,16 +776,17 @@ describe('gcs-resumable-upload', function () {
       up.makeRequest(REQ_OPTS)
     })
 
-    it('should execute the callback with error if one occurred', function (done) {
+    it('should execute the callback with error & response if one occurred', function (done) {
       var error = new Error(':(')
+      var response = {}
 
       up.authClient = {
         authorizeRequest: function (reqOpts, callback) {
-          callback(error)
+          callback(error, response)
         }
       }
 
-      up.makeRequest({}, function (err) {
+      up.makeRequest({}, function (err, resp) {
         assert(err.message.indexOf(error.message) > -1)
         done()
       })
@@ -830,7 +815,7 @@ describe('gcs-resumable-upload', function () {
       up.makeRequest(REQ_OPTS, function () {})
     })
 
-    it('should destroy the stream if there was an error', function (done) {
+    it('should execute the callback with error & response', function (done) {
       var error = new Error(':(')
       var response = {}
 
@@ -846,6 +831,29 @@ describe('gcs-resumable-upload', function () {
 
       up.makeRequest(REQ_OPTS, function (err, resp) {
         assert.strictEqual(err, error)
+        assert.strictEqual(resp, response)
+        done()
+      })
+    })
+
+    it('should execute the callback with a body error & response', function (done) {
+      var response = {}
+      var body = {
+        error: new Error(':(')
+      }
+
+      up.authClient = {
+        authorizeRequest: function (reqOpts, callback) {
+          callback()
+        }
+      }
+
+      requestMock = function (opts, callback) {
+        callback(null, response, body)
+      }
+
+      up.makeRequest({}, function (err, resp) {
+        assert.strictEqual(err, body.error)
         assert.strictEqual(resp, response)
         done()
       })
@@ -973,6 +981,33 @@ describe('gcs-resumable-upload', function () {
       })
     })
 
+    it('should destroy the stream if there was a body error', function (done) {
+      up.authClient = {
+        authorizeRequest: function (reqOpts, callback) {
+          callback()
+        }
+      }
+
+      requestMock = function () {
+        return through()
+      }
+
+      up.getRequestStream(REQ_OPTS, function (requestStream) {
+        var response = {
+          body: {
+            error: new Error(':(')
+          }
+        }
+
+        up.on('error', function (err) {
+          assert.strictEqual(err, response.body.error)
+          done()
+        })
+
+        requestStream.emit('complete', response)
+      })
+    })
+
     it('should check if it should retry on response', function (done) {
       up.authClient = {
         authorizeRequest: function (reqOpts, callback) {
@@ -1029,9 +1064,39 @@ describe('gcs-resumable-upload', function () {
       up.restart()
     })
 
-    it('should start uploading', function (done) {
-      up.startUploading = done
-      up.restart()
+    describe('starting a new upload', function () {
+      it('should create a new URI', function (done) {
+        up.createURI = function () {
+          done()
+        }
+
+        up.restart()
+      })
+
+      it('should destroy stream if it cannot create a URI', function (done) {
+        var error = new Error(':(')
+
+        up.createURI = function (callback) {
+          callback(error)
+        }
+
+        up.destroy = function (err) {
+          assert.strictEqual(err, error)
+          done()
+        }
+
+        up.restart()
+      })
+
+      it('should start uploading', function (done) {
+        up.createURI = function (callback) {
+          callback()
+        }
+
+        up.startUploading = done
+
+        up.restart()
+      })
     })
   })
 
