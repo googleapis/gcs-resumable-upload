@@ -721,6 +721,24 @@ describe('gcs-resumable-upload', function () {
       })
     })
 
+    describe('restart on 410', function () {
+      var ERROR = new Error(':(')
+      var RESP = {
+        statusCode: 410
+      }
+
+      beforeEach(function () {
+        up.makeRequest = function (reqOpts, callback) {
+          callback(ERROR, RESP)
+        }
+      })
+
+      it('should restart the upload', function (done) {
+        up.restart = done
+        up.getAndSetOffset()
+      })
+    })
+
     it('should set the offset from the range', function (done) {
       up.makeRequest = function (reqOpts, callback) {
         callback(null, RESP)

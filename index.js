@@ -16,6 +16,7 @@ var through = require('through2')
 var util = require('util')
 
 var BASE_URI = 'https://www.googleapis.com/upload/storage/v1/b'
+var EXPIRED_UPLOAD_STATUS_CODE = 410
 var RESUMABLE_INCOMPLETE_STATUS_CODE = 308
 var RETRY_LIMIT = 5
 
@@ -233,6 +234,11 @@ Upload.prototype.getAndSetOffset = function (callback) {
         // themselves. if we're just using the configstore file to tell us that
         // this file exists, and it turns out that it doesn't, that's probably
         // stale config data.
+        self.restart()
+      } else if (resp && resp.statusCode === EXPIRED_UPLOAD_STATUS_CODE) {
+        // a resumable upload expires after 7 days, and this error indicates we
+        // need to start over.
+        // ref: https://github.com/stephenplusplus/gcs-resumable-upload/issues/15
         self.restart()
       } else {
         self.destroy(err)
