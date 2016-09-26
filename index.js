@@ -16,6 +16,7 @@ var through = require('through2')
 var util = require('util')
 
 var BASE_URI = 'https://www.googleapis.com/upload/storage/v1/b'
+var TERMINATED_UPLOAD_STATUS_CODE = 410
 var RESUMABLE_INCOMPLETE_STATUS_CODE = 308
 var RETRY_LIMIT = 5
 
@@ -228,16 +229,18 @@ Upload.prototype.getAndSetOffset = function (callback) {
     }
   }, function (err, resp) {
     if (err) {
-      if (resp && resp.statusCode === 404 && !self.uriProvidedManually) {
-        // only return the error if the user provided the resumable URI
-        // themselves. if we're just using the configstore file to tell us that
-        // this file exists, and it turns out that it doesn't, that's probably
-        // stale config data.
-        self.restart()
-      } else {
-        self.destroy(err)
-      }
-      return
+      // we don't return a 404 to the user if they provided the resumable URI.
+      // if we're just using the configstore file to tell us that this file
+      // exists, and it turns out that it doesn't (the 404), that's probably
+      // stale config data.
+      if (resp && resp.statusCode === 404 && !self.uriProvidedManually) return self.restart()
+
+      // this resumable upload is unrecoverable (bad data or service error).
+      //  - https://github.com/stephenplusplus/gcs-resumable-upload/issues/15
+      //  - https://github.com/stephenplusplus/gcs-resumable-upload/pull/16#discussion_r80363774
+      if (resp && resp.statusCode === TERMINATED_UPLOAD_STATUS_CODE) return self.restart()
+
+      return self.destroy(err)
     }
 
     if (resp.statusCode === RESUMABLE_INCOMPLETE_STATUS_CODE) {
