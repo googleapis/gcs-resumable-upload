@@ -10,7 +10,7 @@ var through = require('through2')
 
 var configData = {}
 function ConfigStore () {
-  this.del = function (key) { delete configData[key] }
+  this.delete = function (key) { delete configData[key] }
   this.get = function (key) { return configData[key] }
   this.set = function (key, value) { configData[key] = value }
 }
@@ -1158,7 +1158,7 @@ describe('gcs-resumable-upload', function () {
       var props = { setting: true }
 
       up.configStore = {
-        del: function (name) {
+        delete: function (name) {
           assert.strictEqual(name, up.file)
           done()
         }

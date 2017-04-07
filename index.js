@@ -323,7 +323,7 @@ Upload.prototype.set = function (props) {
 }
 
 Upload.prototype.deleteConfig = function () {
-  this.configStore.del(this.file)
+  this.configStore.delete(this.file)
 }
 
 /**
