@@ -49,7 +49,7 @@ function Upload (cfg) {
   this.origin = cfg.origin
 
   if (cfg.key) {
-    var base64Key = new Buffer(cfg.key).toString('base64')
+    var base64Key = Buffer.from(cfg.key).toString('base64')
     this.encryption = {
       key: base64Key,
       hash: crypto.createHash('sha256').update(base64Key, 'base64').digest('base64')
@@ -193,8 +193,8 @@ Upload.prototype.onChunk = function (chunk, enc, next) {
       })
     } else {
       // this continues an upload in progress. check if the bytes are the same
-      cachedFirstChunk = new Buffer(cachedFirstChunk)
-      firstChunk = new Buffer(firstChunk)
+      cachedFirstChunk = Buffer.from(cachedFirstChunk)
+      firstChunk = Buffer.from(firstChunk)
 
       if (!bufferEqual(cachedFirstChunk, firstChunk)) {
         // this data is not the same. start a new upload

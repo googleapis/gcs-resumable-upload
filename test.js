@@ -550,7 +550,7 @@ describe('gcs-resumable-upload', function () {
   })
 
   describe('#onChunk', function () {
-    var CHUNK = new Buffer('abcdefghijklmnopqrstuvwxyz')
+    var CHUNK = Buffer.from('abcdefghijklmnopqrstuvwxyz')
     var ENC = 'utf-8'
     var NEXT = function () {}
 
