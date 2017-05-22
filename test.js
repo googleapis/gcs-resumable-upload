@@ -313,6 +313,16 @@ describe('gcs-resumable-upload', function () {
       up.createURI()
     })
 
+    it('should respect 0 as a generation', function (done) {
+      up.makeRequest = function (reqOpts) {
+        assert.strictEqual(reqOpts.qs.ifGenerationMatch, 0)
+        done()
+      }
+
+      up.generation = 0
+      up.createURI()
+    })
+
     describe('error', function () {
       var error = new Error(':(')
 

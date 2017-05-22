@@ -111,7 +111,7 @@ Upload.prototype.createURI = function (callback) {
     reqOpts.headers['X-Upload-Content-Type'] = metadata.contentType
   }
 
-  if (this.generation) {
+  if (typeof this.generation !== 'undefined') {
     reqOpts.qs.ifGenerationMatch = this.generation
   }
 
