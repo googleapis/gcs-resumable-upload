@@ -47,6 +47,7 @@ function Upload (cfg) {
   this.metadata = cfg.metadata || {}
   this.offset = cfg.offset
   this.origin = cfg.origin
+  this.userProject = cfg.userProject
 
   if (cfg.key) {
     var base64Key = Buffer.from(cfg.key).toString('base64')
@@ -264,6 +265,11 @@ Upload.prototype.makeRequest = function (reqOpts, callback) {
     reqOpts.headers['x-goog-encryption-key-sha256'] = this.encryption.hash
   }
 
+  if (this.userProject) {
+    reqOpts.qs = reqOpts.qs || {}
+    reqOpts.qs.userProject = this.userProject
+  }
+
   this.authClient.authorizeRequest(reqOpts, function (err, authorizedReqOpts) {
     if (err) return callback(wrapError('Could not authenticate request', err))
 
@@ -284,6 +290,11 @@ Upload.prototype.makeRequest = function (reqOpts, callback) {
 
 Upload.prototype.getRequestStream = function (reqOpts, callback) {
   var self = this
+
+  if (this.userProject) {
+    reqOpts.qs = reqOpts.qs || {}
+    reqOpts.qs.userProject = this.userProject
+  }
 
   this.authClient.authorizeRequest(reqOpts, function (err, authorizedReqOpts) {
     if (err) return self.destroy(wrapError('Could not authenticate request', err))

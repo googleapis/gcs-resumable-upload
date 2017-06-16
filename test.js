@@ -35,6 +35,7 @@ describe('gcs-resumable-upload', function () {
   }
   var ORIGIN = '*'
   var PREDEFINED_ACL = 'authenticatedRead'
+  var USER_PROJECT = 'user-project-id'
 
   before(function () {
     mockery.registerMock('configstore', ConfigStore)
@@ -58,7 +59,8 @@ describe('gcs-resumable-upload', function () {
       generation: GENERATION,
       metadata: METADATA,
       origin: ORIGIN,
-      predefinedAcl: PREDEFINED_ACL
+      predefinedAcl: PREDEFINED_ACL,
+      userProject: USER_PROJECT
     })
   })
 
@@ -68,7 +70,7 @@ describe('gcs-resumable-upload', function () {
   })
 
   it('should work', function (done) {
-    this.timeout(10000)
+    this.timeout(90000)
 
     var uploadSucceeded = false
 
@@ -97,7 +99,7 @@ describe('gcs-resumable-upload', function () {
   })
 
   it('should resume an interrupted upload', function (done) {
-    this.timeout(10000)
+    this.timeout(90000)
 
     requestMock = _request
 
@@ -199,6 +201,10 @@ describe('gcs-resumable-upload', function () {
 
     it('should localize the origin', function () {
       assert.strictEqual(up.origin, ORIGIN)
+    })
+
+    it('should localize userProject', function () {
+      assert.strictEqual(up.userProject, USER_PROJECT)
     })
 
     it('should localize an encryption object from a key', function () {
@@ -793,6 +799,19 @@ describe('gcs-resumable-upload', function () {
       up.makeRequest(REQ_OPTS)
     })
 
+    it('should set userProject', function (done) {
+      up.authClient = {
+        authorizeRequest: function (reqOpts) {
+          assert.deepEqual(reqOpts.qs, {
+            userProject: USER_PROJECT
+          })
+          done()
+        }
+      }
+
+      up.makeRequest(REQ_OPTS)
+    })
+
     it('should authorize the request', function (done) {
       up.authClient = {
         authorizeRequest: function (reqOpts) {
@@ -928,6 +947,19 @@ describe('gcs-resumable-upload', function () {
       up.getRequestStream(REQ_OPTS)
     })
 
+    it('should set userProject', function (done) {
+      up.authClient = {
+        authorizeRequest: function (reqOpts) {
+          assert.deepEqual(reqOpts.qs, {
+            userProject: USER_PROJECT
+          })
+          done()
+        }
+      }
+
+      up.getRequestStream(REQ_OPTS)
+    })
+
     it('should destroy the stream if an error occurred', function (done) {
       var error = new Error(':(')
 
@@ -942,7 +974,7 @@ describe('gcs-resumable-upload', function () {
         }
       }
 
-      up.getRequestStream()
+      up.getRequestStream(REQ_OPTS)
     })
 
     it('should make the correct request', function (done) {

@@ -163,6 +163,13 @@ Make the uploaded file public. (Alias for `config.predefinedAcl = 'publicRead'`)
 
 If you already have a resumable URI from a previously-created resumable upload, just pass it in here and we'll use that.
 
+###### config.userProject
+
+- Type: `string`
+- *Optional*
+
+If the bucket being accessed has `requesterPays` functionality enabled, this can be set to control which project is billed for the access of this file.
+
 --
 
 #### Events
