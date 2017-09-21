@@ -259,7 +259,7 @@ describe('gcs-resumable-upload', function () {
       assert.strictEqual(upWithUri.uriProvidedManually, true)
       assert.strictEqual(upWithUri.uri, uri)
 
-      configData[FILE] = { uri: 'fake-uri' }
+      configData[[BUCKET, FILE].join('/')] = { uri: 'fake-uri' }
       var up = upload({ bucket: BUCKET, file: FILE })
       assert.strictEqual(up.uriProvidedManually, false)
       assert.strictEqual(up.uri, 'fake-uri')
@@ -1167,7 +1167,8 @@ describe('gcs-resumable-upload', function () {
 
       up.configStore = {
         get: function (name) {
-          assert.strictEqual(name, up.file)
+          let actualKey = [up.bucket, up.file].join('/')
+          assert.strictEqual(name, actualKey)
 
           var obj = {}
           obj[prop] = value
@@ -1185,7 +1186,8 @@ describe('gcs-resumable-upload', function () {
 
       up.configStore = {
         set: function (name, prps) {
-          assert.strictEqual(name, up.file)
+          let actualKey = [up.bucket, up.file].join('/')
+          assert.strictEqual(name, actualKey)
           assert.strictEqual(prps, props)
           done()
         }
@@ -1201,7 +1203,8 @@ describe('gcs-resumable-upload', function () {
 
       up.configStore = {
         delete: function (name) {
-          assert.strictEqual(name, up.file)
+          let actualKey = [up.bucket, up.file].join('/')
+          assert.strictEqual(name, actualKey)
           done()
         }
       }

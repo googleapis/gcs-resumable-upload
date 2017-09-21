@@ -325,16 +325,16 @@ Upload.prototype.restart = function () {
 }
 
 Upload.prototype.get = function (prop) {
-  var store = this.configStore.get(this.file)
+  var store = this.configStore.get([this.bucket, this.file].join('/'))
   return store && store[prop]
 }
 
 Upload.prototype.set = function (props) {
-  this.configStore.set(this.file, props)
+  this.configStore.set([this.bucket, this.file].join('/'), props)
 }
 
 Upload.prototype.deleteConfig = function () {
-  this.configStore.delete(this.file)
+  this.configStore.delete([this.bucket, this.file].join('/'))
 }
 
 /**
