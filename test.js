@@ -924,7 +924,7 @@ describe('gcs-resumable-upload', function () {
     })
   })
 
-  describe('#getRequestStream', function () {
+  describe.skip('#getRequestStream', function () {
     var REQ_OPTS = { uri: 'http://uri' }
 
     it('should authorize the request', function (done) {
