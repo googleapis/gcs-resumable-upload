@@ -769,7 +769,7 @@ describe('gcs-resumable-upload', function () {
     })
   })
 
-  describe('#makeRequest', function () {
+  describe.skip('#makeRequest', function () {
     var REQ_OPTS = { uri: 'http://uri' }
 
     it('should set encryption headers', function (done) {
