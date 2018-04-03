@@ -628,7 +628,7 @@ describe('gcs-resumable-upload', function () {
     })
 
     describe('successive writes', function () {
-      it.skip('should increase the length of the bytes written by the bytelength of the chunk', function () {
+      it('should increase the length of the bytes written by the bytelength of the chunk', function () {
         assert.strictEqual(up.numBytesWritten, 0)
         up.onChunk(CHUNK, ENC, NEXT)
         assert.strictEqual(up.numBytesWritten, Buffer.byteLength(CHUNK, ENC))
@@ -648,7 +648,7 @@ describe('gcs-resumable-upload', function () {
     })
 
     describe('next()', function () {
-      it.skip('should push data to the stream if the bytes written is > offset', function (done) {
+      it('should push data to the stream if the bytes written is > offset', function (done) {
         up.numBytesWritten = 10
         up.offset = 0
 
@@ -659,7 +659,7 @@ describe('gcs-resumable-upload', function () {
         })
       })
 
-      it.skip('should not push data to the stream if the bytes written is < offset', function (done) {
+      it('should not push data to the stream if the bytes written is < offset', function (done) {
         up.numBytesWritten = 0
         up.offset = 1000
 
@@ -712,7 +712,7 @@ describe('gcs-resumable-upload', function () {
         }
       })
 
-      it.skip('should restart the upload', function (done) {
+      it('should restart the upload', function (done) {
         up.restart = done
         up.getAndSetOffset()
       })
@@ -769,7 +769,7 @@ describe('gcs-resumable-upload', function () {
     })
   })
 
-  describe.skip('#makeRequest', function () {
+  describe('#makeRequest', function () {
     var REQ_OPTS = { uri: 'http://uri' }
 
     it('should set encryption headers', function (done) {
@@ -924,7 +924,7 @@ describe('gcs-resumable-upload', function () {
     })
   })
 
-  describe.skip('#getRequestStream', function () {
+  describe('#getRequestStream', function () {
     var REQ_OPTS = { uri: 'http://uri' }
 
     it('should authorize the request', function (done) {
@@ -1103,7 +1103,7 @@ describe('gcs-resumable-upload', function () {
     })
   })
 
-  describe.skip('#restart', function () {
+  describe('#restart', function () {
     it('should set numBytesWritten to 0', function () {
       up.numBytesWritten = 8
       up.restart()
@@ -1219,7 +1219,7 @@ describe('gcs-resumable-upload', function () {
         assert.strictEqual(up.numRetries, 1)
       })
 
-      it.skip('should destroy the stream if gte limit', function (done) {
+      it('should destroy the stream if gte limit', function (done) {
         up.destroy = function (err) {
           assert.strictEqual(err.message, 'Retry limit exceeded')
           done()

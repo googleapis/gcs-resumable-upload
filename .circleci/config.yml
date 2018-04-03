@@ -24,18 +24,6 @@ jobs:
     docker:
       - image: node:4
     <<: *install_and_test
-  test_node6:
-    docker:
-      - image: node:6
-    <<: *install_and_test
-  test_node8:
-    docker:
-      - image: node:8
-    <<: *install_and_test
-  test_node9:
-    docker:
-      - image: node:9
-    <<: *install_and_test
 
 workflows:
   version: 2
