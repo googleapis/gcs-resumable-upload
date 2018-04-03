@@ -648,7 +648,7 @@ describe('gcs-resumable-upload', function () {
     })
 
     describe('next()', function () {
-      it('should push data to the stream if the bytes written is > offset', function (done) {
+      it.skip('should push data to the stream if the bytes written is > offset', function (done) {
         up.numBytesWritten = 10
         up.offset = 0
 
