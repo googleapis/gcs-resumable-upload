@@ -19,8 +19,8 @@ var requestMock
 var _request = require('request')
 var request = function () {
   return (requestMock || function () {}).apply(null, arguments)
-}
-request.defaults = _request.defaults
+};
+(request as any).defaults = _request.defaults
 
 describe('gcs-resumable-upload', function () {
   var upload
@@ -46,7 +46,7 @@ describe('gcs-resumable-upload', function () {
       warnOnUnregistered: false
     })
 
-    upload = require('./')
+    upload = require('../src')
   })
 
   beforeEach(function () {
@@ -1009,7 +1009,7 @@ describe('gcs-resumable-upload', function () {
       }
 
       up.getRequestStream(REQ_OPTS, function (requestStream) {
-        assert.strictEqual(requestStream.callback.toString(), 'function () {}')
+        assert.strictEqual(requestStream.callback.toString(), 'function () { }')
         done()
       })
     })
@@ -1278,8 +1278,8 @@ describe('gcs-resumable-upload', function () {
           up.onResponse(RESP)
         }
 
-        var setTimeout = global.setTimeout
-        global.setTimeout = function (cb, delay) {
+        var setTimeout = global.setTimeout;
+        (global as any).setTimeout = function (cb, delay) {
           var minTime = Math.pow(2, up.numRetries - 1) * 1000
           var maxTime = minTime + 1000
 
