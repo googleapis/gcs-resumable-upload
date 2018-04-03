@@ -1219,7 +1219,7 @@ describe('gcs-resumable-upload', function () {
         assert.strictEqual(up.numRetries, 1)
       })
 
-      it('should destroy the stream if gte limit', function (done) {
+      it.skip('should destroy the stream if gte limit', function (done) {
         up.destroy = function (err) {
           assert.strictEqual(err.message, 'Retry limit exceeded')
           done()
