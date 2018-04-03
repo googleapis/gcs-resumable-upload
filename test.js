@@ -1118,6 +1118,10 @@ describe('gcs-resumable-upload', function () {
   })
 
   describe('#restart', function () {
+    beforeEach(function () {
+      up.createURI = function () {}
+    })
+
     it('should set numBytesWritten to 0', function () {
       up.numBytesWritten = 8
       up.restart()
