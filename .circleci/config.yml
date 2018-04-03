@@ -14,7 +14,7 @@ install_and_test: &install_and_test
         command: npm test
     - run:
         name: Remove key
-        command: rm .circleci/key*
+        command: rm .circleci/key.json
         when: always
 
 jobs:
