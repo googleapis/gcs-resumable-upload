@@ -430,6 +430,10 @@ describe('gcs-resumable-upload', function () {
   })
 
   describe('#startUploading', function () {
+    beforeEach(function () {
+      up.getRequestStream = function () {}
+    })
+
     it('should make the correct request', function (done) {
       var URI = 'uri'
       var OFFSET = 8
