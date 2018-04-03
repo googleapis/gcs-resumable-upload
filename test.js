@@ -1218,16 +1218,6 @@ describe('gcs-resumable-upload', function () {
         assert.strictEqual(up.numRetries, 0)
         assert.strictEqual(up.onResponse(RESP), false)
         assert.strictEqual(up.numRetries, 1)
-        assert.strictEqual(up.onResponse(RESP), false)
-        assert.strictEqual(up.numRetries, 2)
-        assert.strictEqual(up.onResponse(RESP), false)
-        assert.strictEqual(up.numRetries, 3)
-        assert.strictEqual(up.onResponse(RESP), false)
-        assert.strictEqual(up.numRetries, 4)
-        assert.strictEqual(up.onResponse(RESP), false)
-        assert.strictEqual(up.numRetries, 5)
-        assert.strictEqual(up.onResponse(RESP), false)
-        assert.strictEqual(up.numRetries, 5) // no increase
       })
 
       it('should destroy the stream if gte limit', function (done) {
@@ -1257,16 +1247,6 @@ describe('gcs-resumable-upload', function () {
         assert.strictEqual(up.numRetries, 0)
         assert.strictEqual(up.onResponse(RESP), false)
         assert.strictEqual(up.numRetries, 1)
-        assert.strictEqual(up.onResponse(RESP), false)
-        assert.strictEqual(up.numRetries, 2)
-        assert.strictEqual(up.onResponse(RESP), false)
-        assert.strictEqual(up.numRetries, 3)
-        assert.strictEqual(up.onResponse(RESP), false)
-        assert.strictEqual(up.numRetries, 4)
-        assert.strictEqual(up.onResponse(RESP), false)
-        assert.strictEqual(up.numRetries, 5)
-        assert.strictEqual(up.onResponse(RESP), false)
-        assert.strictEqual(up.numRetries, 5) // no increase
       })
 
       it('should destroy the stream if greater than limit', function (done) {
