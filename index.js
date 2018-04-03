@@ -71,6 +71,7 @@ function Upload (cfg) {
   this.contentLength = isNaN(contentLength) ? '*' : contentLength
 
   this.once('writing', function () {
+    console.log('writing')
     if (self.uri) {
       self.continueUploading()
     } else {
