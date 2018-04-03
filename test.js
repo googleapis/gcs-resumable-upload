@@ -83,9 +83,6 @@ describe('gcs-resumable-upload', function () {
         file: 'daw.jpg',
         metadata: {
           contentType: 'image/jpg'
-        },
-        authConfig: {
-          credentials: require('./key.json')
         }
       }))
       .on('error', done)
@@ -117,9 +114,6 @@ describe('gcs-resumable-upload', function () {
           file: 'daw.jpg',
           metadata: {
             contentType: 'image/jpg'
-          },
-          authConfig: {
-            credentials: require('./key.json')
           }
         })
 
@@ -160,9 +154,6 @@ describe('gcs-resumable-upload', function () {
     upload.createURI({
       bucket: 'stephen-has-a-new-bucket',
       file: 'daw.jpg',
-      authConfig: {
-        credentials: require('./key.json')
-      },
       metadata: {
         contentType: 'image/jpg'
       }
@@ -430,6 +421,10 @@ describe('gcs-resumable-upload', function () {
   })
 
   describe('#startUploading', function () {
+    beforeEach(function () {
+      up.getRequestStream = function () {}
+    })
+
     it('should make the correct request', function (done) {
       var URI = 'uri'
       var OFFSET = 8
@@ -608,6 +603,7 @@ describe('gcs-resumable-upload', function () {
           up.bufferStream = through()
           up.offsetStream = through()
           up.get = function () { return CHUNK }
+          up.restart = function () {}
         })
 
         it('should push data back to the buffer stream if different', function (done) {
@@ -1113,6 +1109,10 @@ describe('gcs-resumable-upload', function () {
   })
 
   describe('#restart', function () {
+    beforeEach(function () {
+      up.createURI = function () {}
+    })
+
     it('should set numBytesWritten to 0', function () {
       up.numBytesWritten = 8
       up.restart()
@@ -1150,10 +1150,9 @@ describe('gcs-resumable-upload', function () {
 
       it('should start uploading', function (done) {
         up.createURI = function (callback) {
+          up.startUploading = done
           callback()
         }
-
-        up.startUploading = done
 
         up.restart()
       })
@@ -1227,16 +1226,6 @@ describe('gcs-resumable-upload', function () {
         assert.strictEqual(up.numRetries, 0)
         assert.strictEqual(up.onResponse(RESP), false)
         assert.strictEqual(up.numRetries, 1)
-        assert.strictEqual(up.onResponse(RESP), false)
-        assert.strictEqual(up.numRetries, 2)
-        assert.strictEqual(up.onResponse(RESP), false)
-        assert.strictEqual(up.numRetries, 3)
-        assert.strictEqual(up.onResponse(RESP), false)
-        assert.strictEqual(up.numRetries, 4)
-        assert.strictEqual(up.onResponse(RESP), false)
-        assert.strictEqual(up.numRetries, 5)
-        assert.strictEqual(up.onResponse(RESP), false)
-        assert.strictEqual(up.numRetries, 5) // no increase
       })
 
       it('should destroy the stream if gte limit', function (done) {
@@ -1266,16 +1255,6 @@ describe('gcs-resumable-upload', function () {
         assert.strictEqual(up.numRetries, 0)
         assert.strictEqual(up.onResponse(RESP), false)
         assert.strictEqual(up.numRetries, 1)
-        assert.strictEqual(up.onResponse(RESP), false)
-        assert.strictEqual(up.numRetries, 2)
-        assert.strictEqual(up.onResponse(RESP), false)
-        assert.strictEqual(up.numRetries, 3)
-        assert.strictEqual(up.onResponse(RESP), false)
-        assert.strictEqual(up.numRetries, 4)
-        assert.strictEqual(up.onResponse(RESP), false)
-        assert.strictEqual(up.numRetries, 5)
-        assert.strictEqual(up.onResponse(RESP), false)
-        assert.strictEqual(up.numRetries, 5) // no increase
       })
 
       it('should destroy the stream if greater than limit', function (done) {
