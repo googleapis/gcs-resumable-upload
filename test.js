@@ -83,9 +83,6 @@ describe('gcs-resumable-upload', function () {
         file: 'daw.jpg',
         metadata: {
           contentType: 'image/jpg'
-        },
-        authConfig: {
-          credentials: require('./.circleci/key.json')
         }
       }))
       .on('error', done)
@@ -117,9 +114,6 @@ describe('gcs-resumable-upload', function () {
           file: 'daw.jpg',
           metadata: {
             contentType: 'image/jpg'
-          },
-          authConfig: {
-            credentials: require('./.circleci/key.json')
           }
         })
 
@@ -160,9 +154,6 @@ describe('gcs-resumable-upload', function () {
     upload.createURI({
       bucket: 'stephen-has-a-new-bucket',
       file: 'daw.jpg',
-      authConfig: {
-        credentials: require('./.circleci/key.json')
-      },
       metadata: {
         contentType: 'image/jpg'
       }
