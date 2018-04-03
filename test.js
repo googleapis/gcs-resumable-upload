@@ -1140,11 +1140,11 @@ describe('gcs-resumable-upload', function () {
       })
 
       it('should start uploading', function (done) {
+        up.startUploading = done
+
         up.createURI = function (callback) {
           callback()
         }
-
-        up.startUploading = done
 
         up.restart()
       })
