@@ -30,6 +30,3 @@ workflows:
   test:
     jobs:
       - test_node4
-      - test_node6
-      - test_node8
-      - test_node9
