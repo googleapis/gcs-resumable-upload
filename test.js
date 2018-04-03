@@ -608,6 +608,7 @@ describe('gcs-resumable-upload', function () {
           up.bufferStream = through()
           up.offsetStream = through()
           up.get = function () { return CHUNK }
+          up.restart = function () {}
         })
 
         it('should push data back to the buffer stream if different', function (done) {
