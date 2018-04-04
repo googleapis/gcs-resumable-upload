@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as r from 'request';
 const upload = require('../../src');
 
-it('should do end to end', () => {
+describe('should do end to end', () => {
 
   it('should work', (done) => {
     let uploadSucceeded = false;
@@ -17,7 +17,7 @@ it('should do end to end', () => {
         }
       }))
       .on('error', done)
-      .on('response', function (resp) {
+      .on('response', function (resp: r.Response) {
         uploadSucceeded = resp.statusCode === 200;
       })
       .on('finish', function () {
@@ -32,7 +32,7 @@ it('should do end to end', () => {
 
       const size = fd.size;
 
-      const doUpload = function (opts, callback) {
+      const doUpload = function (opts: any, callback: (...args: any[]) => void) {
         let sizeStreamed = 0;
         let destroyed = false;
 
@@ -45,7 +45,7 @@ it('should do end to end', () => {
         });
 
         fs.createReadStream('daw.jpg')
-          .on('error', callback)
+          .on('error', callback as any)
           .on('data', function (chunk) {
             sizeStreamed += chunk.length;
 
@@ -61,10 +61,10 @@ it('should do end to end', () => {
           .on('metadata', callback.bind(null, null));
       };
 
-      doUpload({ interrupt: true }, function (err) {
+      doUpload({ interrupt: true }, function (err: Error) {
         assert.strictEqual(err.message, 'Interrupted');
 
-        doUpload({ interrupt: false }, function (err, metadata) {
+        doUpload({ interrupt: false }, function (err: Error, metadata: { size: number }) {
           assert.ifError(err);
           assert.equal(metadata.size, size);
           done();
