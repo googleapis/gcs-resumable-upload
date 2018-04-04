@@ -11,8 +11,5 @@
     "src/**/*.ts",
     "test/*.ts",
     "test/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules"
   ]
 }
