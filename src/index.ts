@@ -152,15 +152,14 @@ function Upload (cfg: UploadConfig) {
   this.contentLength = isNaN(contentLength) ? '*' : contentLength;
 
   this.once('writing', function() {
-    const self = this;
     if (this.uri) {
       this.continueUploading();
     } else {
       this.createURI((err: Error) => {
         if (err) {
-          return self.destroy(err);
+          return this.destroy(err);
         }
-        self.startUploading();
+        this.startUploading();
       });
     }
   });
@@ -224,7 +223,6 @@ Upload.prototype.continueUploading = function () {
 };
 
 Upload.prototype.startUploading = function (){
-  const self = this;
   const reqOpts = {
     method: 'PUT',
     uri: this.uri,
@@ -241,18 +239,17 @@ Upload.prototype.startUploading = function (){
     this.setPipeline(bufferStream, offsetStream, requestStream, delayStream);
 
     // wait for "complete" from request before letting the stream finish
-    delayStream.on('prefinish', () => { self.cork(); });
+    delayStream.on('prefinish', () => { this.cork(); });
 
     requestStream.on('complete', resp => {
       if (resp.statusCode < 200 || resp.statusCode > 299) {
-        self.destroy(new Error('Upload failed'));
+        this.destroy(new Error('Upload failed'));
         return;
       }
 
-      self.emit('metadata', resp.body);
-
-      self.deleteConfig();
-      self.uncork();
+      this.emit('metadata', resp.body);
+      this.deleteConfig();
+      this.uncork();
     });
   });
 };
