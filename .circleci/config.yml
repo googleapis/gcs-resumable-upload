@@ -9,9 +9,11 @@ install_and_test: &install_and_test
     - run:
         name: Install
         command: npm install
+        when: always
     - run:
         name: Test
         command: npm test
+        when: always
         environment:
           GOOGLE_APPLICATION_CREDENTIALS: /root/project/.circleci/key.json
     - run:
