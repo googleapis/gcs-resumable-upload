@@ -17,7 +17,6 @@ install_and_test: &install_and_test
     - run:
         name: System Tests
         command: npm run system-tests
-        when: always
         environment:
           GOOGLE_APPLICATION_CREDENTIALS: /root/project/.circleci/key.json
     - run:
