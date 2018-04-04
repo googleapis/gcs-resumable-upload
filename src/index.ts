@@ -354,7 +354,7 @@ Upload.prototype.makeRequest = function(reqOpts: r.Options, callback: r.RequestC
 
   this.authClient.authorizeRequest(reqOpts, (err: Error, authorizedReqOpts: r.Options) => {
     if (err) {
-      err = wrapError('Could not authenticate request', err)
+      err = wrapError('Could not authenticate request', err);
       return callback(err, null!, null);
     }
 

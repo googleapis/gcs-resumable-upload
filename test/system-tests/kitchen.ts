@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as r from 'request';
 const upload = require('../../src');
 
-describe('should do end to end', () => {
+describe('end to end', () => {
 
   it('should work', (done) => {
     let uploadSucceeded = false;

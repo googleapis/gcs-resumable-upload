@@ -775,7 +775,7 @@ describe('gcs-resumable-upload', function () {
 
     it('should execute the callback with error & response', function (done) {
       const error = new Error(':(');
-      const response = {} as r.Response;
+      const response = { body: 'wooo' } as r.Response;
 
       up.authClient = {
         authorizeRequest (reqOpts: r.OptionsWithUri,callback: r.RequestCallback) {
@@ -784,12 +784,13 @@ describe('gcs-resumable-upload', function () {
       };
 
       requestMock = function (opts: r.Options, callback: r.RequestCallback) {
-        callback(error, response, null);
+        callback(error, response, response.body);
       };
 
-      up.makeRequest(REQ_OPTS, function (err: Error, resp: r.Response) {
+      up.makeRequest(REQ_OPTS, function (err: Error, resp: r.Response, body: any) {
         assert.strictEqual(err, error);
         assert.strictEqual(resp, response);
+        assert.strictEqual(body, response.body);
         done();
       });
     });
@@ -816,6 +817,33 @@ describe('gcs-resumable-upload', function () {
         done();
       });
     });
+
+    it('should execute the callback with a body error & response for non-2xx status codes', function (done) {
+      const response = {
+        statusCode: 500,
+        body: {
+          error: new Error('!$#@')
+        }
+      } as r.RequestResponse;
+
+      up.authClient = {
+        authorizeRequest (reqOpts: r.OptionsWithUri,callback: r.RequestCallback) {
+          callback(null, null!, null);
+        }
+      };
+
+      requestMock = function (opts: r.Options, callback: r.RequestCallback) {
+        callback(null, response, response.body);
+      };
+
+      up.makeRequest({}, function (err: Error, resp: r.Response, body: any) {
+        assert.strictEqual(err, response.body.error);
+        assert.strictEqual(resp, response);
+        assert.deepStrictEqual(body, response.body);
+        done();
+      });
+    });
+
 
     it('should execute the callback', function (done) {
       const res = { statusCode: 200 } as r.Response;
