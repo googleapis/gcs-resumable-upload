@@ -41,9 +41,13 @@
     "through2": "^2.0.3"
   },
   "devDependencies": {
+    "@types/configstore": "^2.1.1",
+    "@types/is-stream": "^1.1.0",
     "@types/mocha": "^5.0.0",
+    "@types/mockery": "^1.4.29",
     "@types/node": "^9.6.1",
     "@types/request": "^2.47.0",
+    "@types/through2": "^2.0.33",
     "gts": "^0.5.4",
     "is-stream": "^1.1.0",
     "mocha": "^5.0.5",
