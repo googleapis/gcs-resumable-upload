@@ -5,7 +5,9 @@ var ConfigStore = require('configstore')
 var crypto = require('crypto')
 var googleAuth = require('google-auto-auth')
 var Pumpify = require('pumpify')
-var request = require('request').defaults({
+
+import * as r from 'request';
+var request = r.defaults({
   json: true,
   pool: {
     maxSockets: Infinity
@@ -25,7 +27,6 @@ var wrapError = function (message, err) {
 }
 
 function Upload (cfg) {
-  if (!(this instanceof Upload)) return new Upload(cfg)
 
   Pumpify.call(this)
   StreamEvents.call(this)
@@ -84,16 +85,11 @@ function Upload (cfg) {
 
 util.inherits(Upload, Pumpify)
 
-Upload.createURI = function (cfg, callback) {
-  var up = new Upload(cfg)
-  up.createURI(callback)
-}
-
 Upload.prototype.createURI = function (callback) {
   var self = this
   var metadata = this.metadata
 
-  var reqOpts = {
+  var reqOpts: r.Options = {
     method: 'POST',
     uri: [BASE_URI, this.bucket, 'o'].join('/'),
     qs: {
@@ -105,11 +101,11 @@ Upload.prototype.createURI = function (callback) {
   }
 
   if (metadata.contentLength) {
-    reqOpts.headers['X-Upload-Content-Length'] = metadata.contentLength
+    reqOpts.headers!['X-Upload-Content-Length'] = metadata.contentLength
   }
 
   if (metadata.contentType) {
-    reqOpts.headers['X-Upload-Content-Type'] = metadata.contentType
+    reqOpts.headers!['X-Upload-Content-Type'] = metadata.contentType
   }
 
   if (typeof this.generation !== 'undefined') {
@@ -121,7 +117,7 @@ Upload.prototype.createURI = function (callback) {
   }
 
   if (this.origin) {
-    reqOpts.headers.Origin = this.origin
+    reqOpts.headers!.Origin = this.origin
   }
 
   this.makeRequest(reqOpts, function (err, resp) {
@@ -369,4 +365,13 @@ Upload.prototype.onResponse = function (resp) {
   return true
 }
 
-module.exports = Upload
+function upload(cfg) {
+  return new Upload(cfg);
+}
+
+(upload as any).createURI = function (cfg, callback) {
+  var up = new Upload(cfg)
+  up.createURI(callback)
+}
+
+module.exports = upload;
