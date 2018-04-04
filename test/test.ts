@@ -15,11 +15,10 @@ function ConfigStore () {
 }
 
 let requestMock;
-const _request = r;
 const request = (...args) => {
   return (requestMock || (() => {})).apply(null, args);
 };
-(request as any).defaults = _request.defaults;
+(request as any).defaults = r.defaults;
 
 describe('gcs-resumable-upload', function () {
   let upload;
@@ -66,18 +65,6 @@ describe('gcs-resumable-upload', function () {
   after(function () {
     mockery.deregisterAll();
     mockery.disable();
-  });
-
-  it('should just make an upload URI', function (done) {
-    requestMock = _request;
-
-    upload.createURI({
-      bucket: 'stephen-has-a-new-bucket',
-      file: 'daw.jpg',
-      metadata: {
-        contentType: 'image/jpg'
-      }
-    }, done);
   });
 
   describe('ctor', function () {
