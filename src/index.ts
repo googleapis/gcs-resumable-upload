@@ -131,6 +131,11 @@ function Upload (cfg: UploadConfig) {
   this.userProject = cfg.userProject;
 
   if (cfg.key) {
+    /**
+     * NOTE: This is `as string` because there appears to be some weird kind
+     * of TypeScript bug as 2.8. Tracking the issue here:
+     * https://github.com/Microsoft/TypeScript/issues/23155
+     */
     const base64Key = Buffer.from(cfg.key as string).toString('base64');
     this.encryption = {
       key: base64Key,
@@ -151,7 +156,7 @@ function Upload (cfg: UploadConfig) {
   const contentLength = cfg.metadata ? Number(cfg.metadata.contentLength) : NaN;
   this.contentLength = isNaN(contentLength) ? '*' : contentLength;
 
-  this.once('writing', function() {
+  this.once('writing', () => {
     if (this.uri) {
       this.continueUploading();
     } else {
