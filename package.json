@@ -9,7 +9,7 @@
     "gcs-upload": "build/src/cli.js"
   },
   "scripts": {
-    "test": "mocha build/test",
+    "test": "mocha build/test -r source-map-support/register",
     "check": "gts check",
     "clean": "gts clean",
     "compile": "tsc -p .",
@@ -52,6 +52,7 @@
     "is-stream": "^1.1.0",
     "mocha": "^5.0.5",
     "mockery": "^2.1.0",
+    "source-map-support": "^0.5.4",
     "typescript": "~2.6.1"
   }
 }
