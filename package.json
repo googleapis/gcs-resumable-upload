@@ -6,7 +6,7 @@
   "main": "build/src/index.js",
   "types": "build/src/index.d.ts",
   "bin": {
-    "gcs-upload": "./build/src/cli.js"
+    "gcs-upload": "build/src/cli.js"
   },
   "scripts": {
     "test": "mocha build/test",
