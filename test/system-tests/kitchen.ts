@@ -31,7 +31,8 @@ describe('end to end', () => {
       const size = fd.size;
 
       // tslint:disable-next-line no-any
-      const doUpload = function (opts: {interrupt?: boolean}, callback: (...args: any[]) => void) {
+      const doUpload =
+          (opts: {interrupt?: boolean}, callback: (...args: any[]) => void) => {
             let sizeStreamed = 0;
             let destroyed = false;
 
@@ -44,7 +45,7 @@ describe('end to end', () => {
             fs.createReadStream('daw.jpg')
                 .on('error', callback)
                 .on('data',
-                    (chunk) => {
+                    function(chunk) {
                       sizeStreamed += chunk.length;
 
                       if (!destroyed && opts.interrupt &&
