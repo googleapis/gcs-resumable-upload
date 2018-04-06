@@ -5,24 +5,32 @@ import * as isStream from 'is-stream';
 import * as mockery from 'mockery';
 import * as through from 'through2';
 import * as r from 'request';
+import { Stream } from 'stream';
 const bufferEqual = require('buffer-equal');
 
-let configData = {};
+let configData = {  } as {[index: string]: any};
 function ConfigStore () {
-  this.delete = function (key) { delete configData[key]; };
-  this.get = function (key) { return configData[key]; };
-  this.set = function (key, value) { configData[key] = value; };
+  this.delete = (key: string) => {
+    delete configData[key];
+  };
+  this.get = (key: string) => {
+    return configData[key];
+  };
+  this.set = (key: string, value: any) => {
+    configData[key] = value;
+  };
 }
 
-let requestMock;
-const request = (...args) => {
+let requestMock: any;
+const _request = r;
+const request = (...args: any[]) => {
   return (requestMock || (() => {})).apply(null, args);
 };
 (request as any).defaults = r.defaults;
 
 describe('gcs-resumable-upload', function () {
-  let upload;
-  let up;
+  let upload: any;
+  let up: any;
 
   const BUCKET = 'bucket-name';
   const FILE = 'file-name';
@@ -175,8 +183,8 @@ describe('gcs-resumable-upload', function () {
       it('should create an upload', function (done) {
         up.startUploading = done;
 
-        up.createURI = function (callback) {
-          callback();
+        up.createURI = function (callback: r.RequestCallback) {
+          callback(null, null!, null);
         };
 
         up.emit('writing');
@@ -185,13 +193,13 @@ describe('gcs-resumable-upload', function () {
       it('should destroy the stream from an error', function (done) {
         const error = new Error(':(');
 
-        up.destroy = function (err) {
+        up.destroy = function (err: Error) {
           assert(err.message.indexOf(error.message) > -1);
           done();
         };
 
-        up.createURI = function (callback) {
-          callback(error);
+        up.createURI = function (callback: r.RequestCallback) {
+          callback(error, null!, null);
         };
 
         up.emit('writing');
@@ -201,7 +209,7 @@ describe('gcs-resumable-upload', function () {
 
   describe('#createURI', function () {
     it('should make the correct request', function (done) {
-      up.makeRequest = function (reqOpts) {
+      up.makeRequest = function (reqOpts: r.OptionsWithUri) {
         assert.strictEqual(reqOpts.method, 'POST');
         assert.strictEqual(reqOpts.uri, 'https://www.googleapis.com/upload/storage/v1/b/' + BUCKET + '/o');
         assert.deepEqual(reqOpts.qs, {
@@ -218,7 +226,7 @@ describe('gcs-resumable-upload', function () {
     });
 
     it('should respect 0 as a generation', function (done) {
-      up.makeRequest = function (reqOpts) {
+      up.makeRequest = function (reqOpts: r.Options) {
         assert.strictEqual(reqOpts.qs.ifGenerationMatch, 0);
         done();
       };
@@ -231,13 +239,13 @@ describe('gcs-resumable-upload', function () {
       const error = new Error(':(');
 
       beforeEach(function () {
-        up.makeRequest = function (reqOpts, callback) {
-          callback(error);
+        up.makeRequest = function (reqOpts: r.Options, callback: r.RequestCallback) {
+          callback(error, null!, null);
         };
       });
 
       it('should exec callback with error', function (done) {
-        up.createURI(function (err) {
+        up.createURI(function (err: Error) {
           assert.strictEqual(err, error);
           done();
         });
@@ -250,16 +258,16 @@ describe('gcs-resumable-upload', function () {
         headers: {
           location: URI
         }
-      };
+      } as r.Response;
 
       beforeEach(function () {
-        up.makeRequest = function (reqOpts, callback) {
-          callback(null, RESP);
+        up.makeRequest = function (reqOpts: r.Options, callback: r.RequestCallback) {
+          callback(null, RESP, null);
         };
       });
 
       it('should localize the uri', function (done) {
-        up.createURI(function (err) {
+        up.createURI(function (err: Error) {
           assert.ifError(err);
           assert.strictEqual(up.uri, URI);
           assert.strictEqual(up.offset, 0);
@@ -268,7 +276,7 @@ describe('gcs-resumable-upload', function () {
       });
 
       it('should save the uri to config', function (done) {
-        up.set = function (props) {
+        up.set = function (props: {}) {
           assert.deepEqual(props, { uri: URI });
           done();
         };
@@ -277,7 +285,7 @@ describe('gcs-resumable-upload', function () {
       });
 
       it('should default the offset to 0', function (done) {
-        up.createURI(function (err) {
+        up.createURI(function (err: Error) {
           assert.ifError(err);
           assert.strictEqual(up.offset, 0);
           done();
@@ -285,7 +293,7 @@ describe('gcs-resumable-upload', function () {
       });
 
       it('should exec callback with URI', function (done) {
-        up.createURI(function (err, uri) {
+        up.createURI(function (err: Error, uri: string) {
           assert.ifError(err);
           assert.strictEqual(uri, URI);
           done();
@@ -319,7 +327,7 @@ describe('gcs-resumable-upload', function () {
         done();
       };
 
-      up.getAndSetOffset = function (callback) {
+      up.getAndSetOffset = function (callback: Function) {
         callback();
       };
 
@@ -339,7 +347,7 @@ describe('gcs-resumable-upload', function () {
       up.uri = URI;
       up.offset = OFFSET;
 
-      up.getRequestStream = function (reqOpts) {
+      up.getRequestStream = function (reqOpts: r.OptionsWithUri) {
         assert.strictEqual(reqOpts.method, 'PUT');
         assert.strictEqual(reqOpts.uri, up.uri);
         assert.deepEqual(reqOpts.headers, {
@@ -367,7 +375,7 @@ describe('gcs-resumable-upload', function () {
     it('should set the pipeline', function (done) {
       const requestStream = through();
 
-      up.setPipeline = function (buffer, offset, request, delay) {
+      up.setPipeline = function (buffer: Buffer, offset: number, request: Stream, delay: number) {
         assert.strictEqual(buffer, up.bufferStream);
         assert.strictEqual(offset, up.offsetStream);
         assert.strictEqual(request, requestStream);
@@ -376,7 +384,7 @@ describe('gcs-resumable-upload', function () {
         done();
       };
 
-      up.getRequestStream = function (reqOpts, callback) {
+      up.getRequestStream = function (reqOpts: r.OptionsWithUri,callback: Function) {
         callback(requestStream);
       };
 
@@ -386,13 +394,13 @@ describe('gcs-resumable-upload', function () {
     it('should cork the stream on prefinish', function (done) {
       up.cork = done;
 
-      up.setPipeline = function (buffer, offset, request, delay) {
+      up.setPipeline = function (buffer: Buffer, offset: number, request: any, delay: any) {
         setImmediate(function () {
           delay.emit('prefinish');
         });
       };
 
-      up.getRequestStream = function (reqOpts, callback) {
+      up.getRequestStream = function (reqOpts: r.OptionsWithUri, callback: Function) {
         callback(through());
       };
 
@@ -405,10 +413,10 @@ describe('gcs-resumable-upload', function () {
 
       const requestStream = through();
 
-      up.getRequestStream = function (reqOpts, callback) {
+      up.getRequestStream = function (reqOpts: r.OptionsWithUri, callback: Function) {
         callback(requestStream);
 
-        up.on('metadata', function (body) {
+        up.on('metadata', function (body: {}) {
           assert.strictEqual(body, BODY);
           done();
         });
@@ -423,13 +431,13 @@ describe('gcs-resumable-upload', function () {
       const RESP = { body: '', statusCode: 404 };
       const requestStream = through();
 
-      up.getRequestStream = function (reqOpts, callback) {
+      up.getRequestStream = function (reqOpts: r.OptionsWithUri,callback: Function) {
         callback(requestStream);
 
         // metadata shouldn't be emitted... will blow up test if called
         up.on('metadata', done);
 
-        up.destroy = function (err) {
+        up.destroy = function (err: Error) {
           assert.strictEqual(err.message, 'Upload failed');
           done();
         };
@@ -444,7 +452,7 @@ describe('gcs-resumable-upload', function () {
       const RESP = { body: '' };
       const requestStream = through();
 
-      up.getRequestStream = function (reqOpts, callback) {
+      up.getRequestStream = function (reqOpts: r.OptionsWithUri,callback: Function) {
         callback(requestStream);
         up.deleteConfig = done;
         requestStream.emit('complete', RESP);
@@ -457,7 +465,7 @@ describe('gcs-resumable-upload', function () {
       const RESP = { body: '' };
       const requestStream = through();
 
-      up.getRequestStream = function (reqOpts, callback) {
+      up.getRequestStream = function (reqOpts: r.OptionsWithUri,callback: Function) {
         callback(requestStream);
         up.uncork = done;
         requestStream.emit('complete', RESP);
@@ -478,7 +486,7 @@ describe('gcs-resumable-upload', function () {
       });
 
       it('should get the first chunk', function (done) {
-        up.get = function (prop) {
+        up.get = function (prop: string) {
           assert.strictEqual(prop, 'firstChunk');
           done();
         };
@@ -495,7 +503,7 @@ describe('gcs-resumable-upload', function () {
           const URI = 'uri';
           up.uri = URI;
 
-          up.set = function (props) {
+          up.set = function (props: any) {
             const firstChunk = CHUNK.slice(0, 16).valueOf();
             assert.deepEqual(props.uri, URI);
             assert.strictEqual(bufferEqual(props.firstChunk, firstChunk), true);
@@ -514,7 +522,7 @@ describe('gcs-resumable-upload', function () {
         });
 
         it('should push data back to the buffer stream if different', function (done) {
-          up.bufferStream.unshift = function (chunk) {
+          up.bufferStream.unshift = function (chunk: any) {
             assert.strictEqual(chunk, CHUNK);
             done();
           };
@@ -523,7 +531,7 @@ describe('gcs-resumable-upload', function () {
         });
 
         it('should unpipe the offset stream', function (done) {
-          up.bufferStream.unpipe = function (stream) {
+          up.bufferStream.unpipe = function (stream: Stream) {
             assert.strictEqual(stream, up.offsetStream);
             done();
           };
@@ -549,7 +557,7 @@ describe('gcs-resumable-upload', function () {
       it('should slice the chunk by the offset - numBytesWritten', function (done) {
         const OFFSET = 8;
         up.offset = OFFSET;
-        up.onChunk(CHUNK, ENC, function (err, chunk) {
+        up.onChunk(CHUNK, ENC, function (err: Error, chunk: string) {
           assert.ifError(err);
 
           const expectedChunk = CHUNK.slice(OFFSET);
@@ -564,7 +572,7 @@ describe('gcs-resumable-upload', function () {
         up.numBytesWritten = 10;
         up.offset = 0;
 
-        up.onChunk(CHUNK, ENC, function (err, chunk) {
+        up.onChunk(CHUNK, ENC, function (err: Error, chunk: string) {
           assert.ifError(err);
           assert.strictEqual(Buffer.isBuffer(chunk), true);
           done();
@@ -575,7 +583,7 @@ describe('gcs-resumable-upload', function () {
         up.numBytesWritten = 0;
         up.offset = 1000;
 
-        up.onChunk(CHUNK, ENC, function (err, chunk) {
+        up.onChunk(CHUNK, ENC, function (err: Error, chunk: string) {
           assert.ifError(err);
           assert.strictEqual(chunk, undefined);
           done();
@@ -587,7 +595,7 @@ describe('gcs-resumable-upload', function () {
   describe('#getAndSetOffset', function () {
     const RANGE = 123456;
 
-    const RESP = {
+    const RESP: any = {
       statusCode: 308,
       headers: {
         range: 'range-' + RANGE
@@ -598,7 +606,7 @@ describe('gcs-resumable-upload', function () {
       const URI = 'uri';
       up.uri = URI;
 
-      up.makeRequest = function (reqOpts) {
+      up.makeRequest = function (reqOpts: r.OptionsWithUri) {
         assert.strictEqual(reqOpts.method, 'PUT');
         assert.strictEqual(reqOpts.uri, URI);
         assert.deepEqual(reqOpts.headers, {
@@ -616,11 +624,11 @@ describe('gcs-resumable-upload', function () {
       const ERROR = new Error(':(');
       const RESP = {
         statusCode: 404
-      };
+      } as r.Response;
 
       beforeEach(function () {
-        up.makeRequest = function (reqOpts, callback) {
-          callback(ERROR, RESP);
+        up.makeRequest = function (reqOpts: r.OptionsWithUri, callback: r.RequestCallback) {
+          callback(ERROR, RESP, null);
         };
       });
 
@@ -632,7 +640,7 @@ describe('gcs-resumable-upload', function () {
       it('should not restart if URI provided manually', function (done) {
         up.uriProvidedManually = true;
         up.restart = done; // will cause test to fail
-        up.on('error', function (err) {
+        up.on('error', function (err: Error) {
           assert.strictEqual(err, ERROR);
           done();
         });
@@ -644,11 +652,11 @@ describe('gcs-resumable-upload', function () {
       const ERROR = new Error(':(');
       const RESP = {
         statusCode: 410
-      };
+      } as r.Response;
 
       beforeEach(function () {
-        up.makeRequest = function (reqOpts, callback) {
-          callback(ERROR, RESP);
+        up.makeRequest = function (reqOpts: r.Options, callback: r.RequestCallback) {
+          callback(ERROR, RESP, null);
         };
       });
 
@@ -659,8 +667,8 @@ describe('gcs-resumable-upload', function () {
     });
 
     it('should set the offset from the range', function (done) {
-      up.makeRequest = function (reqOpts, callback) {
-        callback(null, RESP);
+      up.makeRequest = function (reqOpts: r.Options, callback: r.RequestCallback) {
+        callback(null, RESP, null);
       };
 
       up.getAndSetOffset(function () {
@@ -670,8 +678,8 @@ describe('gcs-resumable-upload', function () {
     });
 
     it('should set the offset to 0 if no range is back from the API', function (done) {
-      up.makeRequest = function (reqOpts, callback) {
-        callback(null, {});
+      up.makeRequest = function (reqOpts: r.OptionsWithUri,callback: r.RequestCallback) {
+        callback(null, {} as r.Response, null);
       };
 
       up.getAndSetOffset(function () {
@@ -689,7 +697,7 @@ describe('gcs-resumable-upload', function () {
       const up = upload({ bucket: 'BUCKET', file: FILE, key });
 
       up.authClient = {
-        authorizeRequest (reqOpts) {
+        authorizeRequest (reqOpts: r.OptionsWithUri) {
           assert.deepEqual(reqOpts.headers, {
             'x-goog-encryption-algorithm': 'AES256',
             'x-goog-encryption-key': up.encryption.key,
@@ -704,7 +712,7 @@ describe('gcs-resumable-upload', function () {
 
     it('should set userProject', function (done) {
       up.authClient = {
-        authorizeRequest (reqOpts) {
+        authorizeRequest (reqOpts: r.OptionsWithUri) {
           assert.deepEqual(reqOpts.qs, {
             userProject: USER_PROJECT
           });
@@ -717,8 +725,8 @@ describe('gcs-resumable-upload', function () {
 
     it('should authorize the request', function (done) {
       up.authClient = {
-        authorizeRequest (reqOpts) {
-          assert.strictEqual(reqOpts, REQ_OPTS);
+        authorizeRequest (reqOpts: r.OptionsWithUri) {
+          assert.strictEqual(reqOpts,REQ_OPTS);
           done();
         }
       };
@@ -728,15 +736,15 @@ describe('gcs-resumable-upload', function () {
 
     it('should execute the callback with error & response if one occurred', function (done) {
       const error = new Error(':(');
-      const response = {};
+      const response = {} as r.Response;
 
       up.authClient = {
-        authorizeRequest (reqOpts, callback) {
-          callback(error, response);
+        authorizeRequest (reqOpts: r.OptionsWithUri,callback: r.RequestCallback) {
+          callback(error, response, null);
         }
       };
 
-      up.makeRequest({}, function (err, resp) {
+      up.makeRequest({}, function (err: Error, resp: r.Response) {
         assert(err.message.indexOf(error.message) > -1);
         done();
       });
@@ -750,12 +758,12 @@ describe('gcs-resumable-upload', function () {
       };
 
       up.authClient = {
-        authorizeRequest (reqOpts, callback) {
-          callback(null, authorizedReqOpts);
+        authorizeRequest (reqOpts: r.OptionsWithUri,callback: Function) {
+          callback(null, authorizedReqOpts, null);
         }
       };
 
-      requestMock = function (opts) {
+      requestMock = function (opts: r.OptionsWithUri) {
         assert.strictEqual(opts.uri, authorizedReqOpts.uri);
         assert.deepEqual(opts.headers, authorizedReqOpts.headers);
         assert.strictEqual(opts.json, authorizedReqOpts.json);
@@ -767,55 +775,83 @@ describe('gcs-resumable-upload', function () {
 
     it('should execute the callback with error & response', function (done) {
       const error = new Error(':(');
-      const response = {};
+      const response = { body: 'wooo' } as r.Response;
 
       up.authClient = {
-        authorizeRequest (reqOpts, callback) {
-          callback();
+        authorizeRequest (reqOpts: r.OptionsWithUri,callback: r.RequestCallback) {
+          callback(null, null!, null);
         }
       };
 
-      requestMock = function (opts, callback) {
-        callback(error, response);
+      requestMock = function (opts: r.Options, callback: r.RequestCallback) {
+        callback(error, response, response.body);
       };
 
-      up.makeRequest(REQ_OPTS, function (err, resp) {
+      up.makeRequest(REQ_OPTS, function (err: Error, resp: r.Response, body: any) {
         assert.strictEqual(err, error);
         assert.strictEqual(resp, response);
+        assert.strictEqual(body, response.body);
         done();
       });
     });
 
     it('should execute the callback with a body error & response', function (done) {
-      const response = {};
+      const response = {} as r.RequestResponse;
       const body = {
         error: new Error(':(')
       };
 
       up.authClient = {
-        authorizeRequest (reqOpts, callback) {
-          callback();
+        authorizeRequest (reqOpts: r.OptionsWithUri,callback: r.RequestCallback) {
+          callback(null, null!, null);
         }
       };
 
-      requestMock = function (opts, callback) {
+      requestMock = function (opts: r.Options, callback: r.RequestCallback) {
         callback(null, response, body);
       };
 
-      up.makeRequest({}, function (err, resp) {
+      up.makeRequest({}, function (err: Error, resp: r.Response) {
         assert.strictEqual(err, body.error);
         assert.strictEqual(resp, response);
         done();
       });
     });
 
+    it('should execute the callback with a body error & response for non-2xx status codes', function (done) {
+      const response = {
+        statusCode: 500,
+        body: {
+          error: new Error('!$#@')
+        }
+      } as r.RequestResponse;
+
+      up.authClient = {
+        authorizeRequest (reqOpts: r.OptionsWithUri,callback: r.RequestCallback) {
+          callback(null, null!, null);
+        }
+      };
+
+      requestMock = function (opts: r.Options, callback: r.RequestCallback) {
+        callback(null, response, response.body);
+      };
+
+      up.makeRequest({}, function (err: Error, resp: r.Response, body: any) {
+        assert.strictEqual(err, response.body.error);
+        assert.strictEqual(resp, response);
+        assert.deepStrictEqual(body, response.body);
+        done();
+      });
+    });
+
+
     it('should execute the callback', function (done) {
-      const res = { statusCode: 200 };
+      const res = { statusCode: 200 } as r.Response;
       const body = 'body';
 
       up.authClient = {
-        authorizeRequest (reqOpts, callback) {
-          callback();
+        authorizeRequest (reqOpts: r.OptionsWithUri,callback: r.RequestCallback) {
+          callback(null, null!, null);
         }
       };
 
@@ -823,11 +859,11 @@ describe('gcs-resumable-upload', function () {
         return true;
       };
 
-      requestMock = function (opts, callback) {
+      requestMock = function (opts: r.Options, callback: r.RequestCallback) {
         callback(null, res, body);
       };
 
-      up.makeRequest(REQ_OPTS, function (err, resp, bdy) {
+      up.makeRequest(REQ_OPTS, function (err: Error, resp: r.Response, bdy: {}) {
         assert.ifError(err);
         assert.strictEqual(resp, res);
         assert.strictEqual(bdy, body);
@@ -841,7 +877,7 @@ describe('gcs-resumable-upload', function () {
 
     it('should authorize the request', function (done) {
       up.authClient = {
-        authorizeRequest (reqOpts) {
+        authorizeRequest (reqOpts: r.OptionsWithUri) {
           assert.strictEqual(reqOpts, REQ_OPTS);
           done();
         }
@@ -852,7 +888,7 @@ describe('gcs-resumable-upload', function () {
 
     it('should set userProject', function (done) {
       up.authClient = {
-        authorizeRequest (reqOpts) {
+        authorizeRequest (reqOpts: r.OptionsWithUri) {
           assert.deepEqual(reqOpts.qs, {
             userProject: USER_PROJECT
           });
@@ -866,14 +902,14 @@ describe('gcs-resumable-upload', function () {
     it('should destroy the stream if an error occurred', function (done) {
       const error = new Error(':(');
 
-      up.destroy = function (err) {
+      up.destroy = function (err: Error) {
         assert(err.message.indexOf(error.message) > -1);
         done();
       };
 
       up.authClient = {
-        authorizeRequest (reqOpts, callback) {
-          callback(error);
+        authorizeRequest (reqOpts: r.OptionsWithUri,callback: r.RequestCallback) {
+          callback(error, null!, null);
         }
       };
 
@@ -888,12 +924,12 @@ describe('gcs-resumable-upload', function () {
       };
 
       up.authClient = {
-        authorizeRequest (reqOpts, callback) {
+        authorizeRequest (reqOpts: r.OptionsWithUri,callback: Function) {
           callback(null, authorizedReqOpts);
         }
       };
 
-      requestMock = function (opts) {
+      requestMock = function (opts: r.OptionsWithUri) {
         assert.strictEqual(opts.uri, authorizedReqOpts.uri);
         assert.deepEqual(opts.headers, authorizedReqOpts.headers);
         assert.strictEqual(opts.json, authorizedReqOpts.json);
@@ -906,7 +942,7 @@ describe('gcs-resumable-upload', function () {
 
     it('should set the callback to a noop', function (done) {
       up.authClient = {
-        authorizeRequest (reqOpts, callback) {
+        authorizeRequest (reqOpts: r.OptionsWithUri,callback: Function) {
           callback();
         }
       };
@@ -915,7 +951,7 @@ describe('gcs-resumable-upload', function () {
         return through();
       };
 
-      up.getRequestStream(REQ_OPTS, function (requestStream) {
+      up.getRequestStream(REQ_OPTS, function (requestStream: any) {
         assert.strictEqual(requestStream.callback.toString(), 'function () { }');
         done();
       });
@@ -923,7 +959,7 @@ describe('gcs-resumable-upload', function () {
 
     it('should destroy the stream if there was an error', function (done) {
       up.authClient = {
-        authorizeRequest (reqOpts, callback) {
+        authorizeRequest (reqOpts: r.OptionsWithUri,callback: Function) {
           callback();
         }
       };
@@ -932,10 +968,10 @@ describe('gcs-resumable-upload', function () {
         return through();
       };
 
-      up.getRequestStream(REQ_OPTS, function (requestStream) {
+      up.getRequestStream(REQ_OPTS, function (requestStream: Stream) {
         const error = new Error(':(');
 
-        up.on('error', function (err) {
+        up.on('error', function (err: Error) {
           assert.strictEqual(err, error);
           done();
         });
@@ -946,7 +982,7 @@ describe('gcs-resumable-upload', function () {
 
     it('should destroy the stream if there was a body error', function (done) {
       up.authClient = {
-        authorizeRequest (reqOpts, callback) {
+        authorizeRequest (reqOpts: r.OptionsWithUri,callback: Function) {
           callback();
         }
       };
@@ -955,14 +991,14 @@ describe('gcs-resumable-upload', function () {
         return through();
       };
 
-      up.getRequestStream(REQ_OPTS, function (requestStream) {
+      up.getRequestStream(REQ_OPTS, function (requestStream: Stream) {
         const response = {
           body: {
             error: new Error(':(')
           }
         };
 
-        up.on('error', function (err) {
+        up.on('error', function (err: Error) {
           assert.strictEqual(err, response.body.error);
           done();
         });
@@ -973,8 +1009,8 @@ describe('gcs-resumable-upload', function () {
 
     it('should check if it should retry on response', function (done) {
       up.authClient = {
-        authorizeRequest (reqOpts, callback) {
-          callback();
+        authorizeRequest (reqOpts: r.OptionsWithUri, callback: r.RequestCallback) {
+          callback(null, null!, null);
         }
       };
 
@@ -984,21 +1020,21 @@ describe('gcs-resumable-upload', function () {
 
       const res = { statusCode: 200 };
 
-      up.onResponse = function (resp) {
+      up.onResponse = function (resp: r.Response) {
         assert.strictEqual(this, up);
         assert.strictEqual(resp, res);
         done();
       };
 
-      up.getRequestStream(REQ_OPTS, function (requestStream) {
+      up.getRequestStream(REQ_OPTS, function (requestStream: Stream) {
         requestStream.emit('response', res);
       });
     });
 
     it('should execute the callback with the stream', function (done) {
       up.authClient = {
-        authorizeRequest (reqOpts, callback) {
-          callback();
+        authorizeRequest (reqOpts: r.OptionsWithUri,callback: r.RequestCallback) {
+          callback(null, null!, null);
         }
       };
 
@@ -1008,7 +1044,7 @@ describe('gcs-resumable-upload', function () {
         return requestStream;
       };
 
-      up.getRequestStream(REQ_OPTS, function (reqStream) {
+      up.getRequestStream(REQ_OPTS, function (reqStream: Stream) {
         assert.strictEqual(reqStream, requestStream);
         done();
       });
@@ -1043,11 +1079,11 @@ describe('gcs-resumable-upload', function () {
       it('should destroy stream if it cannot create a URI', function (done) {
         const error = new Error(':(');
 
-        up.createURI = function (callback) {
+        up.createURI = function (callback: Function) {
           callback(error);
         };
 
-        up.destroy = function (err) {
+        up.destroy = function (err: Error) {
           assert.strictEqual(err, error);
           done();
         };
@@ -1056,7 +1092,7 @@ describe('gcs-resumable-upload', function () {
       });
 
       it('should start uploading', function (done) {
-        up.createURI = function (callback) {
+        up.createURI = function (callback: Function) {
           up.startUploading = done;
           callback();
         };
@@ -1072,11 +1108,11 @@ describe('gcs-resumable-upload', function () {
       const value = 'abc';
 
       up.configStore = {
-        get (name) {
+        get (name: string) {
           const actualKey = [up.bucket, up.file].join('/');
           assert.strictEqual(name, actualKey);
 
-          const obj = {};
+          const obj: any = {};
           obj[prop] = value;
           return obj;
         }
@@ -1091,7 +1127,7 @@ describe('gcs-resumable-upload', function () {
       const props = { setting: true };
 
       up.configStore = {
-        set (name, prps) {
+        set (name: string, prps: {}) {
           const actualKey = [up.bucket, up.file].join('/');
           assert.strictEqual(name, actualKey);
           assert.strictEqual(prps, props);
@@ -1108,7 +1144,7 @@ describe('gcs-resumable-upload', function () {
       const props = { setting: true };
 
       up.configStore = {
-        delete (name) {
+        delete (name: string) {
           const actualKey = [up.bucket, up.file].join('/');
           assert.strictEqual(name, actualKey);
           done();
@@ -1136,7 +1172,7 @@ describe('gcs-resumable-upload', function () {
       });
 
       it('should destroy the stream if gte limit', function (done) {
-        up.destroy = function (err) {
+        up.destroy = function (err: Error) {
           assert.strictEqual(err.message, 'Retry limit exceeded');
           done();
         };
@@ -1165,7 +1201,7 @@ describe('gcs-resumable-upload', function () {
       });
 
       it('should destroy the stream if greater than limit', function (done) {
-        up.destroy = function (err) {
+        up.destroy = function (err: Error) {
           assert.strictEqual(err.message, 'Retry limit exceeded');
           done();
         };
@@ -1186,7 +1222,7 @@ describe('gcs-resumable-upload', function () {
         };
 
         const setTimeout = global.setTimeout;
-        (global as any).setTimeout = function (cb, delay) {
+        (global as any).setTimeout = function (cb: Function, delay: Number) {
           const minTime = Math.pow(2, up.numRetries - 1) * 1000;
           const maxTime = minTime + 1000;
 
@@ -1195,7 +1231,7 @@ describe('gcs-resumable-upload', function () {
           cb();
         };
 
-        up.on('error', function (err) {
+        up.on('error', function (err: Error) {
           assert.strictEqual(up.numRetries, 5);
           assert.strictEqual(err.message, 'Retry limit exceeded');
           global.setTimeout = setTimeout;
@@ -1210,7 +1246,7 @@ describe('gcs-resumable-upload', function () {
       const RESP = { statusCode: 200 };
 
       it('should emit the response on the stream', function (done) {
-        up.on('response', function (resp) {
+        up.on('response', function (resp: r.Response) {
           assert.strictEqual(resp, RESP);
           done();
         });
