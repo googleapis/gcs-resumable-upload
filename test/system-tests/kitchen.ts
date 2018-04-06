@@ -31,8 +31,7 @@ describe('end to end', () => {
       const size = fd.size;
 
       // tslint:disable-next-line no-any
-      const doUpload =
-          (opts: {interrupt?: boolean}, callback: (...args: any[]) => void) => {
+      const doUpload = function (opts: {interrupt?: boolean}, callback: (...args: any[]) => void) {
             let sizeStreamed = 0;
             let destroyed = false;
 
