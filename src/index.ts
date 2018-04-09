@@ -10,6 +10,10 @@ const bufferEqual = require('buffer-equal');
 const googleAuth = require('google-auto-auth');
 const Pumpify = require('pumpify');
 
+export type RequestBody = any;
+export type RequestResponse = r.Response;
+export type Request = r.Request;
+
 const request = r.defaults({
   json: true,
   pool: {
