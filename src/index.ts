@@ -6,7 +6,6 @@ import * as r from 'request';
 import { Stream } from 'stream';
 
 const StreamEvents = require('stream-events');
-const bufferEqual = require('buffer-equal');
 const googleAuth = require('google-auto-auth');
 const Pumpify = require('pumpify');
 
@@ -284,7 +283,7 @@ Upload.prototype.onChunk = function (chunk: string, enc: string, next: (err: Err
       cachedFirstChunk = Buffer.from(cachedFirstChunk);
       firstChunk = Buffer.from(firstChunk);
 
-      if (!bufferEqual(cachedFirstChunk, firstChunk)) {
+      if (Buffer.compare(cachedFirstChunk, firstChunk) !== 0) {
         // this data is not the same. start a new upload
         this.bufferStream.unshift(chunk);
         this.bufferStream.unpipe(this.offsetStream);
