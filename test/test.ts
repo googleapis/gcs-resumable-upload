@@ -9,8 +9,6 @@ import * as through from 'through2';
 
 import {Request, RequestBody, RequestResponse} from '../src';
 
-const bufferEqual = require('buffer-equal');
-
 let configData = {} as {[index: string]: {}};
 function ConfigStore() {
   this.delete = (key: string) => {
@@ -506,13 +504,11 @@ describe('gcs-resumable-upload', () => {
         it('should save the uri and first chunk if its not cached', () => {
           const URI = 'uri';
           up.uri = URI;
-
-          up.set = (props: {uri?: string, firstChunk?: string}) => {
-            const firstChunk = CHUNK.slice(0, 16).valueOf();
+          up.set = (props: {uri?: string, firstChunk: Buffer}) => {
+            const firstChunk = CHUNK.slice(0, 16);
             assert.deepEqual(props.uri, URI);
-            assert.strictEqual(bufferEqual(props.firstChunk, firstChunk), true);
+            assert.strictEqual(Buffer.compare(props.firstChunk, firstChunk), 0);
           };
-
           up.onChunk(CHUNK, ENC, NEXT);
         });
       });
@@ -564,11 +560,11 @@ describe('gcs-resumable-upload', () => {
       it('should slice the chunk by the offset - numBytesWritten', (done) => {
         const OFFSET = 8;
         up.offset = OFFSET;
-        up.onChunk(CHUNK, ENC, (err: Error, chunk: string) => {
+        up.onChunk(CHUNK, ENC, (err: Error, chunk: Buffer) => {
           assert.ifError(err);
 
           const expectedChunk = CHUNK.slice(OFFSET);
-          assert.strictEqual(bufferEqual(chunk, expectedChunk), true);
+          assert.strictEqual(Buffer.compare(chunk, expectedChunk), 0);
           done();
         });
       });
