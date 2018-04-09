@@ -1,24 +1,20 @@
-import * as crypto from 'crypto';
 import * as ConfigStore from 'configstore';
+import * as crypto from 'crypto';
+import * as r from 'request';
+import {Stream} from 'stream';
 import * as through from 'through2';
 import * as util from 'util';
-import * as r from 'request';
-import { Stream } from 'stream';
 
-const StreamEvents = require('stream-events');
+const streamEvents = require('stream-events');
 const googleAuth = require('google-auto-auth');
-const Pumpify = require('pumpify');
+const pumpify = require('pumpify');
 
+// tslint:disable-next-line no-any
 export type RequestBody = any;
 export type RequestResponse = r.Response;
 export type Request = r.Request;
 
-const request = r.defaults({
-  json: true,
-  pool: {
-    maxSockets: Infinity
-  }
-});
+const request = r.defaults({json: true, pool: {maxSockets: Infinity}});
 
 const BASE_URI = 'https://www.googleapis.com/upload/storage/v1/b';
 const TERMINATED_UPLOAD_STATUS_CODE = 410;
@@ -39,21 +35,22 @@ interface UploadConfig {
    * The name of the destination file.
    */
   file: string;
-  authConfig?: {
-    scopes?: string[];
-  };
+  authConfig?: {scopes?: string[];};
   /**
-   * If you want to re-use an auth client from google-auto-auth, pass an instance here.
+   * If you want to re-use an auth client from google-auto-auth, pass an
+   * instance here.
    */
   authClient?: {};
 
   /**
-   * This will cause the upload to fail if the current generation of the remote object does not match the one provided here.
+   * This will cause the upload to fail if the current generation of the remote
+   * object does not match the one provided here.
    */
   generation?: number;
 
   /**
-   * A customer-supplied encryption key. See https://cloud.google.com/storage/docs/encryption#customer-supplied.
+   * A customer-supplied encryption key. See
+   * https://cloud.google.com/storage/docs/encryption#customer-supplied.
    */
   key?: string|Buffer;
 
@@ -74,7 +71,8 @@ interface UploadConfig {
 
   /**
    * The starting byte of the upload stream, for resuming an interrupted upload.
-   * See https://cloud.google.com/storage/docs/json_api/v1/how-tos/resumable-upload#resume-upload.
+   * See
+   * https://cloud.google.com/storage/docs/json_api/v1/how-tos/resumable-upload#resume-upload.
    */
   offset?: number;
 
@@ -86,34 +84,37 @@ interface UploadConfig {
   /**
    * Apply a predefined set of access controls to the created file.
    */
-  predefinedAcl?: 'authenticatedRead'|'bucketOwnerFullControl'|'bucketOwnerRead'|'private'|'projectPrivate'|'publicRead';
+  predefinedAcl?: 'authenticatedRead'|'bucketOwnerFullControl'|
+      'bucketOwnerRead'|'private'|'projectPrivate'|'publicRead';
 
   /**
-   * Make the uploaded file private. (Alias for config.predefinedAcl = 'private')
+   * Make the uploaded file private. (Alias for config.predefinedAcl =
+   * 'private')
    */
   private?: boolean;
 
   /**
-   * Make the uploaded file public. (Alias for config.predefinedAcl = 'publicRead')
+   * Make the uploaded file public. (Alias for config.predefinedAcl =
+   * 'publicRead')
    */
   public?: boolean;
 
   /**
-   * If you already have a resumable URI from a previously-created resumable upload, just pass it in here and we'll use that.
+   * If you already have a resumable URI from a previously-created resumable
+   * upload, just pass it in here and we'll use that.
    */
   uri?: string;
 
   /**
-   * If the bucket being accessed has requesterPays functionality enabled, this can be set to control which project is billed for the access of this file.
+   * If the bucket being accessed has requesterPays functionality enabled, this
+   * can be set to control which project is billed for the access of this file.
    */
   userProject?: string;
-
 }
 
-function Upload (cfg: UploadConfig) {
-
-  Pumpify.call(this);
-  StreamEvents.call(this);
+function Upload(cfg: UploadConfig) {
+  pumpify.call(this);
+  streamEvents.call(this);
 
   cfg = cfg || {};
 
@@ -122,7 +123,8 @@ function Upload (cfg: UploadConfig) {
   }
 
   cfg.authConfig = cfg.authConfig || {};
-  cfg.authConfig.scopes = ['https://www.googleapis.com/auth/devstorage.full_control'];
+  cfg.authConfig.scopes =
+      ['https://www.googleapis.com/auth/devstorage.full_control'];
   this.authClient = cfg.authClient || googleAuth(cfg.authConfig);
 
   this.bucket = cfg.bucket;
@@ -173,18 +175,16 @@ function Upload (cfg: UploadConfig) {
   });
 }
 
-util.inherits(Upload, Pumpify);
+util.inherits(Upload, pumpify);
 
-Upload.prototype.createURI = function (callback: (err: Error|null, uri?: string) => void) {
+Upload.prototype.createURI = function(
+    callback: (err: Error|null, uri?: string) => void) {
   const metadata = this.metadata;
 
   const reqOpts: r.Options = {
     method: 'POST',
     uri: [BASE_URI, this.bucket, 'o'].join('/'),
-    qs: {
-      name: this.file,
-      uploadType: 'resumable'
-    },
+    qs: {name: this.file, uploadType: 'resumable'},
     json: metadata,
     headers: {}
   };
@@ -216,27 +216,26 @@ Upload.prototype.createURI = function (callback: (err: Error|null, uri?: string)
 
     const uri = resp.headers.location;
     this.uri = uri;
-    this.set({ uri });
+    this.set({uri});
     this.offset = 0;
 
     callback(null, uri);
   });
 };
 
-Upload.prototype.continueUploading = function () {
+Upload.prototype.continueUploading = function() {
   if (typeof this.offset === 'number') {
     return this.startUploading();
   }
   this.getAndSetOffset(this.startUploading.bind(this));
 };
 
-Upload.prototype.startUploading = function (){
+Upload.prototype.startUploading = function() {
   const reqOpts = {
     method: 'PUT',
     uri: this.uri,
-    headers: {
-      'Content-Range': 'bytes ' + this.offset + '-*/' + this.contentLength
-    }
+    headers:
+        {'Content-Range': 'bytes ' + this.offset + '-*/' + this.contentLength}
   };
 
   const bufferStream = this.bufferStream = through();
@@ -247,7 +246,9 @@ Upload.prototype.startUploading = function (){
     this.setPipeline(bufferStream, offsetStream, requestStream, delayStream);
 
     // wait for "complete" from request before letting the stream finish
-    delayStream.on('prefinish', () => { this.cork(); });
+    delayStream.on('prefinish', () => {
+      this.cork();
+    });
 
     requestStream.on('complete', resp => {
       if (resp.statusCode < 200 || resp.statusCode > 299) {
@@ -262,7 +263,9 @@ Upload.prototype.startUploading = function (){
   });
 };
 
-Upload.prototype.onChunk = function (chunk: string, enc: string, next: (err: Error|null, data?: string) => void) {
+Upload.prototype.onChunk = function(
+    chunk: string, enc: string,
+    next: (err: Error|null, data?: string) => void) {
   const offset = this.offset;
   const numBytesWritten = this.numBytesWritten;
 
@@ -270,20 +273,16 @@ Upload.prototype.onChunk = function (chunk: string, enc: string, next: (err: Err
   // of the first chunk, then compares it with the first byte of incoming data
   if (numBytesWritten === 0) {
     let cachedFirstChunk = this.get('firstChunk');
-    let firstChunk: any = chunk.slice(0, 16).valueOf();
+    const firstChunk = chunk.slice(0, 16).valueOf();
 
     if (!cachedFirstChunk) {
       // This is a new upload. Cache the first chunk.
-      this.set({
-        uri: this.uri,
-        firstChunk
-      });
+      this.set({uri: this.uri, firstChunk});
     } else {
       // this continues an upload in progress. check if the bytes are the same
       cachedFirstChunk = Buffer.from(cachedFirstChunk);
-      firstChunk = Buffer.from(firstChunk);
-
-      if (Buffer.compare(cachedFirstChunk, firstChunk) !== 0) {
+      const nextChunk = Buffer.from(firstChunk);
+      if (Buffer.compare(cachedFirstChunk, nextChunk) !== 0) {
         // this data is not the same. start a new upload
         this.bufferStream.unshift(chunk);
         this.bufferStream.unpipe(this.offsetStream);
@@ -305,49 +304,50 @@ Upload.prototype.onChunk = function (chunk: string, enc: string, next: (err: Err
 };
 
 Upload.prototype.getAndSetOffset = function(callback: () => void) {
+  this.makeRequest(
+      {
+        method: 'PUT',
+        uri: this.uri,
+        headers: {'Content-Length': 0, 'Content-Range': 'bytes */*'}
+      },
+      (err: Error|null, resp: r.RequestResponse) => {
+        if (err) {
+          // we don't return a 404 to the user if they provided the resumable
+          // URI. if we're just using the configstore file to tell us that this
+          // file exists, and it turns out that it doesn't (the 404), that's
+          // probably stale config data.
+          if (resp && resp.statusCode === 404 && !this.uriProvidedManually) {
+            return this.restart();
+          }
 
-  this.makeRequest({
-    method: 'PUT',
-    uri: this.uri,
-    headers: {
-      'Content-Length': 0,
-      'Content-Range': 'bytes */*'
-    }
-  }, (err: Error|null, resp: r.RequestResponse) => {
-    if (err) {
-      // we don't return a 404 to the user if they provided the resumable URI.
-      // if we're just using the configstore file to tell us that this file
-      // exists, and it turns out that it doesn't (the 404), that's probably
-      // stale config data.
-      if (resp && resp.statusCode === 404 && !this.uriProvidedManually) {
-        return this.restart();
-      }
+          // this resumable upload is unrecoverable (bad data or service error).
+          //  -
+          //  https://github.com/stephenplusplus/gcs-resumable-upload/issues/15
+          //  -
+          //  https://github.com/stephenplusplus/gcs-resumable-upload/pull/16#discussion_r80363774
+          if (resp && resp.statusCode === TERMINATED_UPLOAD_STATUS_CODE) {
+            return this.restart();
+          }
 
-      // this resumable upload is unrecoverable (bad data or service error).
-      //  - https://github.com/stephenplusplus/gcs-resumable-upload/issues/15
-      //  - https://github.com/stephenplusplus/gcs-resumable-upload/pull/16#discussion_r80363774
-      if (resp && resp.statusCode === TERMINATED_UPLOAD_STATUS_CODE) {
-        return this.restart();
-      }
+          return this.destroy(err);
+        }
 
-      return this.destroy(err);
-    }
+        if (resp.statusCode === RESUMABLE_INCOMPLETE_STATUS_CODE) {
+          if (resp.headers.range) {
+            const range = resp.headers.range as string;
+            this.offset = Number(range.split('-')[1]) + 1;
+            callback();
+            return;
+          }
+        }
 
-    if (resp.statusCode === RESUMABLE_INCOMPLETE_STATUS_CODE) {
-      if (resp.headers.range) {
-        const range = resp.headers.range as string;
-        this.offset = Number(range.split('-')[1]) + 1;
+        this.offset = 0;
         callback();
-        return;
-      }
-    }
-
-    this.offset = 0;
-    callback();
-  });
+      });
 };
 
-Upload.prototype.makeRequest = function(reqOpts: r.Options, callback: r.RequestCallback) {
+Upload.prototype.makeRequest = function(
+    reqOpts: r.Options, callback: r.RequestCallback) {
   if (this.encryption) {
     reqOpts.headers = reqOpts.headers || {};
     reqOpts.headers['x-goog-encryption-algorithm'] = 'AES256';
@@ -360,56 +360,60 @@ Upload.prototype.makeRequest = function(reqOpts: r.Options, callback: r.RequestC
     reqOpts.qs.userProject = this.userProject;
   }
 
-  this.authClient.authorizeRequest(reqOpts, (err: Error, authorizedReqOpts: r.Options) => {
-    if (err) {
-      err = wrapError('Could not authenticate request', err);
-      return callback(err, null!, null);
-    }
+  this.authClient.authorizeRequest(
+      reqOpts, (err: Error, authorizedReqOpts: r.Options) => {
+        if (err) {
+          err = wrapError('Could not authenticate request', err);
+          return callback(err, null!, null);
+        }
 
-    request(authorizedReqOpts, (err, resp, body) => {
-      if (err) {
-        return callback(err, resp, body);
-      }
+        request(authorizedReqOpts, (err, resp, body) => {
+          if (err) {
+            return callback(err, resp, body);
+          }
 
-      if (body && body.error) {
-        return callback(body.error, resp, body);
-      }
+          if (body && body.error) {
+            return callback(body.error, resp, body);
+          }
 
-      const nonSuccess = Math.floor(resp.statusCode / 100) !== 2; // 200-299 status code
-      if (nonSuccess && resp.statusCode !== RESUMABLE_INCOMPLETE_STATUS_CODE) {
-        return callback(new Error(body), resp, body);
-      }
+          const nonSuccess =
+              Math.floor(resp.statusCode / 100) !== 2;  // 200-299 status code
+          if (nonSuccess &&
+              resp.statusCode !== RESUMABLE_INCOMPLETE_STATUS_CODE) {
+            return callback(new Error(body), resp, body);
+          }
 
-      callback(null, resp, body);
-    });
-  });
+          callback(null, resp, body);
+        });
+      });
 };
 
-Upload.prototype.getRequestStream = function(reqOpts: r.Options, callback: (requestStream: r.Request) => void) {
-
+Upload.prototype.getRequestStream = function(
+    reqOpts: r.Options, callback: (requestStream: r.Request) => void) {
   if (this.userProject) {
     reqOpts.qs = reqOpts.qs || {};
     reqOpts.qs.userProject = this.userProject;
   }
 
-  this.authClient.authorizeRequest(reqOpts, (err: Error, authorizedReqOpts: r.Options) => {
-    if (err) {
-      return this.destroy(wrapError('Could not authenticate request', err));
-    }
+  this.authClient.authorizeRequest(
+      reqOpts, (err: Error, authorizedReqOpts: r.Options) => {
+        if (err) {
+          return this.destroy(wrapError('Could not authenticate request', err));
+        }
 
-    const requestStream = request(authorizedReqOpts);
-    requestStream.on('error', this.destroy.bind(this));
-    requestStream.on('response', this.onResponse.bind(this));
-    requestStream.on('complete', (resp) => {
-      const body = resp.body;
-      if (body && body.error) this.destroy(body.error);
-    });
+        const requestStream = request(authorizedReqOpts);
+        requestStream.on('error', this.destroy.bind(this));
+        requestStream.on('response', this.onResponse.bind(this));
+        requestStream.on('complete', (resp) => {
+          const body = resp.body;
+          if (body && body.error) this.destroy(body.error);
+        });
 
-    // this makes the response body come back in the response (weird?)
-    requestStream.callback = () => {};
+        // this makes the response body come back in the response (weird?)
+        requestStream.callback = () => {};
 
-    callback(requestStream);
-  });
+        callback(requestStream);
+      });
 };
 
 Upload.prototype.restart = function() {
@@ -428,6 +432,7 @@ Upload.prototype.get = function(prop: string) {
   return store && store[prop];
 };
 
+// tslint:disable-next-line no-any
 Upload.prototype.set = function(props: any) {
   this.configStore.set([this.bucket, this.file].join('/'), props);
 };
@@ -469,12 +474,16 @@ Upload.prototype.onResponse = function(resp: r.RequestResponse) {
 };
 
 function upload(cfg: UploadConfig) {
+  // tslint:disable-next-line no-any
   return new (Upload as any)(cfg);
 }
 
-(upload as any).createURI = (cfg: UploadConfig, callback: (err: Error|null, uri?: string) => void) => {
-  const up = new (Upload as any)(cfg);
-  up.createURI(callback);
-};
+// tslint:disable-next-line no-any
+(upload as any).createURI =
+    (cfg: UploadConfig, callback: (err: Error|null, uri?: string) => void) => {
+      // tslint:disable-next-line no-any
+      const up = new (Upload as any)(cfg);
+      up.createURI(callback);
+    };
 
 module.exports = upload;

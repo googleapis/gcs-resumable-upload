@@ -9,10 +9,10 @@
     "gcs-upload": "build/src/cli.js"
   },
   "scripts": {
-    "test": "mocha build/test -r source-map-support/register",
+    "test": "mocha build/test -r source-map-support/register && gts check",
     "check": "gts check",
     "clean": "gts clean",
-    "compile": "tsc -p .",
+    "compile": "gts fix && tsc -p .",
     "fix": "gts fix",
     "prepare": "npm run compile",
     "pretest": "npm run compile",
