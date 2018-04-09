@@ -14,6 +14,7 @@
     "clean": "gts clean",
     "compile": "tsc -p .",
     "fix": "gts fix",
+    "posttest": "npm run check",
     "prepare": "npm run compile",
     "pretest": "npm run compile",
     "system-tests": "mocha build/test/system-tests -r source-map-support/register --timeout 20000"
