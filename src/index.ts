@@ -1,8 +1,7 @@
 import * as ConfigStore from 'configstore';
 import * as crypto from 'crypto';
 import * as r from 'request';
-import {Stream} from 'stream';
-import * as through from 'through2';
+import {Stream, Transform} from 'stream';
 import * as util from 'util';
 
 const streamEvents = require('stream-events');
@@ -238,9 +237,10 @@ Upload.prototype.startUploading = function() {
         {'Content-Range': 'bytes ' + this.offset + '-*/' + this.contentLength}
   };
 
-  const bufferStream = this.bufferStream = through();
-  const offsetStream = this.offsetStream = through(this.onChunk.bind(this));
-  const delayStream = through();
+  const bufferStream = this.bufferStream = new Transform();
+  const offsetStream = this.offsetStream =
+      new Transform(this.onChunk.bind(this));
+  const delayStream = new Transform();
 
   this.getRequestStream(reqOpts, (requestStream: Stream) => {
     this.setPipeline(bufferStream, offsetStream, requestStream, delayStream);

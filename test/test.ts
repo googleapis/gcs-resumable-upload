@@ -4,8 +4,7 @@ import {EventEmitter} from 'events';
 import * as isStream from 'is-stream';
 import * as mockery from 'mockery';
 import * as r from 'request';
-import * as stream from 'stream';
-import * as through from 'through2';
+import {Readable, Transform} from 'stream';
 
 import {Request, RequestBody, RequestResponse} from '../src';
 
@@ -371,10 +370,10 @@ describe('gcs-resumable-upload', () => {
     });
 
     it('should set the pipeline', (done) => {
-      const requestStream = through();
+      const requestStream = new Transform();
 
       up.setPipeline =
-          (buffer: Buffer, offset: number, request: stream.Readable,
+          (buffer: Buffer, offset: number, request: Readable,
            delay: number) => {
             assert.strictEqual(buffer, up.bufferStream);
             assert.strictEqual(offset, up.offsetStream);
@@ -403,7 +402,7 @@ describe('gcs-resumable-upload', () => {
           };
 
       up.getRequestStream = (reqOpts: r.OptionsWithUri, callback: Function) => {
-        callback(through());
+        callback(new Transform());
       };
 
       up.startUploading();
@@ -413,7 +412,7 @@ describe('gcs-resumable-upload', () => {
       const BODY = {hi: 1};
       const RESP = {body: BODY};
 
-      const requestStream = through();
+      const requestStream = new Transform();
 
       up.getRequestStream = (reqOpts: r.OptionsWithUri, callback: Function) => {
         callback(requestStream);
@@ -431,7 +430,7 @@ describe('gcs-resumable-upload', () => {
 
     it('should destroy the stream if an error occurred', (done) => {
       const RESP = {body: '', statusCode: 404};
-      const requestStream = through();
+      const requestStream = new Transform();
 
       up.getRequestStream = (reqOpts: r.OptionsWithUri, callback: Function) => {
         callback(requestStream);
@@ -452,7 +451,7 @@ describe('gcs-resumable-upload', () => {
 
     it('should delete the config', (done) => {
       const RESP = {body: ''};
-      const requestStream = through();
+      const requestStream = new Transform();
 
       up.getRequestStream = (reqOpts: r.OptionsWithUri, callback: Function) => {
         callback(requestStream);
@@ -465,7 +464,7 @@ describe('gcs-resumable-upload', () => {
 
     it('should uncork the stream', (done) => {
       const RESP = {body: ''};
-      const requestStream = through();
+      const requestStream = new Transform();
 
       up.getRequestStream = (reqOpts: r.OptionsWithUri, callback: Function) => {
         callback(requestStream);
@@ -515,8 +514,8 @@ describe('gcs-resumable-upload', () => {
 
       describe('continued upload', () => {
         beforeEach(() => {
-          up.bufferStream = through();
-          up.offsetStream = through();
+          up.bufferStream = new Transform();
+          up.offsetStream = new Transform();
           up.get = () => CHUNK;
           up.restart = () => {};
         });
@@ -532,7 +531,7 @@ describe('gcs-resumable-upload', () => {
            });
 
         it('should unpipe the offset stream', (done) => {
-          up.bufferStream.unpipe = (stream: stream.Readable) => {
+          up.bufferStream.unpipe = (stream: Readable) => {
             assert.strictEqual(stream, up.offsetStream);
             done();
           };
@@ -925,7 +924,7 @@ describe('gcs-resumable-upload', () => {
         assert.deepEqual(opts.headers, authorizedReqOpts.headers);
         assert.strictEqual(opts.json, authorizedReqOpts.json);
         setImmediate(done);
-        return through();
+        return new Transform();
       };
 
       up.getRequestStream(REQ_OPTS, () => {});
@@ -939,11 +938,11 @@ describe('gcs-resumable-upload', () => {
       };
 
       requestMock = () => {
-        return through();
+        return new Transform();
       };
 
       up.getRequestStream(
-          REQ_OPTS, (requestStream: stream.Readable&{callback: Function}) => {
+          REQ_OPTS, (requestStream: Readable&{callback: Function}) => {
             assert.strictEqual(
                 requestStream.callback.toString(), 'function () { }');
             done();
@@ -958,10 +957,10 @@ describe('gcs-resumable-upload', () => {
       };
 
       requestMock = () => {
-        return through();
+        return new Transform();
       };
 
-      up.getRequestStream(REQ_OPTS, (requestStream: stream.Readable) => {
+      up.getRequestStream(REQ_OPTS, (requestStream: Readable) => {
         const error = new Error(':(');
 
         up.on('error', (err: Error) => {
@@ -981,10 +980,10 @@ describe('gcs-resumable-upload', () => {
       };
 
       requestMock = () => {
-        return through();
+        return new Transform();
       };
 
-      up.getRequestStream(REQ_OPTS, (requestStream: stream.Readable) => {
+      up.getRequestStream(REQ_OPTS, (requestStream: Readable) => {
         const response = {body: {error: new Error(':(')}};
 
         up.on('error', (err: Error) => {
@@ -1005,7 +1004,7 @@ describe('gcs-resumable-upload', () => {
       };
 
       requestMock = () => {
-        return through();
+        return new Transform();
       };
 
       const res = {statusCode: 200};
@@ -1016,7 +1015,7 @@ describe('gcs-resumable-upload', () => {
         done();
       };
 
-      up.getRequestStream(REQ_OPTS, (requestStream: stream.Readable) => {
+      up.getRequestStream(REQ_OPTS, (requestStream: Readable) => {
         requestStream.emit('response', res);
       });
     });
@@ -1029,13 +1028,13 @@ describe('gcs-resumable-upload', () => {
         }
       };
 
-      const requestStream = through();
+      const requestStream = new Transform();
 
       requestMock = () => {
         return requestStream;
       };
 
-      up.getRequestStream(REQ_OPTS, (reqStream: stream.Readable) => {
+      up.getRequestStream(REQ_OPTS, (reqStream: Readable) => {
         assert.strictEqual(reqStream, requestStream);
         done();
       });
