@@ -37,8 +37,7 @@
     "google-auto-auth": "^0.10.0",
     "pumpify": "^1.4.0",
     "request": "^2.85.0",
-    "stream-events": "^1.0.3",
-    "through2": "^2.0.3"
+    "stream-events": "^1.0.3"
   },
   "devDependencies": {
     "@types/configstore": "^2.1.1",
