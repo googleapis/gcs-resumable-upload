@@ -144,7 +144,7 @@ function Upload(cfg: UploadConfig) {
     const base64Key = Buffer.from(cfg.key as string).toString('base64');
     this.encryption = {
       key: base64Key,
-      hash: crypto.createHash('sha256').update(base64Key).digest('base64')
+      hash: crypto.createHash('sha256').update(cfg.key).digest('base64')
     };
   }
 
