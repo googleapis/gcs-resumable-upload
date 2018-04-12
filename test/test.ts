@@ -120,7 +120,7 @@ describe('gcs-resumable-upload', () => {
 
       const expectedKey = key.toString('base64');
       const expectedHash =
-          crypto.createHash('sha256').update(expectedKey).digest('base64');
+          crypto.createHash('sha256').update(key).digest('base64');
 
       assert.deepEqual(up.encryption, {key: expectedKey, hash: expectedHash});
     });
