@@ -3,13 +3,15 @@ import * as fs from 'fs';
 import * as r from 'request';
 const upload = require('../../src');
 
+const bucketName = process.env.BUCKET_NAME || 'stephen-has-a-new-bucket';
+
 describe('end to end', () => {
   it('should work', (done) => {
     let uploadSucceeded = false;
     fs.createReadStream('daw.jpg')
         .on('error', done)
         .pipe(upload({
-          bucket: 'stephen-has-a-new-bucket',
+          bucket: bucketName,
           file: 'daw.jpg',
           metadata: {contentType: 'image/jpg'}
         }))
@@ -38,7 +40,7 @@ describe('end to end', () => {
             let destroyed = false;
 
             const ws = upload({
-              bucket: 'stephen-has-a-new-bucket',
+              bucket: bucketName,
               file: 'daw.jpg',
               metadata: {contentType: 'image/jpg'}
             });
@@ -77,7 +79,7 @@ describe('end to end', () => {
   it('should just make an upload URI', (done) => {
     upload.createURI(
         {
-          bucket: 'stephen-has-a-new-bucket',
+          bucket: bucketName,
           file: 'daw.jpg',
           metadata: {contentType: 'image/jpg'}
         },
