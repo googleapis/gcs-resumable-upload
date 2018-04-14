@@ -1,8 +1,6 @@
 import * as assert from 'assert';
 import * as crypto from 'crypto';
 import {EventEmitter} from 'events';
-import * as fs from 'fs';
-import {request} from 'http';
 import * as isStream from 'is-stream';
 import * as mockery from 'mockery';
 import * as nock from 'nock';
@@ -342,7 +340,7 @@ describe('gcs-resumable-upload', () => {
       const URI = 'uri';
       const OFFSET = 8;
 
-      up.url = URI;
+      up.uri = URI;
       up.offset = OFFSET;
 
       up.getRequestStream = (reqOpts: RequestOptions) => {
@@ -429,7 +427,7 @@ describe('gcs-resumable-upload', () => {
     });
 
     it('should destroy the stream if an error occurred', (done) => {
-      const RESP = {data: '', statusCode: 404};
+      const RESP = {body: '', statusCode: 404};
       const requestStream = through();
 
       up.getRequestStream = (reqOpts: RequestOptions, callback: Function) => {
@@ -628,7 +626,7 @@ describe('gcs-resumable-upload', () => {
       });
 
       it('should not restart if URI provided manually', (done) => {
-        up.urlProvidedManually = true;
+        up.uriProvidedManually = true;
         up.restart = done;  // will cause test to fail
         up.on('error', (err: Error) => {
           assert.strictEqual(err, ERROR);
@@ -786,6 +784,23 @@ describe('gcs-resumable-upload', () => {
         done();
       });
     });
+
+    it('should execute the callback with a body error & response for non-2xx status codes',
+       (done) => {
+         const response = {statusCode: 500, body: {error: '!$#@'}};
+         mockAuthorizeRequest(up);
+         const scope = nock(REQ_OPTS.uri)
+                           .get('/?userProject=user-project-id')
+                           .reply(500, response.body);
+         up.makeRequest(
+             REQ_OPTS,
+             (err: Error, resp: RequestResponse, body: RequestBody) => {
+               assert.strictEqual(err, response.body.error);
+               assert.deepStrictEqual(resp.statusCode, 500);
+               assert.deepStrictEqual(body, response.body);
+               done();
+             });
+       });
 
     it('should execute the callback', (done) => {
       const data = {red: 'tape'};
