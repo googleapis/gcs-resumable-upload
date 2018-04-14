@@ -1,12 +1,15 @@
 import * as assert from 'assert';
 import * as fs from 'fs';
-import * as r from 'request';
+import * as path from 'path';
+import {RequestResponse} from '../../src';
 const upload = require('../../src');
+
+const dawPath = path.join(__dirname, '../../../test/fixtures/daw.jpg');
 
 describe('end to end', () => {
   it('should work', (done) => {
     let uploadSucceeded = false;
-    fs.createReadStream('daw.jpg')
+    fs.createReadStream(dawPath)
         .on('error', done)
         .pipe(upload({
           bucket: 'stephen-has-a-new-bucket',
@@ -15,8 +18,8 @@ describe('end to end', () => {
         }))
         .on('error', done)
         .on('response',
-            (resp: r.Response) => {
-              uploadSucceeded = resp.statusCode === 200;
+            (resp: RequestResponse) => {
+              uploadSucceeded = resp.status === 200;
             })
         .on('finish', () => {
           assert.strictEqual(uploadSucceeded, true);
@@ -25,7 +28,7 @@ describe('end to end', () => {
   });
 
   it('should resume an interrupted upload', (done) => {
-    fs.stat('daw.jpg', (err, fd) => {
+    fs.stat(dawPath, (err, fd) => {
       assert.ifError(err);
 
       const size = fd.size;
@@ -43,7 +46,7 @@ describe('end to end', () => {
               metadata: {contentType: 'image/jpg'}
             });
 
-            fs.createReadStream('daw.jpg')
+            fs.createReadStream(dawPath)
                 .on('error', callback)
                 .on('data',
                     function(chunk) {
