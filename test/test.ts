@@ -598,8 +598,7 @@ describe('gcs-resumable-upload', () => {
 
     it('should make the correct request', (done) => {
       const URI = 'uri';
-      up.url = URI;
-
+      up.uri = URI;
       up.makeRequest = (reqOpts: RequestOptions) => {
         assert.strictEqual(reqOpts.method, 'PUT');
         assert.strictEqual(reqOpts.url, URI);

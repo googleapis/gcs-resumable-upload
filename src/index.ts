@@ -243,8 +243,7 @@ Upload.prototype.startUploading = function() {
   const reqOpts = {
     method: 'PUT',
     url: this.uri,
-    headers:
-        {'Content-Range': `bytes ${this.offset}-*/${this.contentLength}`}
+    headers: {'Content-Range': `bytes ${this.offset}-*/${this.contentLength}`}
   };
 
   const bufferStream = this.bufferStream = through();
@@ -398,7 +397,6 @@ Upload.prototype.makeRequest = function(
 
 Upload.prototype.getRequestStream = function(
     reqOpts: RequestOptions, callback: (requestStream: Readable) => void) {
-
   if (this.userProject) {
     reqOpts.params = reqOpts.params || {};
     reqOpts.params.userProject = this.userProject;
