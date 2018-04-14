@@ -4,7 +4,7 @@ import * as path from 'path';
 import {RequestResponse} from '../../src';
 const upload = require('../../src');
 
-const dawPath = path.join(__dirname, 'test/fixtures/daw.jpg');
+const dawPath = path.join(__dirname, '../../../test/fixtures/daw.jpg');
 
 describe('end to end', () => {
   it('should work', (done) => {
