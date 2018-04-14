@@ -17,7 +17,7 @@
     "posttest": "npm run check",
     "prepare": "npm run compile",
     "pretest": "npm run compile",
-    "system-tests": "mocha build/test/system-tests -r source-map-support/register --timeout 20000"
+    "system-tests": "npm run compile && mocha build/test/system-tests -r source-map-support/register --timeout 20000"
   },
   "keywords": [
     "google",

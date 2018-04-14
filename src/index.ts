@@ -242,9 +242,9 @@ Upload.prototype.continueUploading = function() {
 Upload.prototype.startUploading = function() {
   const reqOpts = {
     method: 'PUT',
-    uri: this.uri,
+    url: this.uri,
     headers:
-        {'Content-Range': 'bytes ' + this.offset + '-*/' + this.contentLength}
+        {'Content-Range': `bytes ${this.offset}-*/${this.contentLength}`}
   };
 
   const bufferStream = this.bufferStream = through();
@@ -316,7 +316,7 @@ Upload.prototype.getAndSetOffset = function(callback: () => void) {
   this.makeRequest(
       {
         method: 'PUT',
-        url: this.url,
+        url: this.uri,
         headers: {'Content-Length': 0, 'Content-Range': 'bytes */*'}
       },
       (err: Error|null, resp: RequestResponse) => {
@@ -398,11 +398,12 @@ Upload.prototype.makeRequest = function(
 
 Upload.prototype.getRequestStream = function(
     reqOpts: RequestOptions, callback: (requestStream: Readable) => void) {
+
   if (this.userProject) {
     reqOpts.params = reqOpts.params || {};
     reqOpts.params.userProject = this.userProject;
   }
-
+  const opts = getRequestOpts(reqOpts);
   this.authClient.authorizeRequest(
       reqOpts, (err: Error, authorizedReqOpts: RequestOptions) => {
         if (err) {
