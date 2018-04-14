@@ -1,7 +1,8 @@
+import axios, {AxiosError, AxiosRequestConfig, AxiosResponse} from 'axios';
 import * as ConfigStore from 'configstore';
 import * as crypto from 'crypto';
-import * as r from 'request';
-import {Stream} from 'stream';
+import * as extend from 'extend';
+import {Readable, Stream} from 'stream';
 import * as through from 'through2';
 import * as util from 'util';
 
@@ -11,10 +12,19 @@ const pumpify = require('pumpify');
 
 // tslint:disable-next-line no-any
 export type RequestBody = any;
-export type RequestResponse = r.Response;
-export type Request = r.Request;
+export type RequestResponse = AxiosResponse;
+export type RequestOptions = AxiosRequestConfig;
+export type RequestCallback =
+    (err: Error|null, response?: AxiosResponse, body?: RequestBody) => void;
+export type AuthorizeRequestCallback =
+    (err: Error|null, authorizedReqOpts: RequestOptions) => void;
 
-const request = r.defaults({json: true, pool: {maxSockets: Infinity}});
+type OldRequestOptions = {
+  uri?: string,
+  json?: boolean,
+  // tslint:disable-next-line no-any
+  qs?: any
+};
 
 const BASE_URI = 'https://www.googleapis.com/upload/storage/v1/b';
 const TERMINATED_UPLOAD_STATUS_CODE = 410;
@@ -181,11 +191,11 @@ Upload.prototype.createURI = function(
     callback: (err: Error|null, uri?: string) => void) {
   const metadata = this.metadata;
 
-  const reqOpts: r.Options = {
+  const reqOpts: RequestOptions = {
     method: 'POST',
-    uri: [BASE_URI, this.bucket, 'o'].join('/'),
-    qs: {name: this.file, uploadType: 'resumable'},
-    json: metadata,
+    url: [BASE_URI, this.bucket, 'o'].join('/'),
+    params: {name: this.file, uploadType: 'resumable'},
+    data: metadata,
     headers: {}
   };
 
@@ -198,22 +208,21 @@ Upload.prototype.createURI = function(
   }
 
   if (typeof this.generation !== 'undefined') {
-    reqOpts.qs.ifGenerationMatch = this.generation;
+    reqOpts.params.ifGenerationMatch = this.generation;
   }
 
   if (this.predefinedAcl) {
-    reqOpts.qs.predefinedAcl = this.predefinedAcl;
+    reqOpts.params.predefinedAcl = this.predefinedAcl;
   }
 
   if (this.origin) {
     reqOpts.headers!.Origin = this.origin;
   }
 
-  this.makeRequest(reqOpts, (err: Error, resp: r.RequestResponse) => {
+  this.makeRequest(reqOpts, (err: Error, resp: RequestResponse) => {
     if (err) {
       return callback(err);
     }
-
     const uri = resp.headers.location;
     this.uri = uri;
     this.set({uri});
@@ -307,16 +316,16 @@ Upload.prototype.getAndSetOffset = function(callback: () => void) {
   this.makeRequest(
       {
         method: 'PUT',
-        uri: this.uri,
+        url: this.url,
         headers: {'Content-Length': 0, 'Content-Range': 'bytes */*'}
       },
-      (err: Error|null, resp: r.RequestResponse) => {
+      (err: Error|null, resp: RequestResponse) => {
         if (err) {
           // we don't return a 404 to the user if they provided the resumable
           // URI. if we're just using the configstore file to tell us that this
           // file exists, and it turns out that it doesn't (the 404), that's
           // probably stale config data.
-          if (resp && resp.statusCode === 404 && !this.uriProvidedManually) {
+          if (resp && resp.status === 404 && !this.uriProvidedManually) {
             return this.restart();
           }
 
@@ -325,14 +334,14 @@ Upload.prototype.getAndSetOffset = function(callback: () => void) {
           //  https://github.com/stephenplusplus/gcs-resumable-upload/issues/15
           //  -
           //  https://github.com/stephenplusplus/gcs-resumable-upload/pull/16#discussion_r80363774
-          if (resp && resp.statusCode === TERMINATED_UPLOAD_STATUS_CODE) {
+          if (resp && resp.status === TERMINATED_UPLOAD_STATUS_CODE) {
             return this.restart();
           }
 
           return this.destroy(err);
         }
 
-        if (resp.statusCode === RESUMABLE_INCOMPLETE_STATUS_CODE) {
+        if (resp.status === RESUMABLE_INCOMPLETE_STATUS_CODE) {
           if (resp.headers.range) {
             const range = resp.headers.range as string;
             this.offset = Number(range.split('-')[1]) + 1;
@@ -347,7 +356,7 @@ Upload.prototype.getAndSetOffset = function(callback: () => void) {
 };
 
 Upload.prototype.makeRequest = function(
-    reqOpts: r.Options, callback: r.RequestCallback) {
+    reqOpts: RequestOptions, callback: RequestCallback) {
   if (this.encryption) {
     reqOpts.headers = reqOpts.headers || {};
     reqOpts.headers['x-goog-encryption-algorithm'] = 'AES256';
@@ -356,63 +365,66 @@ Upload.prototype.makeRequest = function(
   }
 
   if (this.userProject) {
-    reqOpts.qs = reqOpts.qs || {};
-    reqOpts.qs.userProject = this.userProject;
+    reqOpts.params = reqOpts.params || (reqOpts as OldRequestOptions).qs || {};
+    reqOpts.params.userProject = this.userProject;
   }
 
+  const oldOpts = getRequestOpts(reqOpts);
+
   this.authClient.authorizeRequest(
-      reqOpts, (err: Error, authorizedReqOpts: r.Options) => {
+      oldOpts, (err: Error, authorizedReqOpts: RequestOptions) => {
         if (err) {
           err = wrapError('Could not authenticate request', err);
           return callback(err, null!, null);
         }
-
-        request(authorizedReqOpts, (err, resp, body) => {
-          if (err) {
-            return callback(err, resp, body);
-          }
-
-          if (body && body.error) {
-            return callback(body.error, resp, body);
-          }
-
-          const nonSuccess =
-              Math.floor(resp.statusCode / 100) !== 2;  // 200-299 status code
-          if (nonSuccess &&
-              resp.statusCode !== RESUMABLE_INCOMPLETE_STATUS_CODE) {
-            return callback(new Error(body), resp, body);
-          }
-
-          callback(null, resp, body);
-        });
+        const opts = getAxiosOpts(
+            extend<RequestOptions, RequestOptions>(true, authorizedReqOpts, {
+              validateStatus: status => {
+                return (status >= 200 && status < 300) ||
+                    status === RESUMABLE_INCOMPLETE_STATUS_CODE;
+              }
+            }));
+        axios.request(authorizedReqOpts)
+            .then(
+                res => {
+                  callback(null, res, res.data);
+                },
+                err => {
+                  const body = err.response ? err.response.data : undefined;
+                  return callback(err, err.response, body);
+                });
       });
 };
 
 Upload.prototype.getRequestStream = function(
-    reqOpts: r.Options, callback: (requestStream: r.Request) => void) {
+    reqOpts: RequestOptions, callback: (requestStream: Readable) => void) {
   if (this.userProject) {
-    reqOpts.qs = reqOpts.qs || {};
-    reqOpts.qs.userProject = this.userProject;
+    reqOpts.params = reqOpts.params || {};
+    reqOpts.params.userProject = this.userProject;
   }
 
   this.authClient.authorizeRequest(
-      reqOpts, (err: Error, authorizedReqOpts: r.Options) => {
+      reqOpts, (err: Error, authorizedReqOpts: RequestOptions) => {
         if (err) {
           return this.destroy(wrapError('Could not authenticate request', err));
         }
 
-        const requestStream = request(authorizedReqOpts);
-        requestStream.on('error', this.destroy.bind(this));
-        requestStream.on('response', this.onResponse.bind(this));
-        requestStream.on('complete', (resp) => {
-          const body = resp.body;
-          if (body && body.error) this.destroy(body.error);
+        const opts = getAxiosOpts(extend<RequestOptions, RequestOptions>(
+            true, authorizedReqOpts, {responseType: 'stream'}));
+
+        axios.request<Readable&{callback: Function}>(opts).then(res => {
+          res.data.on('error', this.destroy.bind(this));
+          res.data.on('response', this.onResponse.bind(this));
+          res.data.on('complete', (resp) => {
+            const body = resp.body;
+            if (body && body.error) {
+              this.destroy(body.error);
+            }
+          });
+          // this makes the response body come back in the response (weird?)
+          res.data.callback = () => {};
+          callback(res.data);
         });
-
-        // this makes the response body come back in the response (weird?)
-        requestStream.callback = () => {};
-
-        callback(requestStream);
       });
 };
 
@@ -444,8 +456,8 @@ Upload.prototype.deleteConfig = function() {
 /**
  * @return {bool} is the request good?
  */
-Upload.prototype.onResponse = function(resp: r.RequestResponse) {
-  if (resp.statusCode === 404) {
+Upload.prototype.onResponse = function(resp: RequestResponse) {
+  if (resp.status === 404) {
     if (this.numRetries < RETRY_LIMIT) {
       this.numRetries++;
       this.startUploading();
@@ -455,7 +467,7 @@ Upload.prototype.onResponse = function(resp: r.RequestResponse) {
     return false;
   }
 
-  if (resp.statusCode > 499 && resp.statusCode < 600) {
+  if (resp.status > 499 && resp.status < 600) {
     if (this.numRetries < RETRY_LIMIT) {
       const randomMs = Math.round(Math.random() * 1000);
       const waitTime = Math.pow(2, this.numRetries) * 1000 + randomMs;
@@ -476,6 +488,36 @@ Upload.prototype.onResponse = function(resp: r.RequestResponse) {
 function upload(cfg: UploadConfig) {
   // tslint:disable-next-line no-any
   return new (Upload as any)(cfg);
+}
+
+/**
+ * Given a set of request or axios request options, translate into Mikeal
+ * request format.
+ * @param opts The Request options to be normalized
+ */
+function getRequestOpts(opts: RequestOptions&OldRequestOptions) {
+  if (opts.url && !opts.uri) {
+    opts.uri = opts.url;
+  }
+  if (opts.params && !opts.qs) {
+    opts.qs = opts.params;
+  }
+  return opts;
+}
+
+/**
+ * Given a set of request or axios request options, translate into Axios request
+ * format.
+ * @param opts The Request options to be normalized
+ */
+function getAxiosOpts(opts: RequestOptions&OldRequestOptions) {
+  if (opts.uri && !opts.url) {
+    opts.url = opts.uri;
+  }
+  if (opts.qs && !opts.params) {
+    opts.params = opts.qs;
+  }
+  return opts;
 }
 
 // tslint:disable-next-line no-any
