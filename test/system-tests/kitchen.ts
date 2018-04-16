@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as r from 'request';
 const upload = require('../../src');
 
-const bucketName = process.env.BUCKET_NAME || 'stephen-has-a-new-bucket';
+const bucketName = process.env.BUCKET_NAME;
 
 describe('end to end', () => {
   it('should work', (done) => {
