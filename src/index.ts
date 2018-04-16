@@ -12,6 +12,11 @@ const pumpify = require('pumpify');
 export type RequestBody = any;
 export type RequestResponse = r.Response;
 export type Request = r.Request;
+export type RequestOptions = r.OptionsWithUri;
+export type RequestCallback =
+    (err: Error|null, response?: r.Response, body?: RequestBody) => void;
+export type AuthorizeRequestCallback =
+    (err: Error|null, authorizedReqOpts: RequestOptions) => void;
 
 const request = r.defaults({json: true, pool: {maxSockets: Infinity}});
 
@@ -180,7 +185,7 @@ Upload.prototype.createURI = function(
     callback: (err: Error|null, uri?: string) => void) {
   const metadata = this.metadata;
 
-  const reqOpts: r.Options = {
+  const reqOpts: RequestOptions = {
     method: 'POST',
     uri: [BASE_URI, this.bucket, 'o'].join('/'),
     qs: {name: this.file, uploadType: 'resumable'},
@@ -208,7 +213,7 @@ Upload.prototype.createURI = function(
     reqOpts.headers!.Origin = this.origin;
   }
 
-  this.makeRequest(reqOpts, (err: Error, resp: r.RequestResponse) => {
+  this.makeRequest(reqOpts, (err: Error, resp: RequestResponse) => {
     if (err) {
       return callback(err);
     }
@@ -310,7 +315,7 @@ Upload.prototype.getAndSetOffset = function(callback: () => void) {
         uri: this.uri,
         headers: {'Content-Length': 0, 'Content-Range': 'bytes */*'}
       },
-      (err: Error|null, resp: r.RequestResponse) => {
+      (err: Error|null, resp: RequestResponse) => {
         if (err) {
           // we don't return a 404 to the user if they provided the resumable
           // URI. if we're just using the configstore file to tell us that this
@@ -347,7 +352,7 @@ Upload.prototype.getAndSetOffset = function(callback: () => void) {
 };
 
 Upload.prototype.makeRequest = function(
-    reqOpts: r.Options, callback: r.RequestCallback) {
+    reqOpts: RequestOptions, callback: RequestCallback) {
   if (this.encryption) {
     reqOpts.headers = reqOpts.headers || {};
     reqOpts.headers['x-goog-encryption-algorithm'] = 'AES256';
@@ -361,7 +366,7 @@ Upload.prototype.makeRequest = function(
   }
 
   this.authClient.authorizeRequest(
-      reqOpts, (err: Error, authorizedReqOpts: r.Options) => {
+      reqOpts, (err: Error, authorizedReqOpts: RequestOptions) => {
         if (err) {
           err = wrapError('Could not authenticate request', err);
           return callback(err, null!, null);
@@ -389,14 +394,14 @@ Upload.prototype.makeRequest = function(
 };
 
 Upload.prototype.getRequestStream = function(
-    reqOpts: r.Options, callback: (requestStream: r.Request) => void) {
+    reqOpts: RequestOptions, callback: (requestStream: Request) => void) {
   if (this.userProject) {
     reqOpts.qs = reqOpts.qs || {};
     reqOpts.qs.userProject = this.userProject;
   }
 
   this.authClient.authorizeRequest(
-      reqOpts, (err: Error, authorizedReqOpts: r.Options) => {
+      reqOpts, (err: Error, authorizedReqOpts: RequestOptions) => {
         if (err) {
           return this.destroy(wrapError('Could not authenticate request', err));
         }
@@ -444,7 +449,7 @@ Upload.prototype.deleteConfig = function() {
 /**
  * @return {bool} is the request good?
  */
-Upload.prototype.onResponse = function(resp: r.RequestResponse) {
+Upload.prototype.onResponse = function(resp: RequestResponse) {
   if (resp.statusCode === 404) {
     if (this.numRetries < RETRY_LIMIT) {
       this.numRetries++;
