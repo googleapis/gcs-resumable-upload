@@ -1,8 +1,7 @@
 import * as ConfigStore from 'configstore';
 import * as crypto from 'crypto';
 import * as r from 'request';
-import {Stream} from 'stream';
-import * as through from 'through2';
+import {PassThrough, Readable} from 'stream';
 import * as util from 'util';
 
 const streamEvents = require('stream-events');
@@ -238,11 +237,12 @@ Upload.prototype.startUploading = function() {
         {'Content-Range': 'bytes ' + this.offset + '-*/' + this.contentLength}
   };
 
-  const bufferStream = this.bufferStream = through();
-  const offsetStream = this.offsetStream = through(this.onChunk.bind(this));
-  const delayStream = through();
+  const bufferStream = this.bufferStream = new PassThrough();
+  const offsetStream = this.offsetStream =
+      new PassThrough({transform: this.onChunk.bind(this)});
+  const delayStream = new PassThrough();
 
-  this.getRequestStream(reqOpts, (requestStream: Stream) => {
+  this.getRequestStream(reqOpts, (requestStream: Readable) => {
     this.setPipeline(bufferStream, offsetStream, requestStream, delayStream);
 
     // wait for "complete" from request before letting the stream finish
