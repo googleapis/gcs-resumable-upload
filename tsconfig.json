@@ -7,6 +7,7 @@
   },
   "include": [
     "src/*.ts",
+    "src/pumpify.d.ts",
     "src/**/*.ts",
     "test/*.ts",
     "test/**/*.ts"

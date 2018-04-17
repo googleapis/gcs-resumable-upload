@@ -55,7 +55,7 @@ describe('gcs-resumable-upload', () => {
   before(() => {
     mockery.registerMock('configstore', ConfigStore);
     mockery.enable({useCleanCache: true, warnOnUnregistered: false});
-    upload = require('../src');
+    upload = require('../src').upload;
   });
 
   beforeEach(() => {
