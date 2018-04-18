@@ -97,6 +97,13 @@ This will cause the upload to fail if the current generation of the remote objec
 
 A [customer-supplied encryption key](https://cloud.google.com/storage/docs/encryption#customer-supplied).
 
+###### config.kmsKeyName
+
+- Type: `string`
+- *Optional*
+
+Resource name of the Cloud KMS key, of the form `projects/my-project/locations/global/keyRings/my-kr/cryptoKeys/my-key`, that will be used to encrypt the object. Overrides the object metadata's `kms_key_name` value, if any.
+
 ###### config.metadata
 
 - Type: `object`

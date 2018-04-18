@@ -59,6 +59,14 @@ interface UploadConfig {
   key?: string|Buffer;
 
   /**
+   * Resource name of the Cloud KMS key, of the form
+   * `projects/my-project/locations/global/keyRings/my-kr/cryptoKeys/my-key`,
+   * that will be used to encrypt the object. Overrides the object metadata's
+   * `kms_key_name` value, if any.
+   */
+  kmsKeyName?: string;
+
+  /**
    * Any metadata you wish to set on the object.
    */
   metadata?: {
@@ -134,6 +142,7 @@ function Upload(cfg: UploadConfig) {
   this.bucket = cfg.bucket;
   this.file = cfg.file;
   this.generation = cfg.generation;
+  this.kmsKeyName = cfg.kmsKeyName;
   this.metadata = cfg.metadata || {};
   this.offset = cfg.offset;
   this.origin = cfg.origin;
@@ -203,6 +212,10 @@ Upload.prototype.createURI = function(
 
   if (typeof this.generation !== 'undefined') {
     reqOpts.qs.ifGenerationMatch = this.generation;
+  }
+
+  if (this.kmsKeyName) {
+    reqOpts.qs.kmsKeyName = this.kmsKeyName;
   }
 
   if (this.predefinedAcl) {
