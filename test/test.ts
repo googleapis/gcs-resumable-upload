@@ -96,6 +96,12 @@ describe('gcs-resumable-upload', () => {
       assert.strictEqual(up.generation, GENERATION);
     });
 
+    it('should localize the KMS key name', () => {
+      const kmsKeyName = 'kms-key-name';
+      const up = upload({bucket: 'BUCKET', file: FILE, kmsKeyName});
+      assert.strictEqual(up.kmsKeyName, kmsKeyName);
+    });
+
     it('should localize metadata or default to empty object', () => {
       assert.strictEqual(up.metadata, METADATA);
 
@@ -220,6 +226,18 @@ describe('gcs-resumable-upload', () => {
           ifGenerationMatch: GENERATION
         });
         assert.strictEqual(reqOpts.json, up.metadata);
+        done();
+      };
+
+      up.createURI();
+    });
+
+    it('should pass through the KMS key name', (done) => {
+      const kmsKeyName = 'kms-key-name';
+      const up = upload({bucket: BUCKET, file: FILE, kmsKeyName});
+
+      up.makeRequest = (reqOpts: RequestOptions) => {
+        assert.strictEqual(reqOpts.qs.kmsKeyName, kmsKeyName);
         done();
       };
 
