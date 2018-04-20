@@ -1,9 +1,10 @@
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as r from 'request';
-const upload = require('../../src');
 
-const bucketName = process.env.BUCKET_NAME;
+import {createURI, upload} from '../../src';
+
+const bucketName = process.env.BUCKET_NAME!;
 
 describe('end to end', () => {
   it('should work', (done) => {
@@ -77,7 +78,7 @@ describe('end to end', () => {
   });
 
   it('should just make an upload URI', (done) => {
-    upload.createURI(
+    createURI(
         {
           bucket: bucketName,
           file: 'daw.jpg',
