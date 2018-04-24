@@ -27,14 +27,14 @@ function ConfigStore() {
   };
 }
 
-// tslint:disable-next-line no-any
-function mockAuthorizeRequest(up: any) {
-  up.authClient = {
-    authorizeRequest(
-        reqOpts: RequestOptions, callback: AuthorizeRequestCallback) {
-      callback(null, reqOpts);
-    }
-  };
+const queryPath = '/?userProject=user-project-id';
+
+function mockAuthorizeRequest(code = 200, data: {}|string = {
+  access_token: 'abc123'
+}) {
+  return nock('https://www.googleapis.com')
+      .post('/oauth2/v4/token')
+      .reply(code, data);
 }
 
 describe('gcs-resumable-upload', () => {
@@ -50,7 +50,8 @@ describe('gcs-resumable-upload', () => {
   const ORIGIN = '*';
   const PREDEFINED_ACL = 'authenticatedRead';
   const USER_PROJECT = 'user-project-id';
-  const REQ_OPTS = {uri: 'http://uri'};
+  const REQ_OPTS = {url: 'http://fake.local'};
+  const keyFile = path.join(__dirname, '../../test/fixtures/keys.json');
 
   before(() => {
     mockery.registerMock('configstore', ConfigStore);
@@ -67,7 +68,8 @@ describe('gcs-resumable-upload', () => {
       metadata: METADATA,
       origin: ORIGIN,
       predefinedAcl: PREDEFINED_ACL,
-      userProject: USER_PROJECT
+      userProject: USER_PROJECT,
+      authConfig: {keyFile}
     });
   });
 
@@ -217,15 +219,15 @@ describe('gcs-resumable-upload', () => {
       up.makeRequest = (reqOpts: RequestOptions) => {
         assert.strictEqual(reqOpts.method, 'POST');
         assert.strictEqual(
-            reqOpts.uri,
+            reqOpts.url,
             `https://www.googleapis.com/upload/storage/v1/b/${BUCKET}/o`);
-        assert.deepEqual(reqOpts.qs, {
+        assert.deepEqual(reqOpts.params, {
           predefinedAcl: up.predefinedAcl,
           name: FILE,
           uploadType: 'resumable',
           ifGenerationMatch: GENERATION
         });
-        assert.strictEqual(reqOpts.json, up.metadata);
+        assert.strictEqual(reqOpts.data, up.metadata);
         done();
       };
 
@@ -237,7 +239,7 @@ describe('gcs-resumable-upload', () => {
       const up = upload({bucket: BUCKET, file: FILE, kmsKeyName});
 
       up.makeRequest = (reqOpts: RequestOptions) => {
-        assert.strictEqual(reqOpts.qs.kmsKeyName, kmsKeyName);
+        assert.strictEqual(reqOpts.params.kmsKeyName, kmsKeyName);
         done();
       };
 
@@ -246,7 +248,7 @@ describe('gcs-resumable-upload', () => {
 
     it('should respect 0 as a generation', (done) => {
       up.makeRequest = (reqOpts: RequestOptions) => {
-        assert.strictEqual(reqOpts.qs.ifGenerationMatch, 0);
+        assert.strictEqual(reqOpts.params.ifGenerationMatch, 0);
         done();
       };
       up.generation = 0;
@@ -363,7 +365,7 @@ describe('gcs-resumable-upload', () => {
 
       up.getRequestStream = (reqOpts: RequestOptions) => {
         assert.strictEqual(reqOpts.method, 'PUT');
-        assert.strictEqual(reqOpts.uri, up.uri);
+        assert.strictEqual(reqOpts.url, up.uri);
         assert.deepEqual(
             reqOpts.headers,
             {'Content-Range': 'bytes ' + OFFSET + '-*/' + up.contentLength});
@@ -609,14 +611,15 @@ describe('gcs-resumable-upload', () => {
     const RANGE = 123456;
 
     // tslint:disable-next-line no-any
-    const RESP: any = {statusCode: 308, headers: {range: `range-${RANGE}`}};
+    const RESP = {status: 308, headers: {range: `range-${RANGE}`}} as
+        RequestResponse;
 
     it('should make the correct request', (done) => {
       const URI = 'uri';
       up.uri = URI;
       up.makeRequest = (reqOpts: RequestOptions) => {
         assert.strictEqual(reqOpts.method, 'PUT');
-        assert.strictEqual(reqOpts.uri, URI);
+        assert.strictEqual(reqOpts.url, URI);
         assert.deepEqual(
             reqOpts.headers,
             {'Content-Length': 0, 'Content-Range': 'bytes */*'});
@@ -629,7 +632,7 @@ describe('gcs-resumable-upload', () => {
 
     describe('restart on 404', () => {
       const ERROR = new Error(':(');
-      const RESP = {statusCode: 404} as RequestResponse;
+      const RESP = {status: 404} as RequestResponse;
 
       beforeEach(() => {
         up.makeRequest =
@@ -656,7 +659,7 @@ describe('gcs-resumable-upload', () => {
 
     describe('restart on 410', () => {
       const ERROR = new Error(':(');
-      const RESP = {statusCode: 410} as RequestResponse;
+      const RESP = {status: 410} as RequestResponse;
 
       beforeEach(() => {
         up.makeRequest =
@@ -699,92 +702,67 @@ describe('gcs-resumable-upload', () => {
   describe('#makeRequest', () => {
     it('should set encryption headers', (done) => {
       const key = crypto.randomBytes(32);
-      const up = upload({bucket: 'BUCKET', file: FILE, key});
-
-      up.authClient = {
-        authorizeRequest(reqOpts: RequestOptions) {
-          assert.deepEqual(reqOpts.headers, {
-            'x-goog-encryption-algorithm': 'AES256',
-            'x-goog-encryption-key': up.encryption.key,
-            'x-goog-encryption-key-sha256': up.encryption.hash
-          });
-          done();
-        }
-      };
-
-      up.makeRequest(REQ_OPTS);
+      const up =
+          upload({bucket: 'BUCKET', file: FILE, key, authConfig: {keyFile}});
+      const scopes =
+          [mockAuthorizeRequest(), nock(REQ_OPTS.url).get('/').reply(200, {})];
+      up.makeRequest(REQ_OPTS, (err: Error|null, res: RequestResponse) => {
+        assert.ifError(err);
+        scopes.forEach(x => x.done());
+        const headers = res.config.headers;
+        assert.equal(headers['x-goog-encryption-algorithm'], 'AES256');
+        assert.equal(headers['x-goog-encryption-key'], up.encryption.key);
+        assert.equal(
+            headers['x-goog-encryption-key-sha256'], up.encryption.hash);
+        done();
+      });
     });
 
     it('should set userProject', (done) => {
-      up.authClient = {
-        authorizeRequest(reqOpts: RequestOptions) {
-          assert.deepEqual(reqOpts.qs, {userProject: USER_PROJECT});
-          done();
-        }
-      };
-
-      up.makeRequest(REQ_OPTS);
-    });
-
-    it('should authorize the request', (done) => {
-      up.authClient = {
-        authorizeRequest(reqOpts: RequestOptions) {
-          assert.strictEqual(reqOpts, REQ_OPTS);
-          done();
-        }
-      };
-
-      up.makeRequest(REQ_OPTS);
+      const scopes = [
+        mockAuthorizeRequest(), nock(REQ_OPTS.url).get(queryPath).reply(200, {})
+      ];
+      up.makeRequest(REQ_OPTS, (err: Error|null, res: RequestResponse) => {
+        assert.ifError(err);
+        assert.deepEqual(res.config.params, {userProject: USER_PROJECT});
+        scopes.forEach(x => x.done());
+        done();
+      });
     });
 
     it('should execute the callback with error & response if one occurred',
        (done) => {
-         const error = new Error(':(');
          const response = {} as RequestResponse;
-
-         up.authClient = {
-           authorizeRequest(
-               reqOpts: RequestOptions, callback: RequestCallback) {
-             callback(error, response, null);
-           }
-         };
-
+         const scope = mockAuthorizeRequest(500, ':(');
          up.makeRequest({}, (err: Error, resp: RequestResponse) => {
-           assert(err.message.indexOf(error.message) > -1);
+           assert.equal(err.message, 'Request failed with status code 500');
            done();
          });
        });
 
     it('should make the correct request', (done) => {
-      const uri = 'http://uri/';
       const headers = {};
-      const authorizedReqOpts = {uri, headers} as RequestOptions;
-
-      up.authClient = {
-        authorizeRequest(reqOpts: RequestOptions, callback: Function) {
-          callback(null, authorizedReqOpts);
-        }
-      };
-
-      const scope = nock(uri).get('/').reply(200, undefined, headers);
+      const scopes = [
+        mockAuthorizeRequest(),
+        nock(REQ_OPTS.url).get(queryPath).reply(200, undefined, headers)
+      ];
       up.makeRequest(REQ_OPTS, (err: Error|null, res: RequestResponse) => {
-        const opts = res.request;
-        scope.done();
-        assert.strictEqual(opts.uri.href, authorizedReqOpts.uri);
-        assert.deepStrictEqual(authorizedReqOpts.headers, {});
-        assert.deepStrictEqual(opts.headers, {accept: 'application/json'});
+        assert.ifError(err);
+        scopes.forEach(x => x.done());
+        assert.strictEqual(res.config.url, REQ_OPTS.url);
+        assert.deepStrictEqual(res.headers, {});
         done();
       });
     });
 
     it('should execute the callback with error & response', (done) => {
-      const response = {body: 'wooo'} as RequestResponse;
-      mockAuthorizeRequest(up);
-      const scope = nock(REQ_OPTS.uri)
+      const response = {data: 'wooo'} as RequestResponse;
+      mockAuthorizeRequest();
+      const scope = nock(REQ_OPTS.url)
                         .get('/?userProject=user-project-id')
-                        .reply(500, response.body);
+                        .reply(500, response.data);
       up.makeRequest(REQ_OPTS, (err: Error, resp: RequestResponse) => {
-        assert.strictEqual(resp.body, response.body);
+        assert.strictEqual(resp.data, response.data);
         scope.done();
         done();
       });
@@ -792,29 +770,29 @@ describe('gcs-resumable-upload', () => {
 
     it('should execute the callback with a body error & response', (done) => {
       const response = {error: ':('};
-      mockAuthorizeRequest(up);
-      const scope = nock(REQ_OPTS.uri)
+      mockAuthorizeRequest();
+      const scope = nock(REQ_OPTS.url)
                         .get('/?userProject=user-project-id')
                         .reply(500, response);
       up.makeRequest(REQ_OPTS, (err: Error, res: RequestResponse) => {
-        assert.equal(res.statusCode, 500);
-        assert.deepStrictEqual(response, res.body);
+        assert.equal(res.status, 500);
+        assert.deepStrictEqual(response, res.data);
         done();
       });
     });
 
     it('should execute the callback with a body error & response for non-2xx status codes',
        (done) => {
-         const response = {statusCode: 500, body: {error: '!$#@'}};
-         mockAuthorizeRequest(up);
-         const scope = nock(REQ_OPTS.uri)
+         const response = {status: 500, body: {error: '!$#@'}};
+         mockAuthorizeRequest();
+         const scope = nock(REQ_OPTS.url)
                            .get('/?userProject=user-project-id')
                            .reply(500, response.body);
          up.makeRequest(
              REQ_OPTS,
              (err: Error, resp: RequestResponse, body: RequestBody) => {
                assert.strictEqual(err, response.body.error);
-               assert.deepStrictEqual(resp.statusCode, 500);
+               assert.deepStrictEqual(resp.status, 500);
                assert.deepStrictEqual(body, response.body);
                done();
              });
@@ -822,18 +800,18 @@ describe('gcs-resumable-upload', () => {
 
     it('should execute the callback', (done) => {
       const data = {red: 'tape'};
-      mockAuthorizeRequest(up);
+      mockAuthorizeRequest();
       up.onResponse = () => {
         return true;
       };
-      const scope = nock(REQ_OPTS.uri)
+      const scope = nock(REQ_OPTS.url)
                         .get('/?userProject=user-project-id')
                         .reply(200, data);
       up.makeRequest(
           REQ_OPTS, (err: Error, res: RequestResponse, body: RequestBody) => {
             assert.ifError(err);
             scope.done();
-            assert.strictEqual(res.statusCode, 200);
+            assert.strictEqual(res.status, 200);
             assert.deepStrictEqual(body, data);
             done();
           });
@@ -854,7 +832,7 @@ describe('gcs-resumable-upload', () => {
     it('should set userProject', (done) => {
       up.authClient = {
         authorizeRequest(reqOpts: RequestOptions) {
-          assert.deepEqual(reqOpts.qs, {userProject: USER_PROJECT});
+          assert.deepEqual(reqOpts.params, {userProject: USER_PROJECT});
           done();
         }
       };
@@ -862,23 +840,19 @@ describe('gcs-resumable-upload', () => {
     });
 
     it('should destroy the stream if an error occurred', (done) => {
-      const error = new Error(':(');
       up.destroy = (err: Error) => {
-        assert(err.message.indexOf(error.message) > -1);
+        assert.equal(
+            err.message,
+            'Could not authenticate request\nRequest failed with status code 500');
         done();
       };
-      up.authClient = {
-        authorizeRequest(
-            reqOpts: RequestOptions, callback: AuthorizeRequestCallback) {
-          callback(error, null!);
-        }
-      };
+      const scope = mockAuthorizeRequest(500);
       up.getRequestStream(REQ_OPTS);
     });
 
     it('should make the correct request', (done) => {
-      mockAuthorizeRequest(up);
-      const scope = nock(REQ_OPTS.uri)
+      mockAuthorizeRequest();
+      const scope = nock(REQ_OPTS.url)
                         .get('/?userProject=user-project-id')
                         .replyWithFile(200, dawPath);
       up.getRequestStream(REQ_OPTS, (requestStream: stream.Readable) => {
@@ -889,9 +863,9 @@ describe('gcs-resumable-upload', () => {
     });
 
     it('should set the callback to a noop', (done) => {
-      mockAuthorizeRequest(up);
+      mockAuthorizeRequest();
       const scope =
-          nock(REQ_OPTS.uri).get('/?userProject=user-project-id').reply(200);
+          nock(REQ_OPTS.url).get('/?userProject=user-project-id').reply(200);
       up.getRequestStream(
           REQ_OPTS, (requestStream: stream.Readable&{callback: Function}) => {
             assert.strictEqual(
@@ -901,9 +875,9 @@ describe('gcs-resumable-upload', () => {
     });
 
     it('should destroy the stream if there was an error', (done) => {
-      mockAuthorizeRequest(up);
+      mockAuthorizeRequest();
       const scope =
-          nock(REQ_OPTS.uri).get('/?userProject=user-project-id').reply(200);
+          nock(REQ_OPTS.url).get('/?userProject=user-project-id').reply(200);
       up.getRequestStream(REQ_OPTS, (requestStream: stream.Readable) => {
         const error = new Error(':(');
         up.on('error', (err: Error) => {
@@ -915,9 +889,9 @@ describe('gcs-resumable-upload', () => {
     });
 
     it('should destroy the stream if there was a body error', (done) => {
-      mockAuthorizeRequest(up);
+      mockAuthorizeRequest();
       const scope =
-          nock(REQ_OPTS.uri).get('/?userProject=user-project-id').reply(200);
+          nock(REQ_OPTS.url).get('/?userProject=user-project-id').reply(200);
       up.getRequestStream(REQ_OPTS, (requestStream: stream.Readable) => {
         const response = {body: {error: new Error(':(')}};
         up.on('error', (err: Error) => {
@@ -930,17 +904,10 @@ describe('gcs-resumable-upload', () => {
 
     it('should check if it should retry on response', (done) => {
       let fired = false;
-      up.authClient = {
-        authorizeRequest(
-            reqOpts: RequestOptions, callback: AuthorizeRequestCallback) {
-          callback(null, reqOpts);
-        }
-      };
-
-      const res = {statusCode: 200};
-      const scope =
-          nock(REQ_OPTS.uri).get('/?userProject=user-project-id').reply(200);
-
+      const res = {status: 200};
+      const scopes = [
+        mockAuthorizeRequest(), nock(REQ_OPTS.url).get(queryPath).reply(200)
+      ];
       up.onResponse = function(resp: RequestResponse) {
         if (!fired) {
           assert.strictEqual(this, up);
@@ -956,13 +923,18 @@ describe('gcs-resumable-upload', () => {
     });
 
     it('should execute the callback with the stream', (done) => {
-      const scope = nock(REQ_OPTS.uri)
-                        .get('/?userProject=user-project-id')
-                        .replyWithFile(200, dawPath);
-      mockAuthorizeRequest(up);
+      const scopes = [
+        mockAuthorizeRequest(),
+        nock(REQ_OPTS.url)
+            .get('/?userProject=user-project-id')
+            .replyWithFile(200, dawPath)
+      ];
       up.getRequestStream(REQ_OPTS, (reqStream: stream.Readable) => {
         assert(reqStream);
-        done();
+        reqStream.on('complete', (res: RequestResponse) => {
+          scopes.forEach(x => x.done());
+          done();
+        });
       });
     });
   });
@@ -1079,7 +1051,7 @@ describe('gcs-resumable-upload', () => {
     });
 
     describe('404', () => {
-      const RESP = {statusCode: 404};
+      const RESP = {status: 404};
 
       it('should increase the retry count if less than limit', () => {
         assert.strictEqual(up.numRetries, 0);
@@ -1108,7 +1080,7 @@ describe('gcs-resumable-upload', () => {
     });
 
     describe('500s', () => {
-      const RESP = {statusCode: 500};
+      const RESP = {status: 500};
 
       it('should increase the retry count if less than limit', () => {
         assert.strictEqual(up.numRetries, 0);
@@ -1160,7 +1132,7 @@ describe('gcs-resumable-upload', () => {
     });
 
     describe('all others', () => {
-      const RESP = {statusCode: 200};
+      const RESP = {status: 200};
 
       it('should emit the response on the stream', (done) => {
         up.on('response', (resp: RequestResponse) => {
