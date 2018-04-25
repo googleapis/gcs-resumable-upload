@@ -9,7 +9,7 @@
     "gcs-upload": "build/src/cli.js"
   },
   "scripts": {
-    "test": "mocha build/test -r source-map-support/register",
+    "test": "mocha build/test -r source-map-support/register --timeout 4000",
     "check": "gts check",
     "clean": "gts clean",
     "compile": "tsc -p .",
@@ -33,8 +33,9 @@
   "author": "Stephen Sawchuk <sawchuk@gmail.com>",
   "license": "MIT",
   "dependencies": {
+    "axios": "^0.18.0",
     "configstore": "^3.1.2",
-    "google-auto-auth": "^0.10.0",
+    "google-auth-library": "^1.4.0",
     "pumpify": "^1.4.0",
     "request": "^2.85.0",
     "stream-events": "^1.0.3"

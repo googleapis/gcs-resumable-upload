@@ -1,19 +1,19 @@
+import {AxiosError, AxiosRequestConfig, AxiosResponse} from 'axios';
 import * as ConfigStore from 'configstore';
 import * as crypto from 'crypto';
+import {GoogleAuth, GoogleAuthOptions} from 'google-auth-library';
+import * as Pumpify from 'pumpify';
 import * as r from 'request';
 import {Duplex, PassThrough, Readable, Stream} from 'stream';
 import * as streamEvents from 'stream-events';
 
-const googleAuth = require('google-auto-auth');
-import * as Pumpify from 'pumpify';
-
 // tslint:disable-next-line no-any
 export type RequestBody = any;
-export type RequestResponse = r.Response;
+export type RequestResponse = AxiosResponse;
 export type Request = r.Request;
-export type RequestOptions = r.OptionsWithUri;
+export type RequestOptions = AxiosRequestConfig;
 export type RequestCallback =
-    (err: Error|null, response?: r.Response, body?: RequestBody) => void;
+    (err: Error|null, response?: AxiosResponse, body?: RequestBody) => void;
 export type AuthorizeRequestCallback =
     (err: Error|null, authorizedReqOpts: RequestOptions) => void;
 
@@ -30,13 +30,6 @@ const wrapError = (message: string, err: Error) => {
 
 export type CreateUriCallback = (err: Error|null, uri?: string) => void;
 
-export interface AuthClient {
-  authorizeRequest:
-      (reqOpts: r.OptionsWithUri,
-       callback: (err: Error|null, authorizedReqOpts: RequestOptions) =>
-           void) => void;
-}
-
 export interface Encryption {
   key: {};
   hash: {};
@@ -52,12 +45,12 @@ export interface UploadConfig {
    * The name of the destination file.
    */
   file: string;
-  authConfig?: {scopes?: string[];};
+  authConfig?: GoogleAuthOptions;
   /**
    * If you want to re-use an auth client from google-auto-auth, pass an
    * instance here.
    */
-  authClient?: AuthClient;
+  authClient?: GoogleAuth;
 
   /**
    * This will cause the upload to fail if the current generation of the remote
@@ -143,7 +136,7 @@ export class Upload extends Pumpify {
   bucket: string;
   file: string;
   authConfig?: {scopes?: string[];};
-  authClient: AuthClient;
+  authClient: GoogleAuth;
   generation?: number;
   key?: string|Buffer;
   kmsKeyName?: string;
@@ -178,7 +171,7 @@ export class Upload extends Pumpify {
     cfg.authConfig = cfg.authConfig || {};
     cfg.authConfig.scopes =
         ['https://www.googleapis.com/auth/devstorage.full_control'];
-    this.authClient = cfg.authClient || googleAuth(cfg.authConfig);
+    this.authClient = cfg.authClient || new GoogleAuth(cfg.authConfig);
 
     this.bucket = cfg.bucket;
     this.file = cfg.file;
@@ -235,9 +228,9 @@ export class Upload extends Pumpify {
 
     const reqOpts: RequestOptions = {
       method: 'POST',
-      uri: [BASE_URI, this.bucket, 'o'].join('/'),
-      qs: {name: this.file, uploadType: 'resumable'},
-      json: metadata,
+      url: [BASE_URI, this.bucket, 'o'].join('/'),
+      params: {name: this.file, uploadType: 'resumable'},
+      data: metadata,
       headers: {}
     };
 
@@ -250,15 +243,15 @@ export class Upload extends Pumpify {
     }
 
     if (typeof this.generation !== 'undefined') {
-      reqOpts.qs.ifGenerationMatch = this.generation;
+      reqOpts.params.ifGenerationMatch = this.generation;
     }
 
     if (this.kmsKeyName) {
-      reqOpts.qs.kmsKeyName = this.kmsKeyName;
+      reqOpts.params.kmsKeyName = this.kmsKeyName;
     }
 
     if (this.predefinedAcl) {
-      reqOpts.qs.predefinedAcl = this.predefinedAcl;
+      reqOpts.params.predefinedAcl = this.predefinedAcl;
     }
 
     if (this.origin) {
@@ -287,11 +280,11 @@ export class Upload extends Pumpify {
   private startUploading() {
     const reqOpts = {
       method: 'PUT',
-      uri: this.uri,
+      url: this.uri,
       headers: {
         'Content-Range': 'bytes ' + this.offset + '-*/' + this.contentLength
       }
-    } as r.OptionsWithUri;
+    };
 
     const bufferStream = this.bufferStream = new PassThrough();
     const offsetStream = this.offsetStream =
@@ -363,16 +356,16 @@ export class Upload extends Pumpify {
   private getAndSetOffset(callback: () => void) {
     const opts = {
       method: 'PUT',
-      uri: this.uri,
+      url: this.uri,
       headers: {'Content-Length': 0, 'Content-Range': 'bytes */*'}
-    } as r.OptionsWithUri;
+    };
     this.makeRequest(opts, (err, resp) => {
       if (err) {
         // we don't return a 404 to the user if they provided the resumable
         // URI. if we're just using the configstore file to tell us that this
         // file exists, and it turns out that it doesn't (the 404), that's
         // probably stale config data.
-        if (resp && resp.statusCode === 404 && !this.uriProvidedManually) {
+        if (resp && resp.status === 404 && !this.uriProvidedManually) {
           return this.restart();
         }
 
@@ -381,14 +374,14 @@ export class Upload extends Pumpify {
         //  https://github.com/stephenplusplus/gcs-resumable-upload/issues/15
         //  -
         //  https://github.com/stephenplusplus/gcs-resumable-upload/pull/16#discussion_r80363774
-        if (resp && resp.statusCode === TERMINATED_UPLOAD_STATUS_CODE) {
+        if (resp && resp.status === TERMINATED_UPLOAD_STATUS_CODE) {
           return this.restart();
         }
 
         return this.destroy(err);
       }
 
-      if (resp && resp.statusCode === RESUMABLE_INCOMPLETE_STATUS_CODE) {
+      if (resp && resp.status === RESUMABLE_INCOMPLETE_STATUS_CODE) {
         if (resp.headers.range) {
           const range = resp.headers.range as string;
           this.offset = Number(range.split('-')[1]) + 1;
@@ -411,62 +404,52 @@ export class Upload extends Pumpify {
     }
 
     if (this.userProject) {
-      reqOpts.qs = reqOpts.qs || {};
-      reqOpts.qs.userProject = this.userProject;
+      reqOpts.params = reqOpts.params || {};
+      reqOpts.params.userProject = this.userProject;
     }
 
-    this.authClient.authorizeRequest(reqOpts, (err, authorizedReqOpts) => {
-      if (err) {
-        err = wrapError('Could not authenticate request', err);
-        return callback(err, null!, null);
-      }
+    reqOpts.validateStatus = (status: number) => {
+      return (status >= 200 && status < 300) ||
+          status === RESUMABLE_INCOMPLETE_STATUS_CODE;
+    };
 
-      request(authorizedReqOpts, (err, resp, body) => {
-        if (err) {
-          return callback(err, resp, body);
-        }
-
-        if (body && body.error) {
-          return callback(body.error, resp, body);
-        }
-
-        const nonSuccess =
-            Math.floor(resp.statusCode / 100) !== 2;  // 200-299 status code
-        if (nonSuccess &&
-            resp.statusCode !== RESUMABLE_INCOMPLETE_STATUS_CODE) {
-          return callback(new Error(body), resp, body);
-        }
-
-        callback(null, resp, body);
-      });
-    });
+    this.authClient.request(reqOpts).then(
+        r => {
+          return callback(null, r, r.data);
+        },
+        (err: AxiosError) => {
+          const body = err.response ? err.response.data : undefined;
+          const e = (body && body.error) ? body.error : err;
+          return callback(e, err.response, body);
+        });
   }
 
   private getRequestStream(
       reqOpts: RequestOptions, callback: (requestStream: Request) => void) {
     if (this.userProject) {
-      reqOpts.qs = reqOpts.qs || {};
-      reqOpts.qs.userProject = this.userProject;
+      reqOpts.params = reqOpts.params || {};
+      reqOpts.params.userProject = this.userProject;
     }
 
-    this.authClient.authorizeRequest(reqOpts, (err, authorizedReqOpts) => {
-      if (err) {
-        return this.destroy(wrapError('Could not authenticate request', err));
-      }
+    this.authClient.authorizeRequest(reqOpts)
+        .then(opts => {
+          const authorizedReqOpts = axiosToRequest(reqOpts);
+          const requestStream = request(authorizedReqOpts);
+          requestStream.on('error', this.destroy.bind(this));
+          requestStream.on('response', this.onResponse.bind(this));
+          requestStream.on('complete', (resp) => {
+            const body = resp.body;
+            if (body && body.error) this.destroy(body.error);
+          });
 
-      const requestStream = request(authorizedReqOpts);
-      requestStream.on('error', this.destroy.bind(this));
-      requestStream.on('response', this.onResponse.bind(this));
-      requestStream.on('complete', (resp) => {
-        const body = resp.body;
-        if (body && body.error) this.destroy(body.error);
-      });
+          // this makes the response body come back in the response (weird?)
+          requestStream.callback = () => {};
 
-      // this makes the response body come back in the response (weird?)
-      requestStream.callback = () => {};
-
-      callback(requestStream);
-    });
+          callback(requestStream);
+        })
+        .catch(err => {
+          return this.destroy(wrapError('Could not authenticate request', err));
+        });
   }
 
   private restart() {
@@ -498,7 +481,7 @@ export class Upload extends Pumpify {
    * @return {bool} is the request good?
    */
   private onResponse(resp: RequestResponse) {
-    if (resp.statusCode === 404) {
+    if (resp.status === 404) {
       if (this.numRetries < RETRY_LIMIT) {
         this.numRetries++;
         this.startUploading();
@@ -508,7 +491,7 @@ export class Upload extends Pumpify {
       return false;
     }
 
-    if (resp.statusCode > 499 && resp.statusCode < 600) {
+    if (resp.status > 499 && resp.status < 600) {
       if (this.numRetries < RETRY_LIMIT) {
         const randomMs = Math.round(Math.random() * 1000);
         const waitTime = Math.pow(2, this.numRetries) * 1000 + randomMs;
@@ -525,6 +508,14 @@ export class Upload extends Pumpify {
 
     return true;
   }
+}
+
+function axiosToRequest(opts: AxiosRequestConfig): r.OptionsWithUri {
+  const reqOpts = opts as r.OptionsWithUri;
+  reqOpts.qs = opts.params;
+  reqOpts.json = opts.data;
+  reqOpts.uri = opts.url as string;
+  return reqOpts;
 }
 
 export function upload(cfg: UploadConfig) {
