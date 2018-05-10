@@ -7,7 +7,7 @@ import * as nock from 'nock';
 import * as path from 'path';
 import * as stream from 'stream';
 import * as through from 'through2';
-
+import * as url from 'url';
 import {AuthorizeRequestCallback, RequestBody, RequestCallback, RequestOptions, RequestResponse} from '../src';
 
 const dawPath = path.join(__dirname, '../../daw.jpg');
@@ -369,7 +369,6 @@ describe('gcs-resumable-upload', () => {
         assert.deepEqual(
             reqOpts.headers,
             {'Content-Range': 'bytes ' + OFFSET + '-*/' + up.contentLength});
-
         done();
       };
 
@@ -758,9 +757,7 @@ describe('gcs-resumable-upload', () => {
     it('should execute the callback with error & response', (done) => {
       const response = {data: 'wooo'} as RequestResponse;
       mockAuthorizeRequest();
-      const scope = nock(REQ_OPTS.url)
-                        .get('/?userProject=user-project-id')
-                        .reply(500, response.data);
+      const scope = nock(REQ_OPTS.url).get(queryPath).reply(500, response.data);
       up.makeRequest(REQ_OPTS, (err: Error, resp: RequestResponse) => {
         assert.strictEqual(resp.data, response.data);
         scope.done();
@@ -771,9 +768,7 @@ describe('gcs-resumable-upload', () => {
     it('should execute the callback with a body error & response', (done) => {
       const response = {error: ':('};
       mockAuthorizeRequest();
-      const scope = nock(REQ_OPTS.url)
-                        .get('/?userProject=user-project-id')
-                        .reply(500, response);
+      const scope = nock(REQ_OPTS.url).get(queryPath).reply(500, response);
       up.makeRequest(REQ_OPTS, (err: Error, res: RequestResponse) => {
         assert.equal(res.status, 500);
         assert.deepStrictEqual(response, res.data);
@@ -785,9 +780,8 @@ describe('gcs-resumable-upload', () => {
        (done) => {
          const response = {status: 500, body: {error: '!$#@'}};
          mockAuthorizeRequest();
-         const scope = nock(REQ_OPTS.url)
-                           .get('/?userProject=user-project-id')
-                           .reply(500, response.body);
+         const scope =
+             nock(REQ_OPTS.url).get(queryPath).reply(500, response.body);
          up.makeRequest(
              REQ_OPTS,
              (err: Error, resp: RequestResponse, body: RequestBody) => {
@@ -804,9 +798,7 @@ describe('gcs-resumable-upload', () => {
       up.onResponse = () => {
         return true;
       };
-      const scope = nock(REQ_OPTS.url)
-                        .get('/?userProject=user-project-id')
-                        .reply(200, data);
+      const scope = nock(REQ_OPTS.url).get(queryPath).reply(200, data);
       up.makeRequest(
           REQ_OPTS, (err: Error, res: RequestResponse, body: RequestBody) => {
             assert.ifError(err);
@@ -820,23 +812,30 @@ describe('gcs-resumable-upload', () => {
 
   describe('#getRequestStream', () => {
     it('should authorize the request', (done) => {
-      up.authClient = {
-        authorizeRequest(reqOpts: RequestOptions) {
-          assert.strictEqual(reqOpts, REQ_OPTS);
+      const scopes = [
+        mockAuthorizeRequest(), nock(REQ_OPTS.url).get(queryPath).reply(200)
+      ];
+      up.getRequestStream(REQ_OPTS, (stream: stream.Readable) => {
+        stream.on('response', (res: RequestResponse) => {
+          scopes.forEach(x => x.done());
+          assert.equal('Bearer abc123', res.request.headers.Authorization);
+          assert.equal(url.format(res.request.url), REQ_OPTS.url + queryPath);
           done();
-        }
-      };
-      up.getRequestStream(REQ_OPTS);
+        });
+      });
     });
 
     it('should set userProject', (done) => {
-      up.authClient = {
-        authorizeRequest(reqOpts: RequestOptions) {
-          assert.deepEqual(reqOpts.params, {userProject: USER_PROJECT});
+      const scopes = [
+        mockAuthorizeRequest(), nock(REQ_OPTS.url).get(queryPath).reply(200)
+      ];
+      up.getRequestStream(REQ_OPTS, (stream: stream.Readable) => {
+        stream.on('response', (res: RequestResponse) => {
+          scopes.forEach(x => x.done());
+          assert.deepEqual(res.request.params, {userProject: USER_PROJECT});
           done();
-        }
-      };
-      up.getRequestStream(REQ_OPTS);
+        });
+      });
     });
 
     it('should destroy the stream if an error occurred', (done) => {
@@ -847,14 +846,15 @@ describe('gcs-resumable-upload', () => {
         done();
       };
       const scope = mockAuthorizeRequest(500);
-      up.getRequestStream(REQ_OPTS);
+      up.getRequestStream(REQ_OPTS, (stream: stream.Readable) => {
+        scope.done();
+      });
     });
 
     it('should make the correct request', (done) => {
       mockAuthorizeRequest();
-      const scope = nock(REQ_OPTS.url)
-                        .get('/?userProject=user-project-id')
-                        .replyWithFile(200, dawPath);
+      const scope =
+          nock(REQ_OPTS.url).get(queryPath).replyWithFile(200, dawPath);
       up.getRequestStream(REQ_OPTS, (requestStream: stream.Readable) => {
         assert(requestStream);
         setImmediate(done);
@@ -864,8 +864,7 @@ describe('gcs-resumable-upload', () => {
 
     it('should set the callback to a noop', (done) => {
       mockAuthorizeRequest();
-      const scope =
-          nock(REQ_OPTS.url).get('/?userProject=user-project-id').reply(200);
+      const scope = nock(REQ_OPTS.url).get(queryPath).reply(200);
       up.getRequestStream(
           REQ_OPTS, (requestStream: stream.Readable&{callback: Function}) => {
             assert.strictEqual(
@@ -876,8 +875,7 @@ describe('gcs-resumable-upload', () => {
 
     it('should destroy the stream if there was an error', (done) => {
       mockAuthorizeRequest();
-      const scope =
-          nock(REQ_OPTS.url).get('/?userProject=user-project-id').reply(200);
+      const scope = nock(REQ_OPTS.url).get(queryPath).reply(200);
       up.getRequestStream(REQ_OPTS, (requestStream: stream.Readable) => {
         const error = new Error(':(');
         up.on('error', (err: Error) => {
@@ -889,16 +887,16 @@ describe('gcs-resumable-upload', () => {
     });
 
     it('should destroy the stream if there was a body error', (done) => {
-      mockAuthorizeRequest();
-      const scope =
-          nock(REQ_OPTS.url).get('/?userProject=user-project-id').reply(200);
+      const response = {error: '🤮'};
+      const scopes = [
+        mockAuthorizeRequest(),
+        nock(REQ_OPTS.url).get(queryPath).reply(200, response)
+      ];
       up.getRequestStream(REQ_OPTS, (requestStream: stream.Readable) => {
-        const response = {body: {error: new Error(':(')}};
         up.on('error', (err: Error) => {
-          assert.strictEqual(err, response.body.error);
+          assert.strictEqual(err, response.error);
           done();
         });
-        requestStream.emit('complete', response);
       });
     });
 
@@ -924,14 +922,10 @@ describe('gcs-resumable-upload', () => {
 
     it('should execute the callback with the stream', (done) => {
       const scopes = [
-        mockAuthorizeRequest(),
-        nock(REQ_OPTS.url)
-            .get('/?userProject=user-project-id')
-            .replyWithFile(200, dawPath)
+        mockAuthorizeRequest(), nock(REQ_OPTS.url).get(queryPath).reply(200, {})
       ];
       up.getRequestStream(REQ_OPTS, (reqStream: stream.Readable) => {
-        assert(reqStream);
-        reqStream.on('complete', (res: RequestResponse) => {
+        reqStream.on('complete', () => {
           scopes.forEach(x => x.done());
           done();
         });

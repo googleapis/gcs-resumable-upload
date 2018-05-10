@@ -1,8 +1,7 @@
 import * as assert from 'assert';
 import * as fs from 'fs';
-import * as r from 'request';
 
-import {createURI, upload} from '../../src';
+import {createURI, RequestResponse, upload} from '../../src';
 
 const bucketName = process.env.BUCKET_NAME!;
 
@@ -18,7 +17,7 @@ describe('end to end', () => {
         }))
         .on('error', done)
         .on('response',
-            (resp: r.Response) => {
+            (resp) => {
               uploadSucceeded = resp.statusCode === 200;
             })
         .on('finish', () => {
