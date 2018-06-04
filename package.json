@@ -9,7 +9,8 @@
     "gcs-upload": "build/src/cli.js"
   },
   "scripts": {
-    "test": "mocha build/test -r source-map-support/register --timeout 4000",
+    "test": "npm run test-only",
+    "test-only": "mocha build/test -r source-map-support/register --timeout 4000",
     "check": "gts check",
     "clean": "gts clean",
     "compile": "tsc -p .",
