@@ -1,11 +1,11 @@
 import {AxiosError, AxiosRequestConfig, AxiosResponse} from 'axios';
-import * as ConfigStore from 'configstore';
+import ConfigStore from 'configstore';
 import * as crypto from 'crypto';
 import {GoogleAuth, GoogleAuthOptions} from 'google-auth-library';
-import * as Pumpify from 'pumpify';
-import * as r from 'request';
-import {Duplex, PassThrough, Readable, Stream} from 'stream';
-import * as streamEvents from 'stream-events';
+import Pumpify from 'pumpify';
+import r from 'request';
+import {PassThrough} from 'stream';
+import streamEvents from 'stream-events';
 
 // tslint:disable-next-line no-any
 export type RequestBody = any;
