@@ -43,7 +43,7 @@ jobs:
     <<: *install_and_test
   lint:
     docker:
-      - image: test_node10
+      - image: node:10
     steps:
       - checkout
       - run: npm install
