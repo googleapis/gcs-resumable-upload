@@ -1,14 +1,14 @@
-import * as assert from 'assert';
+import assert from 'assert';
 import * as crypto from 'crypto';
 import {EventEmitter} from 'events';
-import * as isStream from 'is-stream';
+import isStream from 'is-stream';
 import * as mockery from 'mockery';
-import * as nock from 'nock';
+import nock from 'nock';
 import * as path from 'path';
 import * as stream from 'stream';
-import * as through from 'through2';
+import through from 'through2';
 import * as url from 'url';
-import {AuthorizeRequestCallback, RequestBody, RequestCallback, RequestOptions, RequestResponse} from '../src';
+import {RequestBody, RequestCallback, RequestOptions, RequestResponse} from '../src';
 
 const dawPath = path.join(__dirname, '../../daw.jpg');
 
@@ -86,7 +86,7 @@ describe('gcs-resumable-upload', () => {
     it('should throw if a bucket or file is not given', () => {
       assert.throws(() => {
         upload();
-      }, 'A bucket and file name are required');
+      }, /A bucket and file name are required/);
     });
 
     it('should localize the bucket and file', () => {

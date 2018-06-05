@@ -12,7 +12,7 @@ install_and_test: &install_and_test
         when: always
     - run:
         name: Test
-        command: npm test
+        command: npm run compile && npm run test-only
         when: always
     - run:
         name: System Tests
@@ -25,28 +25,36 @@ install_and_test: &install_and_test
         when: always
 
 jobs:
-  test_node4:
+  node4:
     docker:
       - image: node:4
     <<: *install_and_test
-  test_node6:
+  node6:
     docker:
       - image: node:6
     <<: *install_and_test
-  test_node8:
+  node8:
     docker:
       - image: node:8
     <<: *install_and_test
-  test_node9:
+  node10:
     docker:
-      - image: node:9
+      - image: node:10
     <<: *install_and_test
+  lint:
+    docker:
+      - image: node:10
+    steps:
+      - checkout
+      - run: npm install
+      - run: npm run check
 
 workflows:
   version: 2
   test:
     jobs:
-      - test_node4
-      - test_node6
-      - test_node8
-      - test_node9
+      - node4
+      - node6
+      - node8
+      - node10
+      - lint
