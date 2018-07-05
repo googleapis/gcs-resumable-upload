@@ -8,7 +8,9 @@ import * as path from 'path';
 import * as stream from 'stream';
 import through from 'through2';
 import * as url from 'url';
-import {RequestBody, RequestCallback, RequestOptions, RequestResponse} from '../src';
+
+import {CreateUriCallback} from '../src';
+import {RequestBody, RequestCallback, RequestOptions, RequestResponse} from '../src/types';
 
 const dawPath = path.join(__dirname, '../../daw.jpg');
 
@@ -194,8 +196,8 @@ describe('gcs-resumable-upload', () => {
 
       it('should create an upload', (done) => {
         up.startUploading = done;
-        up.createURI = (callback: RequestCallback) => {
-          callback(null, null!, null);
+        up.createURI = (callback: CreateUriCallback) => {
+          callback(null);
         };
         up.emit('writing');
       });
@@ -206,8 +208,8 @@ describe('gcs-resumable-upload', () => {
           assert(err.message.indexOf(error.message) > -1);
           done();
         };
-        up.createURI = (callback: RequestCallback) => {
-          callback(error, null!, null);
+        up.createURI = (callback: CreateUriCallback) => {
+          callback(error);
         };
         up.emit('writing');
       });

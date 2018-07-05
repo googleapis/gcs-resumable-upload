@@ -1,7 +1,7 @@
 import assert from 'assert';
 import * as fs from 'fs';
 
-import {createURI, RequestResponse, upload} from '../../src';
+import {createURI, upload} from '../../src';
 
 const bucketName = process.env.BUCKET_NAME!;
 
