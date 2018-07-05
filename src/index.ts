@@ -1,21 +1,13 @@
 import {AxiosError, AxiosRequestConfig, AxiosResponse} from 'axios';
 import ConfigStore from 'configstore';
-import * as crypto from 'crypto';
+import {createHash} from 'crypto';
 import {GoogleAuth, GoogleAuthOptions} from 'google-auth-library';
 import Pumpify from 'pumpify';
 import r from 'request';
 import {PassThrough} from 'stream';
 import streamEvents from 'stream-events';
 
-// tslint:disable-next-line no-any
-export type RequestBody = any;
-export type RequestResponse = AxiosResponse;
-export type Request = r.Request;
-export type RequestOptions = AxiosRequestConfig;
-export type RequestCallback =
-    (err: Error|null, response?: AxiosResponse, body?: RequestBody) => void;
-export type AuthorizeRequestCallback =
-    (err: Error|null, authorizedReqOpts: RequestOptions) => void;
+import {RequestCallback, RequestOptions, RequestResponse} from './types';
 
 const request = r.defaults({json: true, pool: {maxSockets: Infinity}});
 
@@ -191,7 +183,7 @@ export class Upload extends Pumpify {
       const base64Key = Buffer.from(cfg.key as string).toString('base64');
       this.encryption = {
         key: base64Key,
-        hash: crypto.createHash('sha256').update(cfg.key).digest('base64')
+        hash: createHash('sha256').update(cfg.key).digest('base64')
       };
     }
 
@@ -291,7 +283,7 @@ export class Upload extends Pumpify {
         new PassThrough({transform: this.onChunk.bind(this)});
     const delayStream = new PassThrough();
 
-    this.getRequestStream(reqOpts, (requestStream: Request) => {
+    this.getRequestStream(reqOpts, (requestStream: r.Request) => {
       this.setPipeline(bufferStream, offsetStream, requestStream, delayStream);
 
       // wait for "complete" from request before letting the stream finish
@@ -425,7 +417,7 @@ export class Upload extends Pumpify {
   }
 
   private getRequestStream(
-      reqOpts: RequestOptions, callback: (requestStream: Request) => void) {
+      reqOpts: RequestOptions, callback: (requestStream: r.Request) => void) {
     if (this.userProject) {
       reqOpts.params = reqOpts.params || {};
       reqOpts.params.userProject = this.userProject;
