@@ -51,7 +51,7 @@
     "@types/pumpify": "^1.4.1",
     "@types/request": "^2.47.0",
     "@types/through2": "^2.0.33",
-    "gts": "^0.7.0",
+    "gts": "^0.8.0",
     "is-stream": "^1.1.0",
     "mocha": "^5.2.0",
     "mockery": "^2.1.0",
