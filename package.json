@@ -35,7 +35,7 @@
   "license": "MIT",
   "dependencies": {
     "axios": "^0.18.0",
-    "configstore": "^3.1.2",
+    "configstore": "^4.0.0",
     "google-auth-library": "^1.5.0",
     "pumpify": "^1.5.1",
     "request": "^2.87.0",
