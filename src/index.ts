@@ -6,13 +6,13 @@
  */
 
 import {AxiosError, AxiosRequestConfig, AxiosResponse} from 'axios';
-import ConfigStore from 'configstore';
+import * as ConfigStore from 'configstore';
 import {createHash} from 'crypto';
 import {GoogleAuth, GoogleAuthOptions} from 'google-auth-library';
-import Pumpify from 'pumpify';
-import r from 'request';
+import * as Pumpify from 'pumpify';
+import * as r from 'request';
 import {PassThrough} from 'stream';
-import streamEvents from 'stream-events';
+import * as streamEvents from 'stream-events';
 
 import {RequestCallback, RequestOptions, RequestResponse} from './types';
 

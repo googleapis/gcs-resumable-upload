@@ -5,7 +5,7 @@
  * See file LICENSE for detail or copy at https://opensource.org/licenses/MIT
  */
 
-import assert from 'assert';
+import * as assert from 'assert';
 import * as fs from 'fs';
 
 import {createURI, upload} from '../../src';
