@@ -25,10 +25,6 @@ install_and_test: &install_and_test
         when: always
 
 jobs:
-  node4:
-    docker:
-      - image: node:4
-    <<: *install_and_test
   node6:
     docker:
       - image: node:6
@@ -53,7 +49,6 @@ workflows:
   version: 2
   test:
     jobs:
-      - node4
       - node6
       - node8
       - node10
