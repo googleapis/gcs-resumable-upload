@@ -5,15 +5,15 @@
  * See file LICENSE for detail or copy at https://opensource.org/licenses/MIT
  */
 
-import assert from 'assert';
+import * as assert from 'assert';
 import * as crypto from 'crypto';
 import {EventEmitter} from 'events';
-import isStream from 'is-stream';
+import * as isStream from 'is-stream';
 import * as mockery from 'mockery';
-import nock from 'nock';
+import * as nock from 'nock';
 import * as path from 'path';
 import * as stream from 'stream';
-import through from 'through2';
+import * as through from 'through2';
 import * as url from 'url';
 
 import {CreateUriCallback} from '../src';
