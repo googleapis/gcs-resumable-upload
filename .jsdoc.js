@@ -36,10 +36,10 @@ module.exports = {
     includePattern: '\\.js$'
   },
   templates: {
-    copyright: 'Copyright 2017 Google, Inc.',
+    copyright: 'Copyright 2017 Google, LLC.',
     includeDate: false,
     sourceFiles: false,
-    systemName: '@google-cloud/storage',
+    systemName: 'gcs-resumable-upload',
     theme: 'lumen'
   }
 };
