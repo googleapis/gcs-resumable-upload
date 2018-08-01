@@ -8,9 +8,9 @@
 import * as assert from 'assert';
 import * as fs from 'fs';
 
-import {createURI, upload} from '../../src';
+import {createURI, upload} from '../src';
 
-const bucketName = process.env.BUCKET_NAME!;
+const bucketName = process.env.BUCKET_NAME || 'gcs-resumable-upload-test';
 
 describe('end to end', () => {
   it('should work', (done) => {

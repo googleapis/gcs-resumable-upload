@@ -3,13 +3,11 @@
   "compilerOptions": {
     "rootDir": ".",
     "outDir": "build",
-    "noImplicitThis": false,
-    "target": "es5"
+    "noImplicitThis": false
   },
   "include": [
     "src/*.ts",
-    "src/**/*.ts",
     "test/*.ts",
-    "test/**/*.ts"
+    "system-test/*.ts"
   ]
 }

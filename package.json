@@ -2,7 +2,7 @@
   "name": "gcs-resumable-upload",
   "version": "0.12.0",
   "description": "Upload a file to Google Cloud Storage with built-in resumable behavior",
-  "repository": "stephenplusplus/gcs-resumable-upload",
+  "repository": "GoogleCloudPlatform/gcs-resumable-upload",
   "main": "build/src/index.js",
   "types": "build/src/index.d.ts",
   "bin": {
@@ -10,15 +10,18 @@
   },
   "scripts": {
     "test": "npm run test-only",
-    "test-only": "mocha build/test -r source-map-support/register --timeout 4000",
-    "check": "gts check",
+    "test-only": "mocha build/test",
+    "lint": "gts check",
     "clean": "gts clean",
     "compile": "tsc -p .",
     "fix": "gts fix",
-    "posttest": "npm run check",
+    "posttest": "npm run lint",
     "prepare": "npm run compile",
     "pretest": "npm run compile",
-    "system-tests": "mocha build/test/system-tests -r source-map-support/register --timeout 20000"
+    "system-test": "mocha build/system-test --timeout 20000",
+    "samples-test": "echo no samples 🤷‍♂️",
+    "presystem-test": "npm run compile",
+    "docs": "jsdoc -c .jsdoc.js"
   },
   "keywords": [
     "google",
@@ -54,11 +57,16 @@
     "@types/pumpify": "^1.4.1",
     "@types/request": "^2.47.0",
     "@types/through2": "^2.0.33",
+    "codecov": "^3.0.4",
     "gts": "^0.8.0",
+    "ink-docstrap": "^1.3.2",
+    "intelli-espower-loader": "^1.0.1",
     "is-stream": "^1.1.0",
+    "jsdoc": "^3.5.5",
     "mocha": "^5.2.0",
     "mockery": "^2.1.0",
     "nock": "^9.3.0",
+    "nyc": "^12.0.2",
     "source-map-support": "^0.5.6",
     "through2": "^2.0.3",
     "typescript": "~3.0.0"
