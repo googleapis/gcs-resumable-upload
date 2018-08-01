@@ -1,0 +1,19 @@
+{
+  "description": "Samples for the gcs-resumable-upload npm module.",
+  "license": "MIT",
+  "author": "Google LLC",
+  "engines": {
+    "node": ">=8"
+  },
+  "repository": "GoogleCloudPlatform/gcs-resumable-upload",
+  "private": true,
+  "scripts": {
+    "test": "mocha system-test"
+  },
+  "dependencies": {
+    "gcs-resumable-upload": "*"
+  },
+  "devDependencies": {
+    "mocha": "^5.2.0"
+  }
+}

@@ -61,6 +61,7 @@
     "gts": "^0.8.0",
     "intelli-espower-loader": "^1.0.1",
     "is-stream": "^1.1.0",
+    "jsdoc": "^3.5.5",
     "mocha": "^5.2.0",
     "mockery": "^2.1.0",
     "nock": "^9.3.0",
