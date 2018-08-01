@@ -2,15 +2,15 @@
 > Upload a file to Google Cloud Storage with built-in resumable behavior
 
 ```sh
-$ npm install --save gcs-resumable-upload
+$ npm install gcs-resumable-upload
 ```
 ```js
-var upload = require('gcs-resumable-upload');
-var fs = require('fs');
+const {upload} = require('gcs-resumable-upload');
+const fs = require('fs');
 
 fs.createReadStream('titanic.mov')
   .pipe(upload({ bucket: 'legally-owned-movies', file: 'titanic.mov' }))
-  .on('finish', function () {
+  .on('finish', () => {
     // Uploaded!
   });
 ```
@@ -36,11 +36,11 @@ After the upload completes, the entry in the config file is removed. Done!
 
 ## Authentication
 
-Oh, right. This module uses [google-auto-auth](http://gitnpm.com/google-auto-auth) and accepts all of the configuration that module does to strike up a connection as `config.authConfig`. See [`authConfig`](https://github.com/stephenplusplus/google-auto-auth#authconfig).
+Oh, right. This module uses [google-auth-library](http://gitnpm.com/google-auth-library) and accepts all of the configuration that module does to strike up a connection as `config.authConfig`. See [`authConfig`](https://github.com/google/google-auth-library-nodejs/#choosing-the-correct-credential-type-automatically).
 
 ## API
 
-### upload = require('gcs-resumable-upload')
+### {upload} = require('gcs-resumable-upload')
 
 ---
 
@@ -57,17 +57,17 @@ Configuration object.
 
 ###### config.authClient
 
-- Type: [`GoogleAutoAuth`](http://gitnpm.com/google-auto-auth)
+- Type: [`GoogleAuth`](http://gitnpm.com/google-auth-library)
 - *Optional*
 
-If you want to re-use an auth client from [google-auto-auth](http://gitnpm.com/google-auto-auth), pass an instance here.
+If you want to re-use an auth client from [google-auth-library](http://gitnpm.com/google-auth-library), pass an instance here.
 
 ###### config.authConfig
 
 - Type: `object`
 - *Optional*
 
-See [`authConfig`](https://github.com/stephenplusplus/google-auto-auth#authconfig).
+See [`authConfig`](https://github.com/google/google-auth-library-nodejs/#choosing-the-correct-credential-type-automatically).
 
 ###### config.bucket
 
@@ -209,7 +209,9 @@ The file was uploaded successfully.
 
 ---
 
-#### upload.createURI([config](#config), callback)
+### {createURI} = require('gcs-resumable-upload);
+
+#### createURI([config](#config), callback)
 
 ##### callback(err, resumableURI)
 
