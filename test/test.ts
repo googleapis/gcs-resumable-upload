@@ -876,8 +876,7 @@ describe('gcs-resumable-upload', () => {
       const scope = nock(REQ_OPTS.url).get(queryPath).reply(200);
       up.getRequestStream(
           REQ_OPTS, (requestStream: stream.Readable&{callback: Function}) => {
-            assert.strictEqual(
-                requestStream.callback.toString(), 'function () { }');
+            assert.strictEqual(requestStream.callback.toString(), '() => { }');
             done();
           });
     });
