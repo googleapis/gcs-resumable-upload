@@ -5,5 +5,11 @@
   "automerge": true,
   "pinDigests": false,
   "pinVersions": false,
-  "rebaseStalePrs": true
+  "rebaseStalePrs": true,
+  "packageRules": [
+    {
+      "extends": "packages:linters",
+      "groupName": "linters"
+    }
+  ]
 }
