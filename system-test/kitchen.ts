@@ -7,7 +7,7 @@
 
 import * as assert from 'assert';
 import * as fs from 'fs';
-
+import {Readable} from 'stream';
 import {createURI, upload} from '../src';
 
 const bucketName = process.env.BUCKET_NAME || 'gcs-resumable-upload-test';
@@ -55,7 +55,7 @@ describe('end to end', () => {
             fs.createReadStream('daw.jpg')
                 .on('error', callback)
                 .on('data',
-                    function(chunk) {
+                    function(this: Readable, chunk) {
                       sizeStreamed += chunk.length;
 
                       if (!destroyed && opts.interrupt &&

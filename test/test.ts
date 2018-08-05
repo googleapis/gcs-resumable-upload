@@ -24,16 +24,16 @@ const dawPath = path.join(__dirname, '../../daw.jpg');
 nock.disableNetConnect();
 
 let configData = {} as {[index: string]: {}};
-function ConfigStore() {
-  this.delete = (key: string) => {
+class ConfigStore {
+  delete(key: string) {
     delete configData[key];
-  };
-  this.get = (key: string) => {
+  }
+  get(key: string) {
     return configData[key];
-  };
-  this.set = (key: string, value: {}) => {
+  }
+  set(key: string, value: {}) {
     configData[key] = value;
-  };
+  }
 }
 
 const queryPath = '/?userProject=user-project-id';
