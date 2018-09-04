@@ -42,7 +42,7 @@
   "dependencies": {
     "axios": "^0.18.0",
     "configstore": "^4.0.0",
-    "google-auth-library": "^1.5.0",
+    "google-auth-library": "^2.0.0",
     "pumpify": "^1.5.1",
     "request": "^2.87.0",
     "stream-events": "^1.0.4"
