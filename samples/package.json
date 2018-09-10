@@ -5,7 +5,7 @@
   "engines": {
     "node": ">=8"
   },
-  "repository": "GoogleCloudPlatform/gcs-resumable-upload",
+  "repository": "googleapis/gcs-resumable-upload",
   "private": true,
   "scripts": {
     "test": "mocha system-test"
