@@ -1119,7 +1119,7 @@ describe('gcs-resumable-upload', () => {
           assert(delay >= minTime);
           assert(delay <= maxTime);
           cb();
-          return {ref() {}, unref() {}};
+          return {ref() {}, unref() {}, refresh() {}};
         };
 
         up.on('error', (err: Error) => {
