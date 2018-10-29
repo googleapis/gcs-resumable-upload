@@ -414,6 +414,7 @@ export class Upload extends Pumpify {
             if (!e && (res.statusCode < 200 || res.statusCode >= 300) &&
                 res.statusCode !== RESUMABLE_INCOMPLETE_STATUS_CODE) {
               e = new Error(`The request failed with a ${res.statusCode}.`);
+              e.code = res.statusCode;
             }
             callback(e, res, body);
           });
