@@ -408,13 +408,14 @@ export class Upload extends Pumpify {
         .then(authHeaders => {
           reqOpts.headers = Object.assign({}, reqOpts.headers, authHeaders);
           request(reqOpts, (err, res, body) => {
-            const e = (body && body.error) ? body.error : err;
-            if ((res.statusCode >= 200 && res.statusCode < 300) ||
-                res.statusCode === RESUMABLE_INCOMPLETE_STATUS_CODE) {
-              callback(e, res, body);
-            } else {
-              callback(e, res, body);
+            let e = (body && body.error) ? body.error : err;
+            // If no error was returned, but the response had an invalid status
+            // code, create a new error to be passed to the callback.
+            if (!e && (res.statusCode < 200 || res.statusCode >= 300) &&
+                res.statusCode !== RESUMABLE_INCOMPLETE_STATUS_CODE) {
+              e = new Error(`The request failed with a ${res.statusCode}.`);
             }
+            callback(e, res, body);
           });
         })
         .catch(e => {
