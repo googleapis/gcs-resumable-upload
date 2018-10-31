@@ -226,7 +226,7 @@ export class Upload extends Pumpify {
       method: 'POST',
       url: [BASE_URI, this.bucket, 'o'].join('/'),
       qs: {name: this.file, uploadType: 'resumable'},
-      body: metadata,
+      json: metadata,
       headers: {}
     };
 

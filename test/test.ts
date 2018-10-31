@@ -238,7 +238,7 @@ describe('gcs-resumable-upload', () => {
           uploadType: 'resumable',
           ifGenerationMatch: GENERATION
         });
-        assert.strictEqual(reqOpts.body, up.metadata);
+        assert.strictEqual(reqOpts.json, up.metadata);
         done();
       };
 
