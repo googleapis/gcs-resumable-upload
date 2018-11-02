@@ -12,12 +12,14 @@ import * as isStream from 'is-stream';
 import * as mockery from 'mockery';
 import * as nock from 'nock';
 import * as path from 'path';
+import * as r from 'request';
 import * as stream from 'stream';
 import * as through from 'through2';
-import * as url from 'url';
-
 import {CreateUriCallback} from '../src';
-import {RequestBody, RequestCallback, RequestOptions, RequestResponse} from '../src/types';
+
+type RequestOptions = r.OptionsWithUrl;
+type RequestCallback = r.RequestCallback;
+type RequestResponse = r.Response;
 
 const dawPath = path.join(__dirname, '../../daw.jpg');
 
@@ -230,13 +232,13 @@ describe('gcs-resumable-upload', () => {
         assert.strictEqual(
             reqOpts.url,
             `https://www.googleapis.com/upload/storage/v1/b/${BUCKET}/o`);
-        assert.deepEqual(reqOpts.params, {
+        assert.deepEqual(reqOpts.qs, {
           predefinedAcl: up.predefinedAcl,
           name: FILE,
           uploadType: 'resumable',
           ifGenerationMatch: GENERATION
         });
-        assert.strictEqual(reqOpts.data, up.metadata);
+        assert.strictEqual(reqOpts.json, up.metadata);
         done();
       };
 
@@ -248,7 +250,7 @@ describe('gcs-resumable-upload', () => {
       const up = upload({bucket: BUCKET, file: FILE, kmsKeyName});
 
       up.makeRequest = (reqOpts: RequestOptions) => {
-        assert.strictEqual(reqOpts.params.kmsKeyName, kmsKeyName);
+        assert.strictEqual(reqOpts.qs.kmsKeyName, kmsKeyName);
         done();
       };
 
@@ -257,7 +259,7 @@ describe('gcs-resumable-upload', () => {
 
     it('should respect 0 as a generation', (done) => {
       up.makeRequest = (reqOpts: RequestOptions) => {
-        assert.strictEqual(reqOpts.params.ifGenerationMatch, 0);
+        assert.strictEqual(reqOpts.qs.ifGenerationMatch, 0);
         done();
       };
       up.generation = 0;
@@ -617,9 +619,7 @@ describe('gcs-resumable-upload', () => {
 
   describe('#getAndSetOffset', () => {
     const RANGE = 123456;
-
-    // tslint:disable-next-line no-any
-    const RESP = {status: 308, headers: {range: `range-${RANGE}`}} as
+    const RESP = {statusCode: 308, headers: {range: `range-${RANGE}`}} as {} as
         RequestResponse;
 
     it('should make the correct request', (done) => {
@@ -640,7 +640,7 @@ describe('gcs-resumable-upload', () => {
 
     describe('restart on 404', () => {
       const ERROR = new Error(':(');
-      const RESP = {status: 404} as RequestResponse;
+      const RESP = {statusCode: 404} as RequestResponse;
 
       beforeEach(() => {
         up.makeRequest =
@@ -667,7 +667,7 @@ describe('gcs-resumable-upload', () => {
 
     describe('restart on 410', () => {
       const ERROR = new Error(':(');
-      const RESP = {status: 410} as RequestResponse;
+      const RESP = {statusCode: 410} as RequestResponse;
 
       beforeEach(() => {
         up.makeRequest =
@@ -714,10 +714,10 @@ describe('gcs-resumable-upload', () => {
           upload({bucket: 'BUCKET', file: FILE, key, authConfig: {keyFile}});
       const scopes =
           [mockAuthorizeRequest(), nock(REQ_OPTS.url).get('/').reply(200, {})];
-      up.makeRequest(REQ_OPTS, (err: Error|null, res: RequestResponse) => {
+      up.makeRequest(REQ_OPTS, (err: Error, res: RequestResponse) => {
         assert.ifError(err);
         scopes.forEach(x => x.done());
-        const headers = res.config.headers;
+        const headers = res.request.headers;
         assert.equal(headers['x-goog-encryption-algorithm'], 'AES256');
         assert.equal(headers['x-goog-encryption-key'], up.encryption.key);
         assert.equal(
@@ -730,9 +730,9 @@ describe('gcs-resumable-upload', () => {
       const scopes = [
         mockAuthorizeRequest(), nock(REQ_OPTS.url).get(queryPath).reply(200, {})
       ];
-      up.makeRequest(REQ_OPTS, (err: Error|null, res: RequestResponse) => {
+      up.makeRequest(REQ_OPTS, (err: Error, res: RequestResponse) => {
         assert.ifError(err);
-        assert.deepEqual(res.config.params, {userProject: USER_PROJECT});
+        assert.deepEqual(res.request.uri.query, `userProject=${USER_PROJECT}`);
         scopes.forEach(x => x.done());
         done();
       });
@@ -740,35 +740,34 @@ describe('gcs-resumable-upload', () => {
 
     it('should execute the callback with error & response if one occurred',
        (done) => {
-         const response = {} as RequestResponse;
          const scope = mockAuthorizeRequest(500, ':(');
          up.makeRequest({}, (err: Error, resp: RequestResponse) => {
            assert.equal(err.message, 'Request failed with status code 500');
+           scope.done();
            done();
          });
        });
 
     it('should make the correct request', (done) => {
-      const headers = {};
       const scopes = [
         mockAuthorizeRequest(),
-        nock(REQ_OPTS.url).get(queryPath).reply(200, undefined, headers)
+        nock(REQ_OPTS.url).get(queryPath).reply(200, undefined, {})
       ];
-      up.makeRequest(REQ_OPTS, (err: Error|null, res: RequestResponse) => {
+      up.makeRequest(REQ_OPTS, (err: Error, res: RequestResponse) => {
         assert.ifError(err);
         scopes.forEach(x => x.done());
-        assert.strictEqual(res.config.url, REQ_OPTS.url);
+        assert.strictEqual(res.request.href, REQ_OPTS.url + queryPath);
         assert.deepStrictEqual(res.headers, {});
         done();
       });
     });
 
     it('should execute the callback with error & response', (done) => {
-      const response = {data: 'wooo'} as RequestResponse;
+      const response = {body: 'wooo'} as RequestResponse;
       mockAuthorizeRequest();
-      const scope = nock(REQ_OPTS.url).get(queryPath).reply(500, response.data);
+      const scope = nock(REQ_OPTS.url).get(queryPath).reply(500, response.body);
       up.makeRequest(REQ_OPTS, (err: Error, resp: RequestResponse) => {
-        assert.strictEqual(resp.data, response.data);
+        assert.strictEqual(resp.body, response.body);
         scope.done();
         done();
       });
@@ -779,8 +778,8 @@ describe('gcs-resumable-upload', () => {
       mockAuthorizeRequest();
       const scope = nock(REQ_OPTS.url).get(queryPath).reply(500, response);
       up.makeRequest(REQ_OPTS, (err: Error, res: RequestResponse) => {
-        assert.equal(res.status, 500);
-        assert.deepStrictEqual(response, res.data);
+        assert.equal(res.statusCode, 500);
+        assert.deepStrictEqual(response, res.body);
         done();
       });
     });
@@ -792,10 +791,10 @@ describe('gcs-resumable-upload', () => {
          const scope =
              nock(REQ_OPTS.url).get(queryPath).reply(500, response.body);
          up.makeRequest(
-             REQ_OPTS,
-             (err: Error, resp: RequestResponse, body: RequestBody) => {
+             REQ_OPTS, (err: Error, resp: RequestResponse, body: {}) => {
+               scope.done();
                assert.strictEqual(err, response.body.error);
-               assert.deepStrictEqual(resp.status, 500);
+               assert.deepStrictEqual(resp.statusCode, 500);
                assert.deepStrictEqual(body, response.body);
                done();
              });
@@ -808,14 +807,13 @@ describe('gcs-resumable-upload', () => {
         return true;
       };
       const scope = nock(REQ_OPTS.url).get(queryPath).reply(200, data);
-      up.makeRequest(
-          REQ_OPTS, (err: Error, res: RequestResponse, body: RequestBody) => {
-            assert.ifError(err);
-            scope.done();
-            assert.strictEqual(res.status, 200);
-            assert.deepStrictEqual(body, data);
-            done();
-          });
+      up.makeRequest(REQ_OPTS, (err: Error, res: RequestResponse, body: {}) => {
+        assert.ifError(err);
+        scope.done();
+        assert.strictEqual(res.statusCode, 200);
+        assert.deepStrictEqual(body, data);
+        done();
+      });
     });
   });
 
@@ -828,7 +826,7 @@ describe('gcs-resumable-upload', () => {
         stream.on('response', (res: RequestResponse) => {
           scopes.forEach(x => x.done());
           assert.equal('Bearer abc123', res.request.headers.Authorization);
-          assert.equal(url.format(res.request.url), REQ_OPTS.url + queryPath);
+          assert.equal(res.request.href, REQ_OPTS.url + queryPath);
           done();
         });
       });
@@ -841,7 +839,8 @@ describe('gcs-resumable-upload', () => {
       up.getRequestStream(REQ_OPTS, (stream: stream.Readable) => {
         stream.on('response', (res: RequestResponse) => {
           scopes.forEach(x => x.done());
-          assert.deepEqual(res.request.params, {userProject: USER_PROJECT});
+          assert.deepEqual(
+              res.request.uri.query, `userProject=${USER_PROJECT}`);
           done();
         });
       });
@@ -1053,7 +1052,7 @@ describe('gcs-resumable-upload', () => {
     });
 
     describe('404', () => {
-      const RESP = {status: 404};
+      const RESP = {statusCode: 404};
 
       it('should increase the retry count if less than limit', () => {
         assert.strictEqual(up.numRetries, 0);
@@ -1082,7 +1081,7 @@ describe('gcs-resumable-upload', () => {
     });
 
     describe('500s', () => {
-      const RESP = {status: 500};
+      const RESP = {statusCode: 500};
 
       it('should increase the retry count if less than limit', () => {
         assert.strictEqual(up.numRetries, 0);

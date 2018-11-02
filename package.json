@@ -40,7 +40,6 @@
     "node": ">=6"
   },
   "dependencies": {
-    "axios": "^0.18.0",
     "configstore": "^4.0.0",
     "google-auth-library": "^2.0.0",
     "pumpify": "^1.5.1",
