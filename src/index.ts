@@ -314,6 +314,11 @@ export class Upload extends Pumpify {
     const offset = this.offset!;
     const numBytesWritten = this.numBytesWritten;
 
+    this.emit('progress', {
+      bytesWritten: this.numBytesWritten,
+      contentLength: this.contentLength
+    });
+
     // check if this is the same content uploaded previously. this caches a
     // slice of the first chunk, then compares it with the first byte of
     // incoming data

@@ -588,6 +588,16 @@ describe('gcs-resumable-upload', () => {
           done();
         });
       });
+
+      it('should emit a progress event with the bytes written', (done) => {
+        let happened = false;
+        up.on('progress', (progress: {}) => {
+          happened = true;
+        });
+        up.onChunk(CHUNK, ENC, NEXT);
+        assert.strictEqual(happened, true);
+        done();
+      });
     });
 
     describe('next()', () => {

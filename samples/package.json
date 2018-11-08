@@ -11,7 +11,7 @@
     "test": "mocha system-test"
   },
   "dependencies": {
-    "gcs-resumable-upload": "*"
+    "gcs-resumable-upload": "0.13.0"
   },
   "devDependencies": {
     "mocha": "^5.2.0"
