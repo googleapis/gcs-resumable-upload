@@ -156,7 +156,7 @@ export class Upload extends Pumpify {
 
   constructor(cfg: UploadConfig) {
     super();
-    streamEvents.call(this);
+    streamEvents(this);
 
     cfg = cfg || {};
 
@@ -309,8 +309,7 @@ export class Upload extends Pumpify {
   }
 
   private onChunk(
-      chunk: string, enc: string,
-      next: (err: Error|null, data?: string) => void) {
+      chunk: string, enc: string, next: (err?: Error, data?: string) => void) {
     const offset = this.offset!;
     const numBytesWritten = this.numBytesWritten;
 
@@ -351,7 +350,7 @@ export class Upload extends Pumpify {
     this.numBytesWritten += length;
 
     // only push data from the byte after the one we left off on
-    next(null, this.numBytesWritten > offset ? chunk : undefined);
+    next(undefined, this.numBytesWritten > offset ? chunk : undefined);
   }
 
   private getAndSetOffset(callback: () => void) {
