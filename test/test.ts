@@ -742,7 +742,7 @@ describe('gcs-resumable-upload', () => {
       ];
       up.makeRequest(REQ_OPTS, (err: Error, res: RequestResponse) => {
         assert.ifError(err);
-        assert.deepEqual(res.request.uri.query, `userProject=${USER_PROJECT}`);
+        assert.strictEqual(res.request.href, `${REQ_OPTS.url}${queryPath}`);
         scopes.forEach(x => x.done());
         done();
       });
@@ -849,8 +849,7 @@ describe('gcs-resumable-upload', () => {
       up.getRequestStream(REQ_OPTS, (stream: stream.Readable) => {
         stream.on('response', (res: RequestResponse) => {
           scopes.forEach(x => x.done());
-          assert.deepEqual(
-              res.request.uri.query, `userProject=${USER_PROJECT}`);
+          assert.strictEqual(res.request.href, `${REQ_OPTS.url}${queryPath}`);
           done();
         });
       });
@@ -912,6 +911,7 @@ describe('gcs-resumable-upload', () => {
       up.getRequestStream(REQ_OPTS, (requestStream: stream.Readable) => {
         up.on('error', (err: Error) => {
           assert.strictEqual(err, response.error);
+          scopes.forEach(x => x.done());
           done();
         });
       });
