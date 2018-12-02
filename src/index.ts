@@ -408,8 +408,8 @@ export class Upload extends Pumpify {
       reqOpts.qs.userProject = this.userProject;
     }
 
-    this.authClient.getRequestHeaders()
-        .then(authHeaders => {
+    this.authClient.getRequestHeaders().then(
+        authHeaders => {
           reqOpts.headers = Object.assign({}, reqOpts.headers, authHeaders);
           request(reqOpts, (err, res, body) => {
             let e = (body && body.error) ? body.error : err;
@@ -422,8 +422,8 @@ export class Upload extends Pumpify {
             }
             callback(e, res, body);
           });
-        })
-        .catch(e => {
+        },
+        e => {
           callback(e, e.response, null);
         });
   }
@@ -436,23 +436,25 @@ export class Upload extends Pumpify {
     }
 
     this.authClient.getRequestHeaders(reqOpts.url as string)
-        .then(authHeaders => {
-          reqOpts.headers = Object.assign({}, reqOpts.headers, authHeaders);
-          const requestStream = request(reqOpts);
-          requestStream.on('error', this.destroy.bind(this));
-          requestStream.on('response', this.onResponse.bind(this));
-          requestStream.on('complete', (resp) => {
-            const body = resp.body;
-            if (body && body.error) this.destroy(body.error);
-          });
+        .then(
+            authHeaders => {
+              reqOpts.headers = Object.assign({}, reqOpts.headers, authHeaders);
+              const requestStream = request(reqOpts);
+              requestStream.on('error', this.destroy.bind(this));
+              requestStream.on('response', this.onResponse.bind(this));
+              requestStream.on('complete', (resp) => {
+                const body = resp.body;
+                if (body && body.error) this.destroy(body.error);
+              });
 
-          // this makes the response body come back in the response (weird?)
-          requestStream.callback = () => {};
-          callback(requestStream);
-        })
-        .catch(err => {
-          return this.destroy(wrapError('Could not authenticate request', err));
-        });
+              // this makes the response body come back in the response (weird?)
+              requestStream.callback = () => {};
+              callback(requestStream);
+            },
+            err => {
+              return this.destroy(
+                  wrapError('Could not authenticate request', err));
+            });
   }
 
   private restart() {
