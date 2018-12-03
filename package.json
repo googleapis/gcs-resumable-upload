@@ -48,7 +48,7 @@
     "teeny-request": "^3.11.3"
   },
   "devDependencies": {
-    "@types/configstore": "^2.1.1",
+    "@types/configstore": "^4.0.0",
     "@types/is-stream": "^1.1.0",
     "@types/mocha": "^5.2.1",
     "@types/mockery": "^1.4.29",
