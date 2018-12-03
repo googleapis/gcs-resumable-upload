@@ -226,3 +226,4 @@ Invoked if the authorization failed or the request to start a resumable session 
 - Type: `String`
 
 The resumable upload session URI.
+
