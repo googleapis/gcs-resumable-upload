@@ -12,6 +12,7 @@ import * as Pumpify from 'pumpify';
 import * as r from 'request';
 import {PassThrough} from 'stream';
 import * as streamEvents from 'stream-events';
+import {teenyRequest} from 'teeny-request';
 
 const request = r.defaults({json: true, pool: {maxSockets: Infinity}});
 
@@ -411,7 +412,7 @@ export class Upload extends Pumpify {
     this.authClient.getRequestHeaders().then(
         authHeaders => {
           reqOpts.headers = Object.assign({}, reqOpts.headers, authHeaders);
-          request(reqOpts, (err, res, body) => {
+          teenyRequest(reqOpts, (err, res, body) => {
             let e = (body && body.error) ? body.error : err;
             // If no error was returned, but the response had an invalid status
             // code, create a new error to be passed to the callback.
