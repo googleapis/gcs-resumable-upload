@@ -9,8 +9,7 @@
     "gcs-upload": "build/src/cli.js"
   },
   "scripts": {
-    "test": "npm run test-only",
-    "test-only": "mocha build/test",
+    "test": "nyc mocha build/test",
     "lint": "gts check",
     "clean": "gts clean",
     "compile": "tsc -p .",
