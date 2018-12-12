@@ -5,3 +5,5 @@ package-lock.json
 build
 package-lock.json
 __pycache__
+.coverage
+.nyc_output
