@@ -58,7 +58,7 @@
     "@types/through2": "^2.0.33",
     "codecov": "^3.0.4",
     "gts": "^0.9.0",
-    "ink-docstrap": "^1.3.2",
+    "jsdoc-baseline": "git+https://github.com/hegemonic/jsdoc-baseline.git",
     "intelli-espower-loader": "^1.0.1",
     "is-stream": "^1.1.0",
     "jsdoc": "^3.5.5",
