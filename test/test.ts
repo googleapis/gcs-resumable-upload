@@ -6,6 +6,7 @@
  */
 
 import * as assert from 'assert';
+import {AxiosError, AxiosProxyConfig, AxiosRequestConfig, AxiosResponse} from 'axios';
 import * as crypto from 'crypto';
 import {EventEmitter} from 'events';
 import * as isStream from 'is-stream';
@@ -15,10 +16,11 @@ import * as path from 'path';
 import * as r from 'request';
 import * as stream from 'stream';
 import * as through from 'through2';
+
+const assertRejects = require('assert-rejects');
+
 import {CreateUriCallback} from '../src';
 
-type RequestOptions = r.OptionsWithUrl;
-type RequestCallback = r.RequestCallback;
 type RequestResponse = r.Response;
 
 const dawPath = path.join(__dirname, '../../daw.jpg');
@@ -227,21 +229,21 @@ describe('gcs-resumable-upload', () => {
 
   describe('#createURI', () => {
     it('should make the correct request', (done) => {
-      up.makeRequest = (reqOpts: RequestOptions) => {
+      up.makeRequest = async (reqOpts: AxiosRequestConfig) => {
         assert.strictEqual(reqOpts.method, 'POST');
         assert.strictEqual(
             reqOpts.url,
             `https://www.googleapis.com/upload/storage/v1/b/${BUCKET}/o`);
-        assert.deepEqual(reqOpts.qs, {
+        assert.deepEqual(reqOpts.params, {
           predefinedAcl: up.predefinedAcl,
           name: FILE,
           uploadType: 'resumable',
           ifGenerationMatch: GENERATION
         });
-        assert.strictEqual(reqOpts.json, up.metadata);
+        assert.strictEqual(reqOpts.data, up.metadata);
         done();
+        return {headers: {location: '/foo'}};
       };
-
       up.createURI();
     });
 
@@ -249,18 +251,20 @@ describe('gcs-resumable-upload', () => {
       const kmsKeyName = 'kms-key-name';
       const up = upload({bucket: BUCKET, file: FILE, kmsKeyName});
 
-      up.makeRequest = (reqOpts: RequestOptions) => {
-        assert.strictEqual(reqOpts.qs.kmsKeyName, kmsKeyName);
+      up.makeRequest = async (reqOpts: AxiosRequestConfig) => {
+        assert.strictEqual(reqOpts.params.kmsKeyName, kmsKeyName);
         done();
+        return {headers: {location: '/foo'}};
       };
 
       up.createURI();
     });
 
     it('should respect 0 as a generation', (done) => {
-      up.makeRequest = (reqOpts: RequestOptions) => {
-        assert.strictEqual(reqOpts.qs.ifGenerationMatch, 0);
+      up.makeRequest = async (reqOpts: AxiosRequestConfig) => {
+        assert.strictEqual(reqOpts.params.ifGenerationMatch, 0);
         done();
+        return {headers: {location: '/foo'}};
       };
       up.generation = 0;
       up.createURI();
@@ -270,10 +274,9 @@ describe('gcs-resumable-upload', () => {
       const error = new Error(':(');
 
       beforeEach(() => {
-        up.makeRequest =
-            (reqOpts: RequestOptions, callback: RequestCallback) => {
-              callback(error, null!, null);
-            };
+        up.makeRequest = async () => {
+          throw error;
+        };
       });
 
       it('should exec callback with error', (done) => {
@@ -289,10 +292,9 @@ describe('gcs-resumable-upload', () => {
       const RESP = {headers: {location: URI}} as RequestResponse;
 
       beforeEach(() => {
-        up.makeRequest =
-            (reqOpts: RequestOptions, callback: RequestCallback) => {
-              callback(null, RESP, null);
-            };
+        up.makeRequest = async (reqOpts: AxiosRequestConfig) => {
+          return RESP;
+        };
       });
 
       it('should localize the uri', (done) => {
@@ -334,37 +336,33 @@ describe('gcs-resumable-upload', () => {
   describe('#continueUploading', () => {
     it('should start uploading if an offset was set', (done) => {
       up.offset = 0;
-
-      up.startUploading = () => {
+      up.startUploading = async () => {
         done();
       };
-
       up.continueUploading();
     });
 
     it('should get and set offset if no offset was set', (done) => {
-      up.getAndSetOffset = () => {
+      up.getAndSetOffset = async () => {
         done();
       };
-
+      up.startUploading = () => Promise.resolve();
       up.continueUploading();
     });
 
     it('should start uploading when done', (done) => {
-      up.startUploading = function() {
+      up.startUploading = async function() {
         assert.strictEqual(this, up);
         done();
       };
-      up.getAndSetOffset = (callback: Function) => {
-        callback();
-      };
+      up.getAndSetOffset = () => Promise.resolve();
       up.continueUploading();
     });
   });
 
   describe('#startUploading', () => {
     beforeEach(() => {
-      up.getRequestStream = () => {};
+      up.getRequestStream = async () => through();
     });
 
     it('should make the correct request', (done) => {
@@ -374,13 +372,14 @@ describe('gcs-resumable-upload', () => {
       up.uri = URI;
       up.offset = OFFSET;
 
-      up.getRequestStream = (reqOpts: RequestOptions) => {
+      up.getRequestStream = async (reqOpts: AxiosRequestConfig) => {
         assert.strictEqual(reqOpts.method, 'PUT');
         assert.strictEqual(reqOpts.url, up.uri);
         assert.deepEqual(
             reqOpts.headers,
             {'Content-Range': 'bytes ' + OFFSET + '-*/' + up.contentLength});
         done();
+        return through();
       };
 
       up.startUploading();
@@ -412,10 +411,7 @@ describe('gcs-resumable-upload', () => {
             done();
           };
 
-      up.getRequestStream = (reqOpts: RequestOptions, callback: Function) => {
-        callback(requestStream);
-      };
-
+      up.getRequestStream = async () => requestStream;
       up.startUploading();
     });
 
@@ -429,69 +425,58 @@ describe('gcs-resumable-upload', () => {
             });
           };
 
-      up.getRequestStream = (reqOpts: RequestOptions, callback: Function) => {
-        callback(through());
-      };
-
+      up.getRequestStream = async () => through();
       up.startUploading();
     });
 
     it('should emit the metadata', (done) => {
       const BODY = {hi: 1};
       const RESP = {body: BODY};
-
+      up.on('metadata', (body: {}) => {
+        assert.strictEqual(body, BODY);
+        done();
+      });
       const requestStream = through();
-
-      up.getRequestStream = (reqOpts: RequestOptions, callback: Function) => {
-        callback(requestStream);
-
-        up.on('metadata', (body: {}) => {
-          assert.strictEqual(body, BODY);
-          done();
-        });
-
+      up.getRequestStream = async () => requestStream;
+      up.startUploading().then(() => {
         requestStream.emit('complete', RESP);
-      };
-
-      up.startUploading();
+      });
     });
 
     it('should destroy the stream if an error occurred', (done) => {
       const RESP = {body: '', statusCode: 404};
       const requestStream = through();
-
-      up.getRequestStream = (reqOpts: RequestOptions, callback: Function) => {
-        callback(requestStream);
-
-        // metadata shouldn't be emitted... will blow up test if called
-        up.on('metadata', done);
-        up.destroy = (err: Error) => {
-          assert.strictEqual(err.message, 'Upload failed');
-          done();
-        };
-        requestStream.emit('complete', RESP);
+      up.on('metadata', done);
+      // metadata shouldn't be emitted... will blow up test if called
+      up.destroy = (err: Error) => {
+        assert.strictEqual(err.message, 'Upload failed');
+        done();
       };
-      up.startUploading();
+      up.getRequestStream = async () => requestStream;
+      up.startUploading().then(() => {
+        requestStream.emit('complete', RESP);
+      });
     });
 
     it('should delete the config', (done) => {
       const RESP = {body: ''};
       const requestStream = through();
-      up.getRequestStream = (reqOpts: RequestOptions, callback: Function) => {
-        callback(requestStream);
+      up.getRequestStream = async () => {
         up.deleteConfig = done;
-        requestStream.emit('complete', RESP);
+        return requestStream;
       };
-      up.startUploading();
+      up.startUploading().then(() => {
+        requestStream.emit('complete', RESP);
+      });
     });
 
     it('should uncork the stream', (done) => {
       const RESP = {body: ''};
       const requestStream = through();
-      up.getRequestStream = (reqOpts: RequestOptions, callback: Function) => {
-        callback(requestStream);
+      up.getRequestStream = () => {
         up.uncork = done;
         requestStream.emit('complete', RESP);
+        return requestStream;
       };
       up.startUploading();
     });
@@ -629,34 +614,32 @@ describe('gcs-resumable-upload', () => {
 
   describe('#getAndSetOffset', () => {
     const RANGE = 123456;
-    const RESP = {statusCode: 308, headers: {range: `range-${RANGE}`}} as {} as
-        RequestResponse;
+    const RESP = {status: 308, headers: {range: `range-${RANGE}`}};
 
     it('should make the correct request', (done) => {
       const URI = 'uri';
       up.uri = URI;
-      up.makeRequest = (reqOpts: RequestOptions) => {
+      up.makeRequest = async (reqOpts: AxiosRequestConfig) => {
         assert.strictEqual(reqOpts.method, 'PUT');
         assert.strictEqual(reqOpts.url, URI);
         assert.deepEqual(
             reqOpts.headers,
             {'Content-Length': 0, 'Content-Range': 'bytes */*'});
-
         done();
+        return {};
       };
-
       up.getAndSetOffset();
     });
 
     describe('restart on 404', () => {
-      const ERROR = new Error(':(');
-      const RESP = {statusCode: 404} as RequestResponse;
+      const RESP = {status: 404} as AxiosResponse;
+      const ERROR = new Error(':(') as AxiosError;
+      ERROR.response = RESP;
 
       beforeEach(() => {
-        up.makeRequest =
-            (reqOpts: RequestOptions, callback: RequestCallback) => {
-              callback(ERROR, RESP, null);
-            };
+        up.makeRequest = async () => {
+          throw ERROR;
+        };
       });
 
       it('should restart the upload', (done) => {
@@ -676,14 +659,14 @@ describe('gcs-resumable-upload', () => {
     });
 
     describe('restart on 410', () => {
-      const ERROR = new Error(':(');
-      const RESP = {statusCode: 410} as RequestResponse;
+      const ERROR = new Error(':(') as AxiosError;
+      const RESP = {status: 410} as AxiosResponse;
+      ERROR.response = RESP;
 
       beforeEach(() => {
-        up.makeRequest =
-            (reqOpts: RequestOptions, callback: RequestCallback) => {
-              callback(ERROR, RESP, null);
-            };
+        up.makeRequest = async () => {
+          throw ERROR;
+        };
       });
 
       it('should restart the upload', (done) => {
@@ -692,165 +675,138 @@ describe('gcs-resumable-upload', () => {
       });
     });
 
-    it('should set the offset from the range', (done) => {
-      up.makeRequest = (reqOpts: RequestOptions, callback: RequestCallback) => {
-        callback(null, RESP, null);
-      };
-
-      up.getAndSetOffset(() => {
-        assert.strictEqual(up.offset, RANGE + 1);
-        done();
-      });
+    it('should set the offset from the range', async () => {
+      up.makeRequest = async () => RESP;
+      await up.getAndSetOffset();
+      assert.strictEqual(up.offset, RANGE + 1);
     });
 
     it('should set the offset to 0 if no range is back from the API',
-       (done) => {
-         up.makeRequest =
-             (reqOpts: RequestOptions, callback: RequestCallback) => {
-               callback(null, {} as RequestResponse, null);
-             };
-
-         up.getAndSetOffset(() => {
-           assert.strictEqual(up.offset, 0);
-           done();
-         });
+       async () => {
+         up.makeRequest = async () => {
+           return {};
+         };
+         await up.getAndSetOffset();
+         assert.strictEqual(up.offset, 0);
        });
   });
 
   describe('#makeRequest', () => {
-    it('should set encryption headers', (done) => {
+    it('should set encryption headers', async () => {
       const key = crypto.randomBytes(32);
       const up =
           upload({bucket: 'BUCKET', file: FILE, key, authConfig: {keyFile}});
       const scopes =
           [mockAuthorizeRequest(), nock(REQ_OPTS.url).get('/').reply(200, {})];
-      up.makeRequest(REQ_OPTS, (err: Error, res: RequestResponse) => {
-        assert.ifError(err);
-        scopes.forEach(x => x.done());
-        const headers = res.request.headers;
-        assert.equal(headers['x-goog-encryption-algorithm'], 'AES256');
-        assert.equal(headers['x-goog-encryption-key'], up.encryption.key);
-        assert.equal(
-            headers['x-goog-encryption-key-sha256'], up.encryption.hash);
-        done();
-      });
+      const res = await up.makeRequest(REQ_OPTS);
+      scopes.forEach(x => x.done());
+      const headers = res.request.headers;
+      assert.equal(headers['x-goog-encryption-algorithm'], 'AES256');
+      assert.equal(headers['x-goog-encryption-key'], up.encryption.key);
+      assert.equal(headers['x-goog-encryption-key-sha256'], up.encryption.hash);
     });
 
-    it('should set userProject', (done) => {
+    it('should set userProject', async () => {
       const scopes = [
         mockAuthorizeRequest(), nock(REQ_OPTS.url).get(queryPath).reply(200, {})
       ];
-      up.makeRequest(REQ_OPTS, (err: Error, res: RequestResponse) => {
-        assert.ifError(err);
-        assert.strictEqual(res.request.href, `${REQ_OPTS.url}${queryPath}`);
-        scopes.forEach(x => x.done());
-        done();
-      });
+      const res = await up.makeRequest(REQ_OPTS);
+      assert.strictEqual(res.request.path, queryPath);
+      scopes.forEach(x => x.done());
     });
 
     it('should execute the callback with error & response if one occurred',
-       (done) => {
+       async () => {
          const scope = mockAuthorizeRequest(500, ':(');
-         up.makeRequest({}, (err: Error, resp: RequestResponse) => {
-           assert.equal(err.message, 'Request failed with status code 500');
-           scope.done();
-           done();
-         });
+         await assertRejects(
+             up.makeRequest({}), /Request failed with status code 500/);
+         scope.done();
        });
 
-    it('should make the correct request', (done) => {
+    it('should make the correct request', async () => {
       const scopes = [
         mockAuthorizeRequest(),
         nock(REQ_OPTS.url).get(queryPath).reply(200, undefined, {})
       ];
-      up.makeRequest(REQ_OPTS, (err: Error, res: RequestResponse) => {
-        assert.ifError(err);
-        scopes.forEach(x => x.done());
-        assert.strictEqual(res.request.href, REQ_OPTS.url + queryPath);
-        assert.deepStrictEqual(res.headers, {});
-        done();
-      });
+      const res = await up.makeRequest(REQ_OPTS);
+      scopes.forEach(x => x.done());
+      assert.strictEqual(res.request.path, queryPath);
+      assert.deepStrictEqual(res.headers, {});
     });
 
-    it('should execute the callback with error & response', (done) => {
-      const response = {body: 'wooo'} as RequestResponse;
+    it('should execute the callback with error & response', async () => {
+      const response = {body: 'wooo'};
       mockAuthorizeRequest();
       const scope = nock(REQ_OPTS.url).get(queryPath).reply(500, response.body);
-      up.makeRequest(REQ_OPTS, (err: Error, resp: RequestResponse) => {
-        assert.strictEqual(resp.body, response.body);
-        scope.done();
-        done();
-      });
+      const resp = await up.makeRequest(REQ_OPTS);
+      assert.strictEqual(resp.data, response.body);
+      scope.done();
     });
 
-    it('should execute the callback with a body error & response', (done) => {
+    it('should execute the callback with a body error & response', async () => {
       const response = {error: ':('};
       mockAuthorizeRequest();
       const scope = nock(REQ_OPTS.url).get(queryPath).reply(500, response);
-      up.makeRequest(REQ_OPTS, (err: Error, res: RequestResponse) => {
-        assert.equal(res.statusCode, 500);
-        assert.deepStrictEqual(response, res.body);
-        done();
+      await assertRejects(up.makeRequest(REQ_OPTS), (err: AxiosError) => {
+        assert.equal(err.response!.status, 500);
+        assert.deepStrictEqual(response, err.response!.data);
+        return true;
       });
     });
 
     it('should execute the callback with a body error & response for non-2xx status codes',
-       (done) => {
-         const response = {status: 500, body: {error: '!$#@'}};
+       async () => {
+         const response = {status: 500, data: {error: '!$#@'}};
          mockAuthorizeRequest();
          const scope =
-             nock(REQ_OPTS.url).get(queryPath).reply(500, response.body);
-         up.makeRequest(
-             REQ_OPTS, (err: Error, resp: RequestResponse, body: {}) => {
-               scope.done();
-               assert.strictEqual(err, response.body.error);
-               assert.deepStrictEqual(resp.statusCode, 500);
-               assert.deepStrictEqual(body, response.body);
-               done();
-             });
+             nock(REQ_OPTS.url).get(queryPath).reply(500, response.data);
+         await assertRejects(up.makeRequest(REQ_OPTS), (err: AxiosError) => {
+           scope.done();
+           assert.strictEqual(err.message, response.data.error);
+           assert.deepStrictEqual(err.response!.status, 500);
+           assert.deepStrictEqual(err.response!.data, response.data);
+           return true;
+         });
        });
 
-    it('should execute the callback', (done) => {
+    it('should execute the callback', async () => {
       const data = {red: 'tape'};
       mockAuthorizeRequest();
-      up.onResponse = () => {
-        return true;
-      };
+      up.onResponse = () => true;
       const scope = nock(REQ_OPTS.url).get(queryPath).reply(200, data);
-      up.makeRequest(REQ_OPTS, (err: Error, res: RequestResponse, body: {}) => {
-        assert.ifError(err);
-        scope.done();
-        assert.strictEqual(res.statusCode, 200);
-        assert.deepStrictEqual(body, data);
-        done();
-      });
+      const res = await up.makeRequest(REQ_OPTS);
+      scope.done();
+      assert.strictEqual(res.status, 200);
+      assert.deepStrictEqual(res.data, data);
     });
   });
 
   describe('#getRequestStream', () => {
-    it('should authorize the request', (done) => {
+    it('should authorize the request', async () => {
       const scopes = [
         mockAuthorizeRequest(), nock(REQ_OPTS.url).get(queryPath).reply(200)
       ];
-      up.getRequestStream(REQ_OPTS, (stream: stream.Readable) => {
+      const stream = await up.getRequestStream(REQ_OPTS);
+      return new Promise((resolve, reject) => {
         stream.on('response', (res: RequestResponse) => {
           scopes.forEach(x => x.done());
           assert.equal('Bearer abc123', res.request.headers.Authorization);
           assert.equal(res.request.href, REQ_OPTS.url + queryPath);
-          done();
+          resolve();
         });
       });
     });
 
-    it('should set userProject', (done) => {
+    it('should set userProject', async () => {
       const scopes = [
         mockAuthorizeRequest(), nock(REQ_OPTS.url).get(queryPath).reply(200)
       ];
-      up.getRequestStream(REQ_OPTS, (stream: stream.Readable) => {
+      const stream = await up.getRequestStream(REQ_OPTS);
+      return new Promise(resolve => {
         stream.on('response', (res: RequestResponse) => {
           scopes.forEach(x => x.done());
           assert.strictEqual(res.request.href, `${REQ_OPTS.url}${queryPath}`);
-          done();
+          resolve();
         });
       });
     });
@@ -863,7 +819,7 @@ describe('gcs-resumable-upload', () => {
         done();
       };
       const scope = mockAuthorizeRequest(500);
-      up.getRequestStream(REQ_OPTS, (stream: stream.Readable) => {
+      up.getRequestStream(REQ_OPTS).catch(() => {
         scope.done();
       });
     });
@@ -872,27 +828,25 @@ describe('gcs-resumable-upload', () => {
       mockAuthorizeRequest();
       const scope =
           nock(REQ_OPTS.url).get(queryPath).replyWithFile(200, dawPath);
-      up.getRequestStream(REQ_OPTS, (requestStream: stream.Readable) => {
+      up.getRequestStream(REQ_OPTS).then((requestStream: stream.Readable) => {
         assert(requestStream);
         setImmediate(done);
         return through();
       });
     });
 
-    it('should set the callback to a noop', (done) => {
-      mockAuthorizeRequest();
-      const scope = nock(REQ_OPTS.url).get(queryPath).reply(200);
-      up.getRequestStream(
-          REQ_OPTS, (requestStream: stream.Readable&{callback: Function}) => {
-            assert.strictEqual(typeof requestStream.callback, 'function');
-            done();
-          });
+    it('should set the callback to a noop', async () => {
+      const scopes = [
+        mockAuthorizeRequest(), nock(REQ_OPTS.url).get(queryPath).reply(200)
+      ];
+      const requestStream = await up.getRequestStream(REQ_OPTS);
+      assert.strictEqual(typeof requestStream.callback, 'function');
     });
 
     it('should destroy the stream if there was an error', (done) => {
       mockAuthorizeRequest();
       const scope = nock(REQ_OPTS.url).get(queryPath).reply(200);
-      up.getRequestStream(REQ_OPTS, (requestStream: stream.Readable) => {
+      up.getRequestStream(REQ_OPTS).then((requestStream: stream.Readable) => {
         const error = new Error(':(');
         up.on('error', (err: Error) => {
           assert.strictEqual(err, error);
@@ -908,7 +862,7 @@ describe('gcs-resumable-upload', () => {
         mockAuthorizeRequest(),
         nock(REQ_OPTS.url).get(queryPath).reply(200, response)
       ];
-      up.getRequestStream(REQ_OPTS, (requestStream: stream.Readable) => {
+      up.getRequestStream(REQ_OPTS).then(() => {
         up.on('error', (err: Error) => {
           assert.strictEqual(err, response.error);
           scopes.forEach(x => x.done());
@@ -919,7 +873,7 @@ describe('gcs-resumable-upload', () => {
 
     it('should check if it should retry on response', (done) => {
       let fired = false;
-      const res = {status: 200};
+      const res = {statusCode: 200};
       const scopes = [
         mockAuthorizeRequest(), nock(REQ_OPTS.url).get(queryPath).reply(200)
       ];
@@ -931,8 +885,7 @@ describe('gcs-resumable-upload', () => {
           done();
         }
       };
-
-      up.getRequestStream(REQ_OPTS, (requestStream: stream.Readable) => {
+      up.getRequestStream(REQ_OPTS).then((requestStream: stream.Readable) => {
         requestStream.emit('response', res);
       });
     });
@@ -941,7 +894,7 @@ describe('gcs-resumable-upload', () => {
       const scopes = [
         mockAuthorizeRequest(), nock(REQ_OPTS.url).get(queryPath).reply(200, {})
       ];
-      up.getRequestStream(REQ_OPTS, (reqStream: stream.Readable) => {
+      up.getRequestStream(REQ_OPTS).then((reqStream: stream.Readable) => {
         reqStream.on('complete', () => {
           scopes.forEach(x => x.done());
           done();
@@ -995,7 +948,6 @@ describe('gcs-resumable-upload', () => {
           up.startUploading = done;
           callback();
         };
-
         up.restart();
       });
     });
@@ -1005,18 +957,15 @@ describe('gcs-resumable-upload', () => {
     it('should return the value from the config store', () => {
       const prop = 'property';
       const value = 'abc';
-
       up.configStore = {
         get(name: string) {
           const actualKey = [up.bucket, up.file].join('/');
           assert.strictEqual(name, actualKey);
-
           const obj: {[i: string]: string} = {};
           obj[prop] = value;
           return obj;
         }
       };
-
       assert.strictEqual(up.get(prop), value);
     });
   });
@@ -1024,7 +973,6 @@ describe('gcs-resumable-upload', () => {
   describe('#set', () => {
     it('should set the value to the config store', (done) => {
       const props = {setting: true};
-
       up.configStore = {
         set(name: string, prps: {}) {
           const actualKey = [up.bucket, up.file].join('/');
@@ -1033,7 +981,6 @@ describe('gcs-resumable-upload', () => {
           done();
         }
       };
-
       up.set(props);
     });
   });
