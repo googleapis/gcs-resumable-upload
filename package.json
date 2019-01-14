@@ -55,7 +55,6 @@
     "@types/node": "^10.3.0",
     "@types/pumpify": "^1.4.1",
     "@types/request": "^2.47.0",
-    "@types/sinon": "^7.0.3",
     "@types/through2": "^2.0.33",
     "assert-rejects": "^1.0.0",
     "codecov": "^3.0.4",
@@ -66,7 +65,6 @@
     "mockery": "^2.1.0",
     "nock": "^10.0.0",
     "nyc": "^13.0.0",
-    "sinon": "^7.2.2",
     "source-map-support": "^0.5.6",
     "through2": "^3.0.0",
     "typescript": "~3.2.0"

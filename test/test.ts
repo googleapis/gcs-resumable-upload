@@ -6,7 +6,7 @@
  */
 
 import * as assert from 'assert';
-import {AxiosError, AxiosProxyConfig, AxiosRequestConfig, AxiosResponse} from 'axios';
+import {AxiosError, AxiosRequestConfig, AxiosResponse} from 'axios';
 import * as crypto from 'crypto';
 import {EventEmitter} from 'events';
 import * as isStream from 'is-stream';

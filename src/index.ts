@@ -265,7 +265,7 @@ export class Upload extends Pumpify {
     }
 
     const resp = await this.makeRequest(reqOpts);
-    const uri = resp!.headers.location;
+    const uri = resp.headers.location;
     this.uri = uri;
     this.set({uri});
     this.offset = 0;
