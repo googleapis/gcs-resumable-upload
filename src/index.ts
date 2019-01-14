@@ -5,6 +5,7 @@
  * See file LICENSE for detail or copy at https://opensource.org/licenses/MIT
  */
 
+import {AxiosError, AxiosRequestConfig, AxiosResponse} from 'axios';
 import * as ConfigStore from 'configstore';
 import {createHash} from 'crypto';
 import {GoogleAuth, GoogleAuthOptions} from 'google-auth-library';
@@ -12,7 +13,6 @@ import * as Pumpify from 'pumpify';
 import * as r from 'request';
 import {PassThrough} from 'stream';
 import * as streamEvents from 'stream-events';
-import {teenyRequest} from 'teeny-request';
 
 const request = r.defaults({json: true, pool: {maxSockets: Infinity}});
 
@@ -21,9 +21,9 @@ const TERMINATED_UPLOAD_STATUS_CODE = 410;
 const RESUMABLE_INCOMPLETE_STATUS_CODE = 308;
 const RETRY_LIMIT = 5;
 
-const wrapError = (message: string, err: Error) => {
-  return new Error([message, err.message].join('\n'));
-};
+export interface ErrorWithCode extends Error {
+  code: number;
+}
 
 export type CreateUriCallback = (err: Error|null, uri?: string) => void;
 
@@ -220,14 +220,23 @@ export class Upload extends Pumpify {
     });
   }
 
-  createURI(callback: CreateUriCallback) {
+  createURI(): Promise<string>;
+  createURI(callback: CreateUriCallback): void;
+  createURI(callback?: CreateUriCallback): void|Promise<string> {
+    if (!callback) {
+      return this.createURIAsync();
+    }
+    this.createURIAsync().then(r => callback(null, r), callback);
+  }
+
+  protected async createURIAsync(): Promise<string> {
     const metadata = this.metadata;
 
-    const reqOpts: r.OptionsWithUrl = {
+    const reqOpts: AxiosRequestConfig = {
       method: 'POST',
       url: [BASE_URI, this.bucket, 'o'].join('/'),
-      qs: {name: this.file, uploadType: 'resumable'},
-      json: metadata,
+      params: {name: this.file, uploadType: 'resumable'},
+      data: metadata,
       headers: {}
     };
 
@@ -240,41 +249,39 @@ export class Upload extends Pumpify {
     }
 
     if (typeof this.generation !== 'undefined') {
-      reqOpts.qs.ifGenerationMatch = this.generation;
+      reqOpts.params.ifGenerationMatch = this.generation;
     }
 
     if (this.kmsKeyName) {
-      reqOpts.qs.kmsKeyName = this.kmsKeyName;
+      reqOpts.params.kmsKeyName = this.kmsKeyName;
     }
 
     if (this.predefinedAcl) {
-      reqOpts.qs.predefinedAcl = this.predefinedAcl;
+      reqOpts.params.predefinedAcl = this.predefinedAcl;
     }
 
     if (this.origin) {
       reqOpts.headers!.Origin = this.origin;
     }
 
-    this.makeRequest(reqOpts, (err, resp) => {
-      if (err) {
-        return callback(err);
-      }
-      const uri = resp!.headers.location;
-      this.uri = uri;
-      this.set({uri});
-      this.offset = 0;
-      callback(null, uri);
-    });
+    const resp = await this.makeRequest(reqOpts);
+    const uri = resp.headers.location;
+    this.uri = uri;
+    this.set({uri});
+    this.offset = 0;
+    return uri;
   }
 
-  private continueUploading() {
+  private async continueUploading() {
     if (typeof this.offset === 'number') {
-      return this.startUploading();
+      this.startUploading();
+      return;
     }
-    this.getAndSetOffset(this.startUploading.bind(this));
+    await this.getAndSetOffset();
+    this.startUploading();
   }
 
-  private startUploading() {
+  private async startUploading() {
     const reqOpts = {
       method: 'PUT',
       url: this.uri!,
@@ -288,24 +295,23 @@ export class Upload extends Pumpify {
         new PassThrough({transform: this.onChunk.bind(this)});
     const delayStream = new PassThrough();
 
-    this.getRequestStream(reqOpts, (requestStream: r.Request) => {
-      this.setPipeline(bufferStream, offsetStream, requestStream, delayStream);
+    const requestStream = await this.getRequestStream(reqOpts);
+    this.setPipeline(bufferStream, offsetStream, requestStream, delayStream);
 
-      // wait for "complete" from request before letting the stream finish
-      delayStream.on('prefinish', () => {
-        this.cork();
-      });
+    // wait for "complete" from request before letting the stream finish
+    delayStream.on('prefinish', () => {
+      this.cork();
+    });
 
-      requestStream.on('complete', resp => {
-        if (resp.statusCode < 200 || resp.statusCode > 299) {
-          this.destroy(new Error('Upload failed'));
-          return;
-        }
+    requestStream.on('complete', resp => {
+      if (resp.statusCode < 200 || resp.statusCode > 299) {
+        this.destroy(new Error('Upload failed'));
+        return;
+      }
 
-        this.emit('metadata', resp.body);
-        this.deleteConfig();
-        this.uncork();
-      });
+      this.emit('metadata', resp.body);
+      this.deleteConfig();
+      this.uncork();
     });
   }
 
@@ -354,49 +360,49 @@ export class Upload extends Pumpify {
     next(undefined, this.numBytesWritten > offset ? chunk : undefined);
   }
 
-  private getAndSetOffset(callback: () => void) {
-    const opts: r.OptionsWithUrl = {
+  private async getAndSetOffset() {
+    const opts = {
       method: 'PUT',
       url: this.uri!,
       headers: {'Content-Length': 0, 'Content-Range': 'bytes */*'}
     };
-    this.makeRequest(opts, (err, resp) => {
-      if (err) {
-        // we don't return a 404 to the user if they provided the resumable
-        // URI. if we're just using the configstore file to tell us that this
-        // file exists, and it turns out that it doesn't (the 404), that's
-        // probably stale config data.
-        if (resp && resp.statusCode === 404 && !this.uriProvidedManually) {
-          return this.restart();
-        }
-
-        // this resumable upload is unrecoverable (bad data or service error).
-        //  -
-        //  https://github.com/stephenplusplus/gcs-resumable-upload/issues/15
-        //  -
-        //  https://github.com/stephenplusplus/gcs-resumable-upload/pull/16#discussion_r80363774
-        if (resp && resp.statusCode === TERMINATED_UPLOAD_STATUS_CODE) {
-          return this.restart();
-        }
-
-        return this.destroy(err);
-      }
-
-      if (resp && resp.statusCode === RESUMABLE_INCOMPLETE_STATUS_CODE) {
+    try {
+      const resp = await this.makeRequest(opts);
+      if (resp.status === RESUMABLE_INCOMPLETE_STATUS_CODE) {
         if (resp.headers.range) {
           const range = resp.headers.range as string;
           this.offset = Number(range.split('-')[1]) + 1;
-          callback();
           return;
         }
       }
-
       this.offset = 0;
-      callback();
-    });
+    } catch (err) {
+      const resp = err.response;
+      // we don't return a 404 to the user if they provided the resumable
+      // URI. if we're just using the configstore file to tell us that this
+      // file exists, and it turns out that it doesn't (the 404), that's
+      // probably stale config data.
+      if (resp && resp.status === 404 && !this.uriProvidedManually) {
+        this.restart();
+        return;
+      }
+
+      // this resumable upload is unrecoverable (bad data or service error).
+      //  -
+      //  https://github.com/stephenplusplus/gcs-resumable-upload/issues/15
+      //  -
+      //  https://github.com/stephenplusplus/gcs-resumable-upload/pull/16#discussion_r80363774
+      if (resp && resp.status === TERMINATED_UPLOAD_STATUS_CODE) {
+        this.restart();
+        return;
+      }
+
+      this.destroy(err);
+    }
   }
 
-  private makeRequest(reqOpts: r.OptionsWithUrl, callback: r.RequestCallback) {
+  private async makeRequest(reqOpts: AxiosRequestConfig):
+      Promise<AxiosResponse> {
     if (this.encryption) {
       reqOpts.headers = reqOpts.headers || {};
       reqOpts.headers['x-goog-encryption-algorithm'] = 'AES256';
@@ -405,57 +411,51 @@ export class Upload extends Pumpify {
     }
 
     if (this.userProject) {
-      reqOpts.qs = reqOpts.qs || {};
-      reqOpts.qs.userProject = this.userProject;
+      reqOpts.params = reqOpts.params || {};
+      reqOpts.params.userProject = this.userProject;
     }
+    reqOpts.validateStatus = () => true;
 
-    this.authClient.getRequestHeaders().then(
-        authHeaders => {
-          reqOpts.headers = Object.assign({}, reqOpts.headers, authHeaders);
-          teenyRequest(reqOpts, (err, res, body) => {
-            let e = (body && body.error) ? body.error : err;
-            // If no error was returned, but the response had an invalid status
-            // code, create a new error to be passed to the callback.
-            if (!e && (res.statusCode < 200 || res.statusCode >= 300) &&
-                res.statusCode !== RESUMABLE_INCOMPLETE_STATUS_CODE) {
-              e = new Error(`The request failed with a ${res.statusCode}.`);
-              e.code = res.statusCode;
-            }
-            callback(e, res, body);
-          });
-        },
-        e => {
-          callback(e, e.response, null);
-        });
+    const res = await this.authClient.request(reqOpts);
+    if (res.data && res.data.error) {
+      const err = new Error(res.data.error) as AxiosError;
+      err.response = res;
+      throw err;
+    }
+    // If no error was returned, but the response had an invalid status
+    // code, create a new error to be passed to the callback.
+    if ((res.status < 200 || res.status >= 300) &&
+        res.status !== RESUMABLE_INCOMPLETE_STATUS_CODE) {
+      const e = new Error(`The request failed with a ${res.status}.`);
+      (e as ErrorWithCode).code = res.status;
+    }
+    return res;
   }
 
-  private getRequestStream(
-      reqOpts: r.OptionsWithUrl, callback: (requestStream: r.Request) => void) {
-    if (this.userProject) {
-      reqOpts.qs = reqOpts.qs || {};
-      reqOpts.qs.userProject = this.userProject;
+  private async getRequestStream(reqOpts: r.OptionsWithUrl):
+      Promise<r.Request> {
+    try {
+      if (this.userProject) {
+        reqOpts.qs = reqOpts.qs || {};
+        reqOpts.qs.userProject = this.userProject;
+      }
+      const authHeaders =
+          await this.authClient.getRequestHeaders(reqOpts.url as string);
+      reqOpts.headers = Object.assign({}, reqOpts.headers, authHeaders);
+      const requestStream = request(reqOpts);
+      requestStream.on('error', this.destroy.bind(this));
+      requestStream.on('response', this.onResponse.bind(this));
+      requestStream.on('complete', (resp) => {
+        const body = resp.body;
+        if (body && body.error) this.destroy(body.error);
+      });
+      // this makes the response body come back in the response (weird?)
+      requestStream.callback = () => {};
+      return requestStream;
+    } catch (e) {
+      this.destroy(e);
+      throw e;
     }
-
-    this.authClient.getRequestHeaders(reqOpts.url as string)
-        .then(
-            authHeaders => {
-              reqOpts.headers = Object.assign({}, reqOpts.headers, authHeaders);
-              const requestStream = request(reqOpts);
-              requestStream.on('error', this.destroy.bind(this));
-              requestStream.on('response', this.onResponse.bind(this));
-              requestStream.on('complete', (resp) => {
-                const body = resp.body;
-                if (body && body.error) this.destroy(body.error);
-              });
-
-              // this makes the response body come back in the response (weird?)
-              requestStream.callback = () => {};
-              callback(requestStream);
-            },
-            err => {
-              return this.destroy(
-                  wrapError('Could not authenticate request', err));
-            });
   }
 
   private restart() {
@@ -517,7 +517,13 @@ export function upload(cfg: UploadConfig) {
   return new Upload(cfg);
 }
 
-export function createURI(cfg: UploadConfig, callback: CreateUriCallback) {
+export function createURI(cfg: UploadConfig): Promise<string>;
+export function createURI(cfg: UploadConfig, callback: CreateUriCallback): void;
+export function createURI(
+    cfg: UploadConfig, callback?: CreateUriCallback): void|Promise<string> {
   const up = new Upload(cfg);
-  up.createURI(callback);
+  if (!callback) {
+    return up.createURI();
+  }
+  up.createURI().then(r => callback(null, r), callback);
 }
