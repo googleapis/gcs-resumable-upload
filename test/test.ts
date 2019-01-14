@@ -813,9 +813,7 @@ describe('gcs-resumable-upload', () => {
 
     it('should destroy the stream if an error occurred', (done) => {
       up.destroy = (err: Error) => {
-        assert.equal(
-            err.message,
-            'Could not authenticate request\nRequest failed with status code 500');
+        assert.equal(err.message, 'Request failed with status code 500');
         done();
       };
       const scope = mockAuthorizeRequest(500);

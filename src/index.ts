@@ -434,23 +434,28 @@ export class Upload extends Pumpify {
 
   private async getRequestStream(reqOpts: r.OptionsWithUrl):
       Promise<r.Request> {
-    if (this.userProject) {
-      reqOpts.qs = reqOpts.qs || {};
-      reqOpts.qs.userProject = this.userProject;
+    try {
+      if (this.userProject) {
+        reqOpts.qs = reqOpts.qs || {};
+        reqOpts.qs.userProject = this.userProject;
+      }
+      const authHeaders =
+          await this.authClient.getRequestHeaders(reqOpts.url as string);
+      reqOpts.headers = Object.assign({}, reqOpts.headers, authHeaders);
+      const requestStream = request(reqOpts);
+      requestStream.on('error', this.destroy.bind(this));
+      requestStream.on('response', this.onResponse.bind(this));
+      requestStream.on('complete', (resp) => {
+        const body = resp.body;
+        if (body && body.error) this.destroy(body.error);
+      });
+      // this makes the response body come back in the response (weird?)
+      requestStream.callback = () => {};
+      return requestStream;
+    } catch (e) {
+      this.destroy(e);
+      throw e;
     }
-    const authHeaders =
-        await this.authClient.getRequestHeaders(reqOpts.url as string);
-    reqOpts.headers = Object.assign({}, reqOpts.headers, authHeaders);
-    const requestStream = request(reqOpts);
-    requestStream.on('error', this.destroy.bind(this));
-    requestStream.on('response', this.onResponse.bind(this));
-    requestStream.on('complete', (resp) => {
-      const body = resp.body;
-      if (body && body.error) this.destroy(body.error);
-    });
-    // this makes the response body come back in the response (weird?)
-    requestStream.callback = () => {};
-    return requestStream;
   }
 
   private restart() {
