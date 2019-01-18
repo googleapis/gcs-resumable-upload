@@ -5,9 +5,9 @@
  * See file LICENSE for detail or copy at https://opensource.org/licenses/MIT
  */
 
-import {AxiosError, AxiosRequestConfig, AxiosResponse} from 'axios';
 import * as ConfigStore from 'configstore';
 import {createHash} from 'crypto';
+import {GaxiosError, GaxiosOptions, GaxiosPromise} from 'gaxios';
 import {GoogleAuth, GoogleAuthOptions} from 'google-auth-library';
 import * as Pumpify from 'pumpify';
 import * as r from 'request';
@@ -232,7 +232,7 @@ export class Upload extends Pumpify {
   protected async createURIAsync(): Promise<string> {
     const metadata = this.metadata;
 
-    const reqOpts: AxiosRequestConfig = {
+    const reqOpts: GaxiosOptions = {
       method: 'POST',
       url: [BASE_URI, this.bucket, 'o'].join('/'),
       params: {name: this.file, uploadType: 'resumable'},
@@ -241,7 +241,8 @@ export class Upload extends Pumpify {
     };
 
     if (metadata.contentLength) {
-      reqOpts.headers!['X-Upload-Content-Length'] = metadata.contentLength;
+      reqOpts.headers!['X-Upload-Content-Length'] =
+          metadata.contentLength.toString();
     }
 
     if (metadata.contentType) {
@@ -361,7 +362,7 @@ export class Upload extends Pumpify {
   }
 
   private async getAndSetOffset() {
-    const opts = {
+    const opts: GaxiosOptions = {
       method: 'PUT',
       url: this.uri!,
       headers: {'Content-Length': 0, 'Content-Range': 'bytes */*'}
@@ -401,13 +402,13 @@ export class Upload extends Pumpify {
     }
   }
 
-  private async makeRequest(reqOpts: AxiosRequestConfig):
-      Promise<AxiosResponse> {
+  private async makeRequest(reqOpts: GaxiosOptions): GaxiosPromise {
     if (this.encryption) {
       reqOpts.headers = reqOpts.headers || {};
       reqOpts.headers['x-goog-encryption-algorithm'] = 'AES256';
-      reqOpts.headers['x-goog-encryption-key'] = this.encryption.key;
-      reqOpts.headers['x-goog-encryption-key-sha256'] = this.encryption.hash;
+      reqOpts.headers['x-goog-encryption-key'] = this.encryption.key.toString();
+      reqOpts.headers['x-goog-encryption-key-sha256'] =
+          this.encryption.hash.toString();
     }
 
     if (this.userProject) {
@@ -418,7 +419,7 @@ export class Upload extends Pumpify {
 
     const res = await this.authClient.request(reqOpts);
     if (res.data && res.data.error) {
-      const err = new Error(res.data.error) as AxiosError;
+      const err = new Error(res.data.error) as GaxiosError;
       err.response = res;
       throw err;
     }
