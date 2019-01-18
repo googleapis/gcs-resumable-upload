@@ -6,7 +6,6 @@
  */
 
 import * as assert from 'assert';
-import {AxiosError, AxiosRequestConfig, AxiosResponse} from 'axios';
 import * as crypto from 'crypto';
 import {EventEmitter} from 'events';
 import * as isStream from 'is-stream';
@@ -20,6 +19,7 @@ import * as through from 'through2';
 const assertRejects = require('assert-rejects');
 
 import {CreateUriCallback} from '../src';
+import {GaxiosOptions, GaxiosError, GaxiosResponse} from 'gaxios';
 
 type RequestResponse = r.Response;
 
@@ -229,7 +229,7 @@ describe('gcs-resumable-upload', () => {
 
   describe('#createURI', () => {
     it('should make the correct request', (done) => {
-      up.makeRequest = async (reqOpts: AxiosRequestConfig) => {
+      up.makeRequest = async (reqOpts: GaxiosOptions) => {
         assert.strictEqual(reqOpts.method, 'POST');
         assert.strictEqual(
             reqOpts.url,
@@ -251,7 +251,7 @@ describe('gcs-resumable-upload', () => {
       const kmsKeyName = 'kms-key-name';
       const up = upload({bucket: BUCKET, file: FILE, kmsKeyName});
 
-      up.makeRequest = async (reqOpts: AxiosRequestConfig) => {
+      up.makeRequest = async (reqOpts: GaxiosOptions) => {
         assert.strictEqual(reqOpts.params.kmsKeyName, kmsKeyName);
         done();
         return {headers: {location: '/foo'}};
@@ -261,7 +261,7 @@ describe('gcs-resumable-upload', () => {
     });
 
     it('should respect 0 as a generation', (done) => {
-      up.makeRequest = async (reqOpts: AxiosRequestConfig) => {
+      up.makeRequest = async (reqOpts: GaxiosOptions) => {
         assert.strictEqual(reqOpts.params.ifGenerationMatch, 0);
         done();
         return {headers: {location: '/foo'}};
@@ -292,7 +292,7 @@ describe('gcs-resumable-upload', () => {
       const RESP = {headers: {location: URI}} as RequestResponse;
 
       beforeEach(() => {
-        up.makeRequest = async (reqOpts: AxiosRequestConfig) => {
+        up.makeRequest = async (reqOpts: GaxiosOptions) => {
           return RESP;
         };
       });
@@ -372,7 +372,7 @@ describe('gcs-resumable-upload', () => {
       up.uri = URI;
       up.offset = OFFSET;
 
-      up.getRequestStream = async (reqOpts: AxiosRequestConfig) => {
+      up.getRequestStream = async (reqOpts: GaxiosOptions) => {
         assert.strictEqual(reqOpts.method, 'PUT');
         assert.strictEqual(reqOpts.url, up.uri);
         assert.deepEqual(
@@ -619,7 +619,7 @@ describe('gcs-resumable-upload', () => {
     it('should make the correct request', (done) => {
       const URI = 'uri';
       up.uri = URI;
-      up.makeRequest = async (reqOpts: AxiosRequestConfig) => {
+      up.makeRequest = async (reqOpts: GaxiosOptions) => {
         assert.strictEqual(reqOpts.method, 'PUT');
         assert.strictEqual(reqOpts.url, URI);
         assert.deepEqual(
@@ -632,8 +632,8 @@ describe('gcs-resumable-upload', () => {
     });
 
     describe('restart on 404', () => {
-      const RESP = {status: 404} as AxiosResponse;
-      const ERROR = new Error(':(') as AxiosError;
+      const RESP = {status: 404} as GaxiosResponse;
+      const ERROR = new Error(':(') as GaxiosError;
       ERROR.response = RESP;
 
       beforeEach(() => {
@@ -659,8 +659,8 @@ describe('gcs-resumable-upload', () => {
     });
 
     describe('restart on 410', () => {
-      const ERROR = new Error(':(') as AxiosError;
-      const RESP = {status: 410} as AxiosResponse;
+      const ERROR = new Error(':(') as GaxiosError;
+      const RESP = {status: 410} as GaxiosResponse;
       ERROR.response = RESP;
 
       beforeEach(() => {
@@ -700,7 +700,7 @@ describe('gcs-resumable-upload', () => {
           [mockAuthorizeRequest(), nock(REQ_OPTS.url).get('/').reply(200, {})];
       const res = await up.makeRequest(REQ_OPTS);
       scopes.forEach(x => x.done());
-      const headers = res.request.headers;
+      const headers = res.config.headers;
       assert.equal(headers['x-goog-encryption-algorithm'], 'AES256');
       assert.equal(headers['x-goog-encryption-key'], up.encryption.key);
       assert.equal(headers['x-goog-encryption-key-sha256'], up.encryption.hash);
@@ -710,8 +710,8 @@ describe('gcs-resumable-upload', () => {
       const scopes = [
         mockAuthorizeRequest(), nock(REQ_OPTS.url).get(queryPath).reply(200, {})
       ];
-      const res = await up.makeRequest(REQ_OPTS);
-      assert.strictEqual(res.request.path, queryPath);
+      const res: GaxiosResponse = await up.makeRequest(REQ_OPTS);
+      assert.strictEqual(res.config.url, REQ_OPTS.url + queryPath);
       scopes.forEach(x => x.done());
     });
 
@@ -730,7 +730,7 @@ describe('gcs-resumable-upload', () => {
       ];
       const res = await up.makeRequest(REQ_OPTS);
       scopes.forEach(x => x.done());
-      assert.strictEqual(res.request.path, queryPath);
+      assert.strictEqual(res.config.url, REQ_OPTS.url + queryPath);
       assert.deepStrictEqual(res.headers, {});
     });
 
@@ -747,7 +747,7 @@ describe('gcs-resumable-upload', () => {
       const response = {error: ':('};
       mockAuthorizeRequest();
       const scope = nock(REQ_OPTS.url).get(queryPath).reply(500, response);
-      await assertRejects(up.makeRequest(REQ_OPTS), (err: AxiosError) => {
+      await assertRejects(up.makeRequest(REQ_OPTS), (err: GaxiosError) => {
         assert.equal(err.response!.status, 500);
         assert.deepStrictEqual(response, err.response!.data);
         return true;
@@ -760,7 +760,7 @@ describe('gcs-resumable-upload', () => {
          mockAuthorizeRequest();
          const scope =
              nock(REQ_OPTS.url).get(queryPath).reply(500, response.data);
-         await assertRejects(up.makeRequest(REQ_OPTS), (err: AxiosError) => {
+         await assertRejects(up.makeRequest(REQ_OPTS), (err: GaxiosError) => {
            scope.done();
            assert.strictEqual(err.message, response.data.error);
            assert.deepStrictEqual(err.response!.status, 500);
