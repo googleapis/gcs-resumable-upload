@@ -419,9 +419,7 @@ export class Upload extends Pumpify {
 
     const res = await this.authClient.request(reqOpts);
     if (res.data && res.data.error) {
-      const err = new Error(res.data.error) as GaxiosError;
-      err.response = res;
-      throw err;
+      throw res.data.error;
     }
     // If no error was returned, but the response had an invalid status
     // code, create a new error to be passed to the callback.
