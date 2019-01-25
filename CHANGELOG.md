@@ -4,6 +4,19 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+## v0.14.1
+
+01-25-2019 10:39 PST
+  
+### Implementation Changes
+
+- fix: return GaxiosError directly ([#171](https://github.com/googleapis/gcs-resumable-upload/pull/171))
+
+### Documentation
+
+- build: exclude googleapis in 404 check. ([#172](https://github.com/googleapis/gcs-resumable-upload/pull/172))
+- build: exclude googleapis.com checks in 404 checker ([#170](https://github.com/googleapis/gcs-resumable-upload/pull/170))
+
 ## v0.14.0
 
 01-23-2019 17:57 PST
