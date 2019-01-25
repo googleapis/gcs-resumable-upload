@@ -744,27 +744,28 @@ describe('gcs-resumable-upload', () => {
     });
 
     it('should execute the callback with a body error & response', async () => {
-      const response = {error: ':('};
+      const error = new GaxiosError(
+          'Error message', {},
+          {config: {}, data: {}, status: 500, headers: {}});
       mockAuthorizeRequest();
-      const scope = nock(REQ_OPTS.url).get(queryPath).reply(500, response);
+      const scope = nock(REQ_OPTS.url).get(queryPath).reply(500, {error});
       await assertRejects(up.makeRequest(REQ_OPTS), (err: GaxiosError) => {
-        assert.equal(err.response!.status, 500);
-        assert.deepStrictEqual(response, err.response!.data);
+        scope.done();
+        assert.strictEqual(err.code, '500');
         return true;
       });
     });
 
     it('should execute the callback with a body error & response for non-2xx status codes',
        async () => {
-         const response = {status: 500, data: {error: '!$#@'}};
+         const error = new GaxiosError(
+             'Error message', {},
+             {config: {}, data: {}, status: 500, headers: {}});
          mockAuthorizeRequest();
-         const scope =
-             nock(REQ_OPTS.url).get(queryPath).reply(500, response.data);
+         const scope = nock(REQ_OPTS.url).get(queryPath).reply(500, {error});
          await assertRejects(up.makeRequest(REQ_OPTS), (err: GaxiosError) => {
            scope.done();
-           assert.strictEqual(err.message, response.data.error);
-           assert.deepStrictEqual(err.response!.status, 500);
-           assert.deepStrictEqual(err.response!.data, response.data);
+           assert.deepStrictEqual(err.code, '500');
            return true;
          });
        });
