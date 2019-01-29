@@ -7,14 +7,11 @@
 
 import * as ConfigStore from 'configstore';
 import {createHash} from 'crypto';
-import {GaxiosError, GaxiosOptions, GaxiosPromise} from 'gaxios';
+import {GaxiosError, GaxiosOptions, GaxiosPromise, GaxiosResponse} from 'gaxios';
 import {GoogleAuth, GoogleAuthOptions} from 'google-auth-library';
 import * as Pumpify from 'pumpify';
-import * as r from 'request';
-import {PassThrough} from 'stream';
+import {PassThrough, Transform} from 'stream';
 import * as streamEvents from 'stream-events';
-
-const request = r.defaults({json: true, pool: {maxSockets: Infinity}});
 
 const BASE_URI = 'https://www.googleapis.com/upload/storage/v1/b';
 const TERMINATED_UPLOAD_STATUS_CODE = 410;
@@ -283,37 +280,46 @@ export class Upload extends Pumpify {
   }
 
   private async startUploading() {
-    const reqOpts = {
-      method: 'PUT',
-      url: this.uri!,
-      headers: {
-        'Content-Range': 'bytes ' + this.offset + '-*/' + this.contentLength
-      }
-    };
-
     const bufferStream = this.bufferStream = new PassThrough();
     const offsetStream = this.offsetStream =
-        new PassThrough({transform: this.onChunk.bind(this)});
+        new Transform({transform: this.onChunk.bind(this)});
     const delayStream = new PassThrough();
+    const requestStreamEmbeddedStream = new PassThrough();
 
-    const requestStream = await this.getRequestStream(reqOpts);
-    this.setPipeline(bufferStream, offsetStream, requestStream, delayStream);
-
-    // wait for "complete" from request before letting the stream finish
     delayStream.on('prefinish', () => {
       this.cork();
     });
 
-    requestStream.on('complete', resp => {
-      if (resp.statusCode < 200 || resp.statusCode > 299) {
+    this.on('response', (resp: GaxiosResponse) => {
+      if (resp.data.error) {
+        this.destroy(resp.data.error);
+        return;
+      }
+
+      if (resp.status < 200 || resp.status > 299) {
         this.destroy(new Error('Upload failed'));
         return;
       }
 
-      this.emit('metadata', resp.body);
+      this.emit('metadata', resp.data);
       this.deleteConfig();
       this.uncork();
     });
+
+    this.setPipeline(bufferStream, offsetStream, delayStream);
+
+    this.pipe(requestStreamEmbeddedStream);
+
+    const reqOpts: GaxiosOptions = {
+      method: 'PUT',
+      url: this.uri,
+      headers: {
+        'Content-Range': 'bytes ' + this.offset + '-*/' + this.contentLength
+      },
+      body: requestStreamEmbeddedStream,
+    };
+
+    await this.getRequestStream(reqOpts);
   }
 
   private onChunk(
@@ -431,26 +437,18 @@ export class Upload extends Pumpify {
     return res;
   }
 
-  private async getRequestStream(reqOpts: r.OptionsWithUrl):
-      Promise<r.Request> {
+  private async getRequestStream(reqOpts: GaxiosOptions):
+      Promise<GaxiosResponse> {
     try {
       if (this.userProject) {
-        reqOpts.qs = reqOpts.qs || {};
-        reqOpts.qs.userProject = this.userProject;
+        reqOpts.params = reqOpts.params || {};
+        reqOpts.params.userProject = this.userProject;
       }
-      const authHeaders =
-          await this.authClient.getRequestHeaders(reqOpts.url as string);
-      reqOpts.headers = Object.assign({}, reqOpts.headers, authHeaders);
-      const requestStream = request(reqOpts);
-      requestStream.on('error', this.destroy.bind(this));
-      requestStream.on('response', this.onResponse.bind(this));
-      requestStream.on('complete', (resp) => {
-        const body = resp.body;
-        if (body && body.error) this.destroy(body.error);
+
+      return this.authClient.request(reqOpts).then(res => {
+        this.onResponse(res);
+        return res;
       });
-      // this makes the response body come back in the response (weird?)
-      requestStream.callback = () => {};
-      return requestStream;
     } catch (e) {
       this.destroy(e);
       throw e;
@@ -485,8 +483,8 @@ export class Upload extends Pumpify {
   /**
    * @return {bool} is the request good?
    */
-  private onResponse(resp: r.Response) {
-    if (resp.statusCode === 404) {
+  private onResponse(resp: GaxiosResponse) {
+    if (resp.status === 404) {
       if (this.numRetries < RETRY_LIMIT) {
         this.numRetries++;
         this.startUploading();
@@ -496,7 +494,7 @@ export class Upload extends Pumpify {
       return false;
     }
 
-    if (resp.statusCode > 499 && resp.statusCode < 600) {
+    if (resp.status > 499 && resp.status < 600) {
       if (this.numRetries < RETRY_LIMIT) {
         const randomMs = Math.round(Math.random() * 1000);
         const waitTime = Math.pow(2, this.numRetries) * 1000 + randomMs;
