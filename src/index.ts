@@ -319,7 +319,7 @@ export class Upload extends Pumpify {
       body: requestStreamEmbeddedStream,
     };
 
-    await this.getRequestStream(reqOpts);
+    await this.makeRequestStream(reqOpts);
   }
 
   private onChunk(
@@ -437,7 +437,7 @@ export class Upload extends Pumpify {
     return res;
   }
 
-  private async getRequestStream(reqOpts: GaxiosOptions):
+  private async makeRequestStream(reqOpts: GaxiosOptions):
       Promise<GaxiosResponse> {
     try {
       if (this.userProject) {
@@ -445,10 +445,9 @@ export class Upload extends Pumpify {
         reqOpts.params.userProject = this.userProject;
       }
 
-      return this.authClient.request(reqOpts).then(res => {
-        this.onResponse(res);
-        return res;
-      });
+      const res = await this.authClient.request(reqOpts);
+      this.onResponse(res);
+      return res;
     } catch (e) {
       this.destroy(e);
       throw e;
