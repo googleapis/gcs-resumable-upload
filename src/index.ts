@@ -7,7 +7,7 @@
 
 import * as ConfigStore from 'configstore';
 import {createHash} from 'crypto';
-import {GaxiosError, GaxiosOptions, GaxiosPromise, GaxiosResponse} from 'gaxios';
+import {GaxiosOptions, GaxiosPromise, GaxiosResponse} from 'gaxios';
 import {GoogleAuth, GoogleAuthOptions} from 'google-auth-library';
 import * as Pumpify from 'pumpify';
 import {PassThrough, Transform} from 'stream';
@@ -280,16 +280,33 @@ export class Upload extends Pumpify {
   }
 
   private async startUploading() {
-    const bufferStream = this.bufferStream = new PassThrough();
+    // The buffer stream allows us to keep chunks in memory
+    // until we are sure we can successfully resume the upload.
+    const bufferStream = this.bufferStream || new PassThrough();
+
+    // The offset stream allows us to analyze each incoming
+    // chunk to analyze it against what the upstream API already
+    // has stored for this upload.
     const offsetStream = this.offsetStream =
         new Transform({transform: this.onChunk.bind(this)});
+
+    // The delay stream gives us a chance to catch the response
+    // from the API request before we signal to the user that
+    // the upload was successful.
     const delayStream = new PassThrough();
+
+    // The request library (authClient.request()) requires the
+    // stream to be sent within the request options.
     const requestStreamEmbeddedStream = new PassThrough();
 
     delayStream.on('prefinish', () => {
+      // Pause the stream from finishing so we can process the
+      // response from the API.
       this.cork();
     });
 
+    // Process the API response to look for errors that came in
+    // the response body.
     this.on('response', (resp: GaxiosResponse) => {
       if (resp.data.error) {
         this.destroy(resp.data.error);
@@ -303,12 +320,21 @@ export class Upload extends Pumpify {
 
       this.emit('metadata', resp.data);
       this.deleteConfig();
+
+      // Allow the stream to continue naturally so the user's
+      // "finish" event fires.
       this.uncork();
     });
 
     this.setPipeline(bufferStream, offsetStream, delayStream);
 
     this.pipe(requestStreamEmbeddedStream);
+
+    this.once('restart', () => {
+      // The upload is being re-attempted. Disconnect the request
+      // stream, so it won't receive more data.
+      this.unpipe(requestStreamEmbeddedStream);
+    });
 
     const reqOpts: GaxiosOptions = {
       method: 'PUT',
@@ -455,6 +481,7 @@ export class Upload extends Pumpify {
   }
 
   private restart() {
+    this.emit('restart');
     this.numBytesWritten = 0;
     this.deleteConfig();
     this.createURI(err => {
