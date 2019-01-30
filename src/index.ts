@@ -470,6 +470,7 @@ export class Upload extends Pumpify {
         reqOpts.params = reqOpts.params || {};
         reqOpts.params.userProject = this.userProject;
       }
+      reqOpts.validateStatus = () => true;
 
       const res = await this.authClient.request(reqOpts);
       this.onResponse(res);
