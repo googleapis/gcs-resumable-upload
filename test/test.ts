@@ -744,9 +744,13 @@ describe('gcs-resumable-upload', () => {
     });
 
     it('should execute the callback with a body error & response', async () => {
-      const error = new GaxiosError(
-          'Error message', {},
-          {config: {}, data: {}, status: 500, headers: {}});
+      const error = new GaxiosError('Error message', {}, {
+        config: {},
+        data: {},
+        status: 500,
+        statusText: 'sad trombone',
+        headers: {}
+      });
       mockAuthorizeRequest();
       const scope = nock(REQ_OPTS.url).get(queryPath).reply(500, {error});
       await assertRejects(up.makeRequest(REQ_OPTS), (err: GaxiosError) => {
@@ -758,9 +762,13 @@ describe('gcs-resumable-upload', () => {
 
     it('should execute the callback with a body error & response for non-2xx status codes',
        async () => {
-         const error = new GaxiosError(
-             'Error message', {},
-             {config: {}, data: {}, status: 500, headers: {}});
+         const error = new GaxiosError('Error message', {}, {
+           config: {},
+           data: {},
+           status: 500,
+           statusText: 'sad trombone',
+           headers: {}
+         });
          mockAuthorizeRequest();
          const scope = nock(REQ_OPTS.url).get(queryPath).reply(500, {error});
          await assertRejects(up.makeRequest(REQ_OPTS), (err: GaxiosError) => {
