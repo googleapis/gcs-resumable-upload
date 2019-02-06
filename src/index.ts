@@ -5,6 +5,7 @@
  * See file LICENSE for detail or copy at https://opensource.org/licenses/MIT
  */
 
+import AbortController from 'abort-controller';
 import * as ConfigStore from 'configstore';
 import {createHash} from 'crypto';
 import {GaxiosOptions, GaxiosPromise, GaxiosResponse} from 'gaxios';
@@ -469,10 +470,14 @@ export class Upload extends Pumpify {
   }
 
   private async makeRequestStream(reqOpts: GaxiosOptions): GaxiosPromise {
+    const controller = new AbortController();
+    this.once('error', () => controller.abort());
+
     if (this.userProject) {
       reqOpts.params = reqOpts.params || {};
       reqOpts.params.userProject = this.userProject;
     }
+    reqOpts.signal = controller.signal;
     reqOpts.validateStatus = () => true;
 
     const res = await this.authClient.request(reqOpts);
@@ -519,7 +524,6 @@ export class Upload extends Pumpify {
       }
       return false;
     }
-
     if (resp.status > 499 && resp.status < 600) {
       if (this.numRetries < RETRY_LIMIT) {
         const randomMs = Math.round(Math.random() * 1000);
