@@ -283,6 +283,7 @@ export class Upload extends Pumpify {
     // The buffer stream allows us to keep chunks in memory
     // until we are sure we can successfully resume the upload.
     const bufferStream = this.bufferStream || new PassThrough();
+    this.bufferStream = bufferStream;
 
     // The offset stream allows us to analyze each incoming
     // chunk to analyze it against what the upstream API already
@@ -345,7 +346,11 @@ export class Upload extends Pumpify {
       body: requestStreamEmbeddedStream,
     };
 
-    await this.makeRequestStream(reqOpts);
+    try {
+      await this.makeRequestStream(reqOpts);
+    } catch (e) {
+      this.destroy(e);
+    }
   }
 
   private onChunk(
@@ -463,22 +468,16 @@ export class Upload extends Pumpify {
     return res;
   }
 
-  private async makeRequestStream(reqOpts: GaxiosOptions):
-      Promise<GaxiosResponse> {
-    try {
-      if (this.userProject) {
-        reqOpts.params = reqOpts.params || {};
-        reqOpts.params.userProject = this.userProject;
-      }
-      reqOpts.validateStatus = () => true;
-
-      const res = await this.authClient.request(reqOpts);
-      this.onResponse(res);
-      return res;
-    } catch (e) {
-      this.destroy(e);
-      throw e;
+  private async makeRequestStream(reqOpts: GaxiosOptions): GaxiosPromise {
+    if (this.userProject) {
+      reqOpts.params = reqOpts.params || {};
+      reqOpts.params.userProject = this.userProject;
     }
+    reqOpts.validateStatus = () => true;
+
+    const res = await this.authClient.request(reqOpts);
+    this.onResponse(res);
+    return res;
   }
 
   private restart() {

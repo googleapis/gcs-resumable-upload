@@ -20,6 +20,7 @@ const assertRejects = require('assert-rejects');
 
 import {CreateUriCallback} from '../src';
 import {GaxiosOptions, GaxiosError, GaxiosResponse} from 'gaxios';
+import {request} from 'https';
 
 type RequestResponse = r.Response;
 
@@ -362,7 +363,7 @@ describe('gcs-resumable-upload', () => {
 
   describe('#startUploading', () => {
     beforeEach(() => {
-      up.getRequestStream = async () => through();
+      up.makeRequestStream = async () => through();
     });
 
     it('should make the correct request', (done) => {
@@ -372,7 +373,7 @@ describe('gcs-resumable-upload', () => {
       up.uri = URI;
       up.offset = OFFSET;
 
-      up.getRequestStream = async (reqOpts: GaxiosOptions) => {
+      up.makeRequestStream = async (reqOpts: GaxiosOptions) => {
         assert.strictEqual(reqOpts.method, 'PUT');
         assert.strictEqual(reqOpts.url, up.uri);
         assert.deepEqual(
@@ -391,91 +392,146 @@ describe('gcs-resumable-upload', () => {
       assert.strictEqual(isStream(up.bufferStream), true);
     });
 
+    it('should reuse the buffer stream', () => {
+      const bufferStream = new stream.PassThrough();
+      up.bufferStream = bufferStream;
+      up.startUploading();
+      assert.strictEqual(up.bufferStream, bufferStream);
+    });
+
     it('should create an offset stream', () => {
       assert.strictEqual(up.offsetStream, undefined);
       up.startUploading();
       assert.strictEqual(isStream(up.offsetStream), true);
     });
 
-    it('should set the pipeline', (done) => {
-      const requestStream = through();
-
-      up.setPipeline =
-          (buffer: Buffer, offset: number, request: stream.Readable,
-           delay: number) => {
-            assert.strictEqual(buffer, up.bufferStream);
-            assert.strictEqual(offset, up.offsetStream);
-            assert.strictEqual(request, requestStream);
-            assert.strictEqual(isStream(delay), true);
-
-            done();
-          };
-
-      up.getRequestStream = async () => requestStream;
-      up.startUploading();
-    });
-
     it('should cork the stream on prefinish', (done) => {
       up.cork = done;
       up.setPipeline =
-          (buffer: Buffer, offset: number, request: stream.Readable,
-           delay: EventEmitter) => {
+          (buffer: stream.Stream, offset: stream.Stream,
+           delay: stream.Stream) => {
             setImmediate(() => {
               delay.emit('prefinish');
             });
           };
 
-      up.getRequestStream = async () => through();
+      up.makeRequestStream = async () => through();
       up.startUploading();
+    });
+
+    it('should set the pipeline', (done) => {
+      up.setPipeline =
+          (buffer: stream.Stream, offset: stream.Stream,
+           delay: stream.Stream) => {
+            assert.strictEqual(buffer, up.bufferStream);
+            assert.strictEqual(offset, up.offsetStream);
+            assert.strictEqual(isStream(delay), true);
+
+            done();
+          };
+
+      up.makeRequestStream = async () => through();
+      up.startUploading();
+    });
+
+    it('should pipe to the request stream', (done) => {
+      let requestStreamEmbeddedStream: stream.PassThrough;
+      up.pipe = (requestStream: stream.PassThrough) => {
+        requestStreamEmbeddedStream = requestStream;
+      };
+      up.makeRequestStream = async (reqOpts: GaxiosOptions) => {
+        assert.strictEqual(reqOpts.body, requestStreamEmbeddedStream);
+        setImmediate(done);
+        return through();
+      };
+      up.startUploading();
+    });
+
+    it('should unpipe the request stream on restart', (done) => {
+      let requestStreamEmbeddedStream: stream.PassThrough;
+      up.pipe = (requestStream: stream.PassThrough) => {
+        requestStreamEmbeddedStream = requestStream;
+      };
+      up.unpipe = (requestStream: stream.PassThrough) => {
+        assert.strictEqual(requestStream, requestStreamEmbeddedStream);
+        done();
+      };
+      up.makeRequestStream = async () => through();
+      up.startUploading();
+      up.emit('restart');
     });
 
     it('should emit the metadata', (done) => {
       const BODY = {hi: 1};
-      const RESP = {body: BODY};
+      const RESP = {data: BODY};
       up.on('metadata', (body: {}) => {
         assert.strictEqual(body, BODY);
         done();
       });
       const requestStream = through();
-      up.getRequestStream = async () => requestStream;
-      up.startUploading().then(() => {
-        requestStream.emit('complete', RESP);
-      });
+      up.makeRequestStream = async () => requestStream;
+      up.startUploading();
+      up.emit('response', RESP);
     });
 
     it('should destroy the stream if an error occurred', (done) => {
-      const RESP = {body: '', statusCode: 404};
+      const RESP = {data: {error: new Error('Error.')}};
       const requestStream = through();
       up.on('metadata', done);
       // metadata shouldn't be emitted... will blow up test if called
       up.destroy = (err: Error) => {
-        assert.strictEqual(err.message, 'Upload failed');
+        assert.strictEqual(err, RESP.data.error);
         done();
       };
-      up.getRequestStream = async () => requestStream;
-      up.startUploading().then(() => {
-        requestStream.emit('complete', RESP);
-      });
+      up.makeRequestStream = async () => requestStream;
+      up.startUploading();
+      up.emit('response', RESP);
+    });
+
+    it('should destroy the stream if the status code is out of range',
+       (done) => {
+         const RESP = {data: {}, status: 300};
+         const requestStream = through();
+         up.on('metadata', done);
+         // metadata shouldn't be emitted... will blow up test if called
+         up.destroy = (err: Error) => {
+           assert.strictEqual(err.message, 'Upload failed');
+           done();
+         };
+         up.makeRequestStream = async () => requestStream;
+         up.startUploading();
+         up.emit('response', RESP);
+       });
+
+    it('should estroy the stream if hte request failed', (done) => {
+      const error = new Error('Error.');
+      up.destroy = (err: Error) => {
+        assert.strictEqual(err, error);
+        done();
+      };
+      up.makeRequestStream = async () => {
+        throw error;
+      };
+      up.startUploading();
     });
 
     it('should delete the config', (done) => {
-      const RESP = {body: ''};
+      const RESP = {data: ''};
       const requestStream = through();
-      up.getRequestStream = async () => {
+      up.makeRequestStream = async () => {
         up.deleteConfig = done;
         return requestStream;
       };
-      up.startUploading().then(() => {
-        requestStream.emit('complete', RESP);
-      });
+      up.startUploading();
+      up.emit('response', RESP);
     });
 
     it('should uncork the stream', (done) => {
-      const RESP = {body: ''};
+      const RESP = {data: ''};
       const requestStream = through();
-      up.getRequestStream = () => {
+      up.makeRequestStream = () => {
         up.uncork = done;
-        requestStream.emit('complete', RESP);
+        up.emit('response', RESP);
         return requestStream;
       };
       up.startUploading();
@@ -790,129 +846,62 @@ describe('gcs-resumable-upload', () => {
     });
   });
 
-  describe('#getRequestStream', () => {
-    it('should authorize the request', async () => {
-      const scopes = [
-        mockAuthorizeRequest(), nock(REQ_OPTS.url).get(queryPath).reply(200)
-      ];
-      const stream = await up.getRequestStream(REQ_OPTS);
-      return new Promise((resolve, reject) => {
-        stream.on('response', (res: RequestResponse) => {
-          scopes.forEach(x => x.done());
-          assert.equal('Bearer abc123', res.request.headers.Authorization);
-          assert.equal(res.request.href, REQ_OPTS.url + queryPath);
-          resolve();
-        });
-      });
+  describe('#makeRequestStream', () => {
+    beforeEach(() => {
+      up.onResponse = () => {};
     });
 
-    it('should set userProject', async () => {
-      const scopes = [
-        mockAuthorizeRequest(), nock(REQ_OPTS.url).get(queryPath).reply(200)
-      ];
-      const stream = await up.getRequestStream(REQ_OPTS);
-      return new Promise(resolve => {
-        stream.on('response', (res: RequestResponse) => {
-          scopes.forEach(x => x.done());
-          assert.strictEqual(res.request.href, `${REQ_OPTS.url}${queryPath}`);
-          resolve();
-        });
-      });
+    it('should set userProject', (done) => {
+      up.userProject = 'user-project';
+      up.authClient = {
+        request: (reqOpts: GaxiosOptions) => {
+          assert.deepStrictEqual(reqOpts.params, {userProject: 'user-project'});
+          done();
+        },
+      };
+      up.makeRequestStream(REQ_OPTS);
     });
 
-    it('should destroy the stream if an error occurred', (done) => {
-      up.destroy = (err: Error) => {
-        assert.equal(err.message, 'Request failed with status code 500');
+    it('should always validate the status', (done) => {
+      up.authClient = {
+        request: (reqOpts: GaxiosOptions) => {
+          assert.strictEqual(reqOpts.validateStatus!(0), true);
+          done();
+        },
+      };
+      up.makeRequestStream(REQ_OPTS);
+    });
+
+    it('should pass the response to the handler', (done) => {
+      const response = {};
+      up.authClient = {
+        request: async () => response,
+      };
+      up.onResponse = (res: GaxiosResponse) => {
+        assert.strictEqual(res, response);
         done();
       };
-      const scope = mockAuthorizeRequest(500);
-      up.getRequestStream(REQ_OPTS).catch(() => {
-        scope.done();
-      });
+      up.makeRequestStream(REQ_OPTS);
     });
 
-    it('should make the correct request', (done) => {
-      mockAuthorizeRequest();
-      const scope =
-          nock(REQ_OPTS.url).get(queryPath).replyWithFile(200, dawPath);
-      up.getRequestStream(REQ_OPTS).then((requestStream: stream.Readable) => {
-        assert(requestStream);
-        setImmediate(done);
-        return through();
-      });
-    });
-
-    it('should set the callback to a noop', async () => {
-      const scopes = [
-        mockAuthorizeRequest(), nock(REQ_OPTS.url).get(queryPath).reply(200)
-      ];
-      const requestStream = await up.getRequestStream(REQ_OPTS);
-      assert.strictEqual(typeof requestStream.callback, 'function');
-    });
-
-    it('should destroy the stream if there was an error', (done) => {
-      mockAuthorizeRequest();
-      const scope = nock(REQ_OPTS.url).get(queryPath).reply(200);
-      up.getRequestStream(REQ_OPTS).then((requestStream: stream.Readable) => {
-        const error = new Error(':(');
-        up.on('error', (err: Error) => {
-          assert.strictEqual(err, error);
-          done();
-        });
-        requestStream.emit('error', error);
-      });
-    });
-
-    it('should destroy the stream if there was a body error', (done) => {
-      const response = {error: '🤮'};
-      const scopes = [
-        mockAuthorizeRequest(),
-        nock(REQ_OPTS.url).get(queryPath).reply(200, response)
-      ];
-      up.getRequestStream(REQ_OPTS).then(() => {
-        up.on('error', (err: Error) => {
-          assert.strictEqual(err, response.error);
-          scopes.forEach(x => x.done());
-          done();
-        });
-      });
-    });
-
-    it('should check if it should retry on response', (done) => {
-      let fired = false;
-      const res = {statusCode: 200};
-      const scopes = [
-        mockAuthorizeRequest(), nock(REQ_OPTS.url).get(queryPath).reply(200)
-      ];
-      up.onResponse = function(resp: RequestResponse) {
-        if (!fired) {
-          assert.strictEqual(this, up);
-          assert.strictEqual(resp, res);
-          fired = true;
-          done();
-        }
+    it('should return the response', async () => {
+      const response = {};
+      up.authClient = {
+        request: async () => response,
       };
-      up.getRequestStream(REQ_OPTS).then((requestStream: stream.Readable) => {
-        requestStream.emit('response', res);
-      });
-    });
-
-    it('should execute the callback with the stream', (done) => {
-      const scopes = [
-        mockAuthorizeRequest(), nock(REQ_OPTS.url).get(queryPath).reply(200, {})
-      ];
-      up.getRequestStream(REQ_OPTS).then((reqStream: stream.Readable) => {
-        reqStream.on('complete', () => {
-          scopes.forEach(x => x.done());
-          done();
-        });
-      });
+      const stream = await up.makeRequestStream(REQ_OPTS);
+      assert.strictEqual(stream, response);
     });
   });
 
   describe('#restart', () => {
     beforeEach(() => {
       up.createURI = () => {};
+    });
+
+    it('should emit the restart event', (done) => {
+      up.on('restart', done);
+      up.restart();
     });
 
     it('should set numBytesWritten to 0', () => {
@@ -1016,7 +1005,7 @@ describe('gcs-resumable-upload', () => {
     });
 
     describe('404', () => {
-      const RESP = {statusCode: 404};
+      const RESP = {status: 404};
 
       it('should increase the retry count if less than limit', () => {
         assert.strictEqual(up.numRetries, 0);
@@ -1045,7 +1034,7 @@ describe('gcs-resumable-upload', () => {
     });
 
     describe('500s', () => {
-      const RESP = {statusCode: 500};
+      const RESP = {status: 500};
 
       it('should increase the retry count if less than limit', () => {
         assert.strictEqual(up.numRetries, 0);
