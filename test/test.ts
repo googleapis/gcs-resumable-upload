@@ -28,6 +28,14 @@ const dawPath = path.join(__dirname, '../../daw.jpg');
 
 nock.disableNetConnect();
 
+class AbortController {
+  aborted = false;
+  signal = this;
+  abort() {
+    this.aborted = true;
+  }
+}
+
 let configData = {} as {[index: string]: {}};
 class ConfigStore {
   delete(key: string) {
@@ -68,6 +76,7 @@ describe('gcs-resumable-upload', () => {
   const keyFile = path.join(__dirname, '../../test/fixtures/keys.json');
 
   before(() => {
+    mockery.registerMock('abort-controller', {default: AbortController});
     mockery.registerMock('configstore', ConfigStore);
     mockery.enable({useCleanCache: true, warnOnUnregistered: false});
     upload = require('../src').upload;
@@ -848,7 +857,38 @@ describe('gcs-resumable-upload', () => {
 
   describe('#makeRequestStream', () => {
     beforeEach(() => {
+      up.authClient = {request: () => {}};
       up.onResponse = () => {};
+    });
+
+    it('should pass a signal from the abort controller', (done) => {
+      up.authClient = {
+        request: (reqOpts: GaxiosOptions) => {
+          assert(reqOpts.signal instanceof AbortController);
+          done();
+        },
+      };
+      up.makeRequestStream(REQ_OPTS);
+    });
+
+    it('should abort on an error', (done) => {
+      up.on('error', () => {});
+
+      let abortController: AbortController;
+      up.authClient = {
+        request: (reqOpts: GaxiosOptions) => {
+          // tslint:disable-next-line no-any
+          abortController = reqOpts.signal as any;
+        },
+      };
+
+      up.makeRequestStream(REQ_OPTS);
+      up.emit('error', new Error('Error.'));
+
+      setImmediate(() => {
+        assert.strictEqual(abortController.aborted, true);
+        done();
+      });
     });
 
     it('should set userProject', (done) => {
