@@ -21,6 +21,7 @@ const assertRejects = require('assert-rejects');
 import {CreateUriCallback} from '../src';
 import {GaxiosOptions, GaxiosError, GaxiosResponse} from 'gaxios';
 import {request} from 'https';
+import {isMainThread} from 'worker_threads';
 
 type RequestResponse = r.Response;
 
@@ -72,7 +73,7 @@ describe('gcs-resumable-upload', () => {
   const ORIGIN = '*';
   const PREDEFINED_ACL = 'authenticatedRead';
   const USER_PROJECT = 'user-project-id';
-  const REQ_OPTS = {url: 'http://fake.local'};
+  let REQ_OPTS: GaxiosOptions;
   const keyFile = path.join(__dirname, '../../test/fixtures/keys.json');
 
   before(() => {
@@ -84,6 +85,7 @@ describe('gcs-resumable-upload', () => {
 
   beforeEach(() => {
     configData = {};
+    REQ_OPTS = {url: 'http://fake.local'};
     up = upload({
       bucket: BUCKET,
       file: FILE,
@@ -762,7 +764,7 @@ describe('gcs-resumable-upload', () => {
       const up =
           upload({bucket: 'BUCKET', file: FILE, key, authConfig: {keyFile}});
       const scopes =
-          [mockAuthorizeRequest(), nock(REQ_OPTS.url).get('/').reply(200, {})];
+          [mockAuthorizeRequest(), nock(REQ_OPTS.url!).get('/').reply(200, {})];
       const res = await up.makeRequest(REQ_OPTS);
       scopes.forEach(x => x.done());
       const headers = res.config.headers;
@@ -773,7 +775,8 @@ describe('gcs-resumable-upload', () => {
 
     it('should set userProject', async () => {
       const scopes = [
-        mockAuthorizeRequest(), nock(REQ_OPTS.url).get(queryPath).reply(200, {})
+        mockAuthorizeRequest(),
+        nock(REQ_OPTS.url!).get(queryPath).reply(200, {})
       ];
       const res: GaxiosResponse = await up.makeRequest(REQ_OPTS);
       assert.strictEqual(res.config.url, REQ_OPTS.url + queryPath);
@@ -791,7 +794,7 @@ describe('gcs-resumable-upload', () => {
     it('should make the correct request', async () => {
       const scopes = [
         mockAuthorizeRequest(),
-        nock(REQ_OPTS.url).get(queryPath).reply(200, undefined, {})
+        nock(REQ_OPTS.url!).get(queryPath).reply(200, undefined, {})
       ];
       const res = await up.makeRequest(REQ_OPTS);
       scopes.forEach(x => x.done());
@@ -802,7 +805,8 @@ describe('gcs-resumable-upload', () => {
     it('should execute the callback with error & response', async () => {
       const response = {body: 'wooo'};
       mockAuthorizeRequest();
-      const scope = nock(REQ_OPTS.url).get(queryPath).reply(500, response.body);
+      const scope =
+          nock(REQ_OPTS.url!).get(queryPath).reply(500, response.body);
       const resp = await up.makeRequest(REQ_OPTS);
       assert.strictEqual(resp.data, response.body);
       scope.done();
@@ -817,7 +821,7 @@ describe('gcs-resumable-upload', () => {
         headers: {}
       });
       mockAuthorizeRequest();
-      const scope = nock(REQ_OPTS.url).get(queryPath).reply(500, {error});
+      const scope = nock(REQ_OPTS.url!).get(queryPath).reply(500, {error});
       await assertRejects(up.makeRequest(REQ_OPTS), (err: GaxiosError) => {
         scope.done();
         assert.strictEqual(err.code, '500');
@@ -835,7 +839,7 @@ describe('gcs-resumable-upload', () => {
            headers: {}
          });
          mockAuthorizeRequest();
-         const scope = nock(REQ_OPTS.url).get(queryPath).reply(500, {error});
+         const scope = nock(REQ_OPTS.url!).get(queryPath).reply(500, {error});
          await assertRejects(up.makeRequest(REQ_OPTS), (err: GaxiosError) => {
            scope.done();
            assert.deepStrictEqual(err.code, '500');
@@ -847,7 +851,7 @@ describe('gcs-resumable-upload', () => {
       const data = {red: 'tape'};
       mockAuthorizeRequest();
       up.onResponse = () => true;
-      const scope = nock(REQ_OPTS.url).get(queryPath).reply(200, data);
+      const scope = nock(REQ_OPTS.url!).get(queryPath).reply(200, data);
       const res = await up.makeRequest(REQ_OPTS);
       scope.done();
       assert.strictEqual(res.status, 200);
@@ -896,6 +900,22 @@ describe('gcs-resumable-upload', () => {
       up.authClient = {
         request: (reqOpts: GaxiosOptions) => {
           assert.deepStrictEqual(reqOpts.params, {userProject: 'user-project'});
+          done();
+        },
+      };
+      up.makeRequestStream(REQ_OPTS);
+    });
+
+    it('should not remove existing params when userProject is set', (done) => {
+      REQ_OPTS.params = {a: 'b', c: 'd'};
+      up.userProject = 'user-project';
+      up.authClient = {
+        request: (reqOpts: GaxiosOptions) => {
+          assert.deepStrictEqual(reqOpts.params, {
+            userProject: 'user-project',
+            a: 'b',
+            c: 'd',
+          });
           done();
         },
       };
