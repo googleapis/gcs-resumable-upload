@@ -5,16 +5,14 @@
  * See file LICENSE for detail or copy at https://opensource.org/licenses/MIT
  */
 
+import AbortController from 'abort-controller';
 import * as ConfigStore from 'configstore';
 import {createHash} from 'crypto';
-import {GaxiosError, GaxiosOptions, GaxiosPromise} from 'gaxios';
+import {GaxiosOptions, GaxiosPromise, GaxiosResponse} from 'gaxios';
 import {GoogleAuth, GoogleAuthOptions} from 'google-auth-library';
 import * as Pumpify from 'pumpify';
-import * as r from 'request';
-import {PassThrough} from 'stream';
+import {PassThrough, Transform} from 'stream';
 import * as streamEvents from 'stream-events';
-
-const request = r.defaults({json: true, pool: {maxSockets: Infinity}});
 
 const BASE_URI = 'https://www.googleapis.com/upload/storage/v1/b';
 const TERMINATED_UPLOAD_STATUS_CODE = 410;
@@ -283,37 +281,77 @@ export class Upload extends Pumpify {
   }
 
   private async startUploading() {
-    const reqOpts = {
-      method: 'PUT',
-      url: this.uri!,
-      headers: {
-        'Content-Range': 'bytes ' + this.offset + '-*/' + this.contentLength
-      }
-    };
+    // The buffer stream allows us to keep chunks in memory
+    // until we are sure we can successfully resume the upload.
+    const bufferStream = this.bufferStream || new PassThrough();
+    this.bufferStream = bufferStream;
 
-    const bufferStream = this.bufferStream = new PassThrough();
+    // The offset stream allows us to analyze each incoming
+    // chunk to analyze it against what the upstream API already
+    // has stored for this upload.
     const offsetStream = this.offsetStream =
-        new PassThrough({transform: this.onChunk.bind(this)});
+        new Transform({transform: this.onChunk.bind(this)});
+
+    // The delay stream gives us a chance to catch the response
+    // from the API request before we signal to the user that
+    // the upload was successful.
     const delayStream = new PassThrough();
 
-    const requestStream = await this.getRequestStream(reqOpts);
-    this.setPipeline(bufferStream, offsetStream, requestStream, delayStream);
+    // The request library (authClient.request()) requires the
+    // stream to be sent within the request options.
+    const requestStreamEmbeddedStream = new PassThrough();
 
-    // wait for "complete" from request before letting the stream finish
     delayStream.on('prefinish', () => {
+      // Pause the stream from finishing so we can process the
+      // response from the API.
       this.cork();
     });
 
-    requestStream.on('complete', resp => {
-      if (resp.statusCode < 200 || resp.statusCode > 299) {
+    // Process the API response to look for errors that came in
+    // the response body.
+    this.on('response', (resp: GaxiosResponse) => {
+      if (resp.data.error) {
+        this.destroy(resp.data.error);
+        return;
+      }
+
+      if (resp.status < 200 || resp.status > 299) {
         this.destroy(new Error('Upload failed'));
         return;
       }
 
-      this.emit('metadata', resp.body);
+      this.emit('metadata', resp.data);
       this.deleteConfig();
+
+      // Allow the stream to continue naturally so the user's
+      // "finish" event fires.
       this.uncork();
     });
+
+    this.setPipeline(bufferStream, offsetStream, delayStream);
+
+    this.pipe(requestStreamEmbeddedStream);
+
+    this.once('restart', () => {
+      // The upload is being re-attempted. Disconnect the request
+      // stream, so it won't receive more data.
+      this.unpipe(requestStreamEmbeddedStream);
+    });
+
+    const reqOpts: GaxiosOptions = {
+      method: 'PUT',
+      url: this.uri,
+      headers: {
+        'Content-Range': 'bytes ' + this.offset + '-*/' + this.contentLength
+      },
+      body: requestStreamEmbeddedStream,
+    };
+
+    try {
+      await this.makeRequestStream(reqOpts);
+    } catch (e) {
+      this.destroy(e);
+    }
   }
 
   private onChunk(
@@ -431,33 +469,24 @@ export class Upload extends Pumpify {
     return res;
   }
 
-  private async getRequestStream(reqOpts: r.OptionsWithUrl):
-      Promise<r.Request> {
-    try {
-      if (this.userProject) {
-        reqOpts.qs = reqOpts.qs || {};
-        reqOpts.qs.userProject = this.userProject;
-      }
-      const authHeaders =
-          await this.authClient.getRequestHeaders(reqOpts.url as string);
-      reqOpts.headers = Object.assign({}, reqOpts.headers, authHeaders);
-      const requestStream = request(reqOpts);
-      requestStream.on('error', this.destroy.bind(this));
-      requestStream.on('response', this.onResponse.bind(this));
-      requestStream.on('complete', (resp) => {
-        const body = resp.body;
-        if (body && body.error) this.destroy(body.error);
-      });
-      // this makes the response body come back in the response (weird?)
-      requestStream.callback = () => {};
-      return requestStream;
-    } catch (e) {
-      this.destroy(e);
-      throw e;
+  private async makeRequestStream(reqOpts: GaxiosOptions): GaxiosPromise {
+    const controller = new AbortController();
+    this.once('error', () => controller.abort());
+
+    if (this.userProject) {
+      reqOpts.params = reqOpts.params || {};
+      reqOpts.params.userProject = this.userProject;
     }
+    reqOpts.signal = controller.signal;
+    reqOpts.validateStatus = () => true;
+
+    const res = await this.authClient.request(reqOpts);
+    this.onResponse(res);
+    return res;
   }
 
   private restart() {
+    this.emit('restart');
     this.numBytesWritten = 0;
     this.deleteConfig();
     this.createURI(err => {
@@ -485,8 +514,8 @@ export class Upload extends Pumpify {
   /**
    * @return {bool} is the request good?
    */
-  private onResponse(resp: r.Response) {
-    if (resp.statusCode === 404) {
+  private onResponse(resp: GaxiosResponse) {
+    if (resp.status === 404) {
       if (this.numRetries < RETRY_LIMIT) {
         this.numRetries++;
         this.startUploading();
@@ -495,8 +524,7 @@ export class Upload extends Pumpify {
       }
       return false;
     }
-
-    if (resp.statusCode > 499 && resp.statusCode < 600) {
+    if (resp.status > 499 && resp.status < 600) {
       if (this.numRetries < RETRY_LIMIT) {
         const randomMs = Math.round(Math.random() * 1000);
         const waitTime = Math.pow(2, this.numRetries) * 1000 + randomMs;

@@ -41,10 +41,11 @@
     "node": ">=6"
   },
   "dependencies": {
+    "abort-controller": "^2.0.2",
     "configstore": "^4.0.0",
+    "gaxios": "^1.5.0",
     "google-auth-library": "^3.0.0",
     "pumpify": "^1.5.1",
-    "request": "^2.87.0",
     "stream-events": "^1.0.4"
   },
   "devDependencies": {
@@ -59,7 +60,6 @@
     "@types/request": "^2.47.0",
     "@types/through2": "^2.0.33",
     "assert-rejects": "^1.0.0",
-    "gaxios": "^1.2.2",
     "codecov": "^3.0.4",
     "gts": "^0.9.0",
     "intelli-espower-loader": "^1.0.1",

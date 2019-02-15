@@ -189,13 +189,13 @@ If the bucket being accessed has `requesterPays` functionality enabled, this can
 
 Invoked if the authorization failed, the request failed, or the file wasn't successfully uploaded.
 
-##### .on('response', function (resp, metadata) {})
+##### .on('response', function (response) {})
 
 ###### resp
 
 - Type: `Object`
 
-The HTTP response from [`request`](http://gitnpm.com/request).
+The [response object from Gaxios](https://github.com/JustinBeckwith/gaxios/blob/88a47e000625d8192689acac5c40c0b1e1d963a2/src/gaxios.ts#L197-L203).
 
 ###### metadata
 

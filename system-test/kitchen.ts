@@ -25,7 +25,7 @@ describe('end to end', () => {
         .on('error', done)
         .on('response',
             (resp) => {
-              uploadSucceeded = resp.statusCode === 200;
+              uploadSucceeded = resp.status === 200;
             })
         .on('finish', () => {
           assert.strictEqual(uploadSucceeded, true);
