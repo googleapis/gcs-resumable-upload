@@ -4,6 +4,42 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+## v1.0.0
+
+02-28-2019 06:27 PST
+
+**This release has breaking changes**. The underlying transport library was changed from [request](https://github.com/request/request) to [gaxios](https://github.com/JustinBeckwith/gaxios).  Any `response` objects returned via the API will now return a [`GaxiosResponse`](https://github.com/JustinBeckwith/gaxios/blob/88a47e000625d8192689acac5c40c0b1e1d963a2/src/gaxios.ts#L197-L203) object.
+
+
+#### Old Code
+```js
+.on('response', function (resp, metadata) {
+  console.log(resp.statusCode);
+})
+```
+
+#### New Code
+```js
+.on('response', function (resp) {
+  console.log(resp.status);
+});
+```
+
+### Implementation Changes
+- fix: replace request with gaxios ([#174](https://github.com/GoogleCloudPlatform/gcs-resumable-upload/pull/174))
+
+### Documentation
+- docs: update links in contrib guide ([#184](https://github.com/GoogleCloudPlatform/gcs-resumable-upload/pull/184))
+- docs: add lint/fix example to contributing guide ([#177](https://github.com/GoogleCloudPlatform/gcs-resumable-upload/pull/177))
+
+### Internal / Testing Changes
+- chore(deps): update dependency mocha to v6 ([#185](https://github.com/GoogleCloudPlatform/gcs-resumable-upload/pull/185))
+- build: use linkinator for docs test ([#183](https://github.com/GoogleCloudPlatform/gcs-resumable-upload/pull/183))
+- build: create docs test npm scripts ([#182](https://github.com/GoogleCloudPlatform/gcs-resumable-upload/pull/182))
+- build: test using @grpc/grpc-js in CI ([#181](https://github.com/GoogleCloudPlatform/gcs-resumable-upload/pull/181))
+- chore: move CONTRIBUTING.md to root ([#179](https://github.com/GoogleCloudPlatform/gcs-resumable-upload/pull/179))
+- chore(deps): update dependency typescript to ~3.3.0 ([#176](https://github.com/GoogleCloudPlatform/gcs-resumable-upload/pull/176))
+
 ## v0.14.1
 
 01-25-2019 10:39 PST
