@@ -11,8 +11,10 @@ import {createHash} from 'crypto';
 import {GaxiosOptions, GaxiosPromise, GaxiosResponse} from 'gaxios';
 import {GoogleAuth, GoogleAuthOptions} from 'google-auth-library';
 import * as Pumpify from 'pumpify';
+import * as querystring from 'querystring';
 import {PassThrough, Transform} from 'stream';
 import * as streamEvents from 'stream-events';
+import {URL} from 'url';
 
 const BASE_URI = 'https://www.googleapis.com/upload/storage/v1/b';
 const TERMINATED_UPLOAD_STATUS_CODE = 410;
@@ -338,12 +340,18 @@ export class Upload extends Pumpify {
       this.unpipe(requestStreamEmbeddedStream);
     });
 
+    const parsedUrl = new URL(this.uri!);
+    const url = `${parsedUrl.origin}${parsedUrl.pathname}`;
+    const params =
+        querystring.parse(parsedUrl.search.substr(1));  // removes `?`
+
     const reqOpts: GaxiosOptions = {
       method: 'PUT',
-      url: this.uri,
+      url,
       headers: {
         'Content-Range': 'bytes ' + this.offset + '-*/' + this.contentLength
       },
+      params,
       body: requestStreamEmbeddedStream,
     };
 

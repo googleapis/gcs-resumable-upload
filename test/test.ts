@@ -373,23 +373,25 @@ describe('gcs-resumable-upload', () => {
   });
 
   describe('#startUploading', () => {
+    const URI = 'https://uri/path?param=true';
+
     beforeEach(() => {
+      up.uri = URI;
       up.makeRequestStream = async () => through();
     });
 
     it('should make the correct request', (done) => {
-      const URI = 'uri';
       const OFFSET = 8;
 
-      up.uri = URI;
       up.offset = OFFSET;
 
       up.makeRequestStream = async (reqOpts: GaxiosOptions) => {
         assert.strictEqual(reqOpts.method, 'PUT');
-        assert.strictEqual(reqOpts.url, up.uri);
+        assert.strictEqual(reqOpts.url, 'https://uri/path');
         assert.deepEqual(
             reqOpts.headers,
             {'Content-Range': 'bytes ' + OFFSET + '-*/' + up.contentLength});
+        assert.deepEqual(reqOpts.params, {param: 'true'});
         done();
         return through();
       };
