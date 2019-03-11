@@ -76,6 +76,13 @@ See [`authConfig`](https://github.com/google/google-auth-library-nodejs/#choosin
 
 The name of the destination bucket.
 
+###### config.configPath
+
+- Type: `string`
+- *Optional*
+
+Where the gcs-resumable-upload configuration file should be stored on your system. This maps to the [configstore option by the same name](https://github.com/yeoman/configstore/tree/0df1ec950d952b1f0dfb39ce22af8e505dffc71a#configpath).
+
 ###### config.file
 
 - Type: `string`

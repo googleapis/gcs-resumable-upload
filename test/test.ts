@@ -39,6 +39,10 @@ class AbortController {
 
 let configData = {} as {[index: string]: {}};
 class ConfigStore {
+  constructor(packageName: string, config: object) {
+    this.set('packageName', packageName);
+    this.set('config', config);
+  }
   delete(key: string) {
     delete configData[key];
   }
@@ -172,6 +176,17 @@ describe('gcs-resumable-upload', () => {
     it('should set the predefinedAcl with private: true', () => {
       const up = upload({bucket: BUCKET, file: FILE, private: true});
       assert.strictEqual(up.predefinedAcl, 'private');
+    });
+
+    it('should create a ConfigStore instance', () => {
+      const up = upload({bucket: BUCKET, file: FILE});
+      assert.strictEqual(configData.packageName, 'gcs-resumable-upload');
+    });
+
+    it('should set the configPath', () => {
+      const configPath = '/custom/config/path';
+      const up = upload({bucket: BUCKET, file: FILE, configPath});
+      assert.deepStrictEqual(configData.config, {configPath});
     });
 
     it('should set numBytesWritten to 0', () => {
