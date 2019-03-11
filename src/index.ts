@@ -48,6 +48,12 @@ export interface UploadConfig {
   authClient?: GoogleAuth;
 
   /**
+   * Where the gcs-resumable-upload configuration file should be stored on your
+   * system. This maps to the configstore option by the same name.
+   */
+  configPath?: string;
+
+  /**
    * This will cause the upload to fail if the current generation of the remote
    * object does not match the one provided here.
    */
@@ -194,7 +200,9 @@ export class Upload extends Pumpify {
     if (cfg.private) this.predefinedAcl = 'private';
     if (cfg.public) this.predefinedAcl = 'publicRead';
 
-    this.configStore = new ConfigStore('gcs-resumable-upload');
+    const configPath = cfg.configPath;
+    this.configStore = new ConfigStore('gcs-resumable-upload', {configPath});
+
     this.uriProvidedManually = !!cfg.uri;
     this.uri = cfg.uri || this.get('uri');
     this.numBytesWritten = 0;
