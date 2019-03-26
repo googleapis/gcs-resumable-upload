@@ -4,6 +4,20 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+## v1.1.0
+
+03-26-2019 07:13 PDT
+  
+### New Features
+- feat: support ConfigStore configPath option ([#194](https://github.com/googleapis/gcs-resumable-upload/pull/194))
+
+### Internal / Testing Changes
+- chore: publish to npm using wombat ([#197](https://github.com/googleapis/gcs-resumable-upload/pull/197))
+- build: use per-repo npm publish token ([#195](https://github.com/googleapis/gcs-resumable-upload/pull/195))
+- build: Add docuploader credentials to node publish jobs ([#192](https://github.com/googleapis/gcs-resumable-upload/pull/192))
+- build: use node10 to run samples-test, system-test etc ([#190](https://github.com/googleapis/gcs-resumable-upload/pull/190))
+- build: update release configuration
+
 ## v1.0.0
 
 02-28-2019 06:27 PST
