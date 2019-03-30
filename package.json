@@ -70,7 +70,7 @@
     "nyc": "^13.0.0",
     "source-map-support": "^0.5.6",
     "through2": "^3.0.0",
-    "typescript": "~3.3.0",
+    "typescript": "~3.4.0",
     "linkinator": "^1.1.2"
   }
 }
