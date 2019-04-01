@@ -7,25 +7,16 @@
 
 import * as assert from 'assert';
 import * as crypto from 'crypto';
-import {EventEmitter} from 'events';
 import * as isStream from 'is-stream';
 import * as mockery from 'mockery';
 import * as nock from 'nock';
 import * as path from 'path';
-import * as r from 'request';
-import * as stream from 'stream';
-import * as through from 'through2';
+import {PassThrough, Stream} from 'stream';
 
 const assertRejects = require('assert-rejects');
 
 import {CreateUriCallback} from '../src';
 import {GaxiosOptions, GaxiosError, GaxiosResponse} from 'gaxios';
-import {request} from 'https';
-import {isMainThread} from 'worker_threads';
-
-type RequestResponse = r.Response;
-
-const dawPath = path.join(__dirname, '../../daw.jpg');
 
 nock.disableNetConnect();
 
@@ -316,7 +307,7 @@ describe('gcs-resumable-upload', () => {
 
     describe('success', () => {
       const URI = 'uri';
-      const RESP = {headers: {location: URI}} as RequestResponse;
+      const RESP = {headers: {location: URI}};
 
       beforeEach(() => {
         up.makeRequest = async (reqOpts: GaxiosOptions) => {
@@ -389,7 +380,7 @@ describe('gcs-resumable-upload', () => {
 
   describe('#startUploading', () => {
     beforeEach(() => {
-      up.makeRequestStream = async () => through();
+      up.makeRequestStream = async () => new PassThrough();
     });
 
     it('should make the correct request', (done) => {
@@ -406,7 +397,7 @@ describe('gcs-resumable-upload', () => {
             reqOpts.headers,
             {'Content-Range': 'bytes ' + OFFSET + '-*/' + up.contentLength});
         done();
-        return through();
+        return new PassThrough();
       };
 
       up.startUploading();
@@ -419,7 +410,7 @@ describe('gcs-resumable-upload', () => {
     });
 
     it('should reuse the buffer stream', () => {
-      const bufferStream = new stream.PassThrough();
+      const bufferStream = new PassThrough();
       up.bufferStream = bufferStream;
       up.startUploading();
       assert.strictEqual(up.bufferStream, bufferStream);
@@ -433,56 +424,52 @@ describe('gcs-resumable-upload', () => {
 
     it('should cork the stream on prefinish', (done) => {
       up.cork = done;
-      up.setPipeline =
-          (buffer: stream.Stream, offset: stream.Stream,
-           delay: stream.Stream) => {
-            setImmediate(() => {
-              delay.emit('prefinish');
-            });
-          };
+      up.setPipeline = (buffer: Stream, offset: Stream, delay: Stream) => {
+        setImmediate(() => {
+          delay.emit('prefinish');
+        });
+      };
 
-      up.makeRequestStream = async () => through();
+      up.makeRequestStream = async () => new PassThrough();
       up.startUploading();
     });
 
     it('should set the pipeline', (done) => {
-      up.setPipeline =
-          (buffer: stream.Stream, offset: stream.Stream,
-           delay: stream.Stream) => {
-            assert.strictEqual(buffer, up.bufferStream);
-            assert.strictEqual(offset, up.offsetStream);
-            assert.strictEqual(isStream(delay), true);
+      up.setPipeline = (buffer: Stream, offset: Stream, delay: Stream) => {
+        assert.strictEqual(buffer, up.bufferStream);
+        assert.strictEqual(offset, up.offsetStream);
+        assert.strictEqual(isStream(delay), true);
 
-            done();
-          };
+        done();
+      };
 
-      up.makeRequestStream = async () => through();
+      up.makeRequestStream = async () => new PassThrough();
       up.startUploading();
     });
 
     it('should pipe to the request stream', (done) => {
-      let requestStreamEmbeddedStream: stream.PassThrough;
-      up.pipe = (requestStream: stream.PassThrough) => {
+      let requestStreamEmbeddedStream: PassThrough;
+      up.pipe = (requestStream: PassThrough) => {
         requestStreamEmbeddedStream = requestStream;
       };
       up.makeRequestStream = async (reqOpts: GaxiosOptions) => {
         assert.strictEqual(reqOpts.body, requestStreamEmbeddedStream);
         setImmediate(done);
-        return through();
+        return new PassThrough();
       };
       up.startUploading();
     });
 
     it('should unpipe the request stream on restart', (done) => {
-      let requestStreamEmbeddedStream: stream.PassThrough;
-      up.pipe = (requestStream: stream.PassThrough) => {
+      let requestStreamEmbeddedStream: PassThrough;
+      up.pipe = (requestStream: PassThrough) => {
         requestStreamEmbeddedStream = requestStream;
       };
-      up.unpipe = (requestStream: stream.PassThrough) => {
+      up.unpipe = (requestStream: PassThrough) => {
         assert.strictEqual(requestStream, requestStreamEmbeddedStream);
         done();
       };
-      up.makeRequestStream = async () => through();
+      up.makeRequestStream = async () => new PassThrough();
       up.startUploading();
       up.emit('restart');
     });
@@ -494,7 +481,7 @@ describe('gcs-resumable-upload', () => {
         assert.strictEqual(body, BODY);
         done();
       });
-      const requestStream = through();
+      const requestStream = new PassThrough();
       up.makeRequestStream = async () => requestStream;
       up.startUploading();
       up.emit('response', RESP);
@@ -502,7 +489,7 @@ describe('gcs-resumable-upload', () => {
 
     it('should destroy the stream if an error occurred', (done) => {
       const RESP = {data: {error: new Error('Error.')}};
-      const requestStream = through();
+      const requestStream = new PassThrough();
       up.on('metadata', done);
       // metadata shouldn't be emitted... will blow up test if called
       up.destroy = (err: Error) => {
@@ -517,7 +504,7 @@ describe('gcs-resumable-upload', () => {
     it('should destroy the stream if the status code is out of range',
        (done) => {
          const RESP = {data: {}, status: 300};
-         const requestStream = through();
+         const requestStream = new PassThrough();
          up.on('metadata', done);
          // metadata shouldn't be emitted... will blow up test if called
          up.destroy = (err: Error) => {
@@ -543,7 +530,7 @@ describe('gcs-resumable-upload', () => {
 
     it('should delete the config', (done) => {
       const RESP = {data: ''};
-      const requestStream = through();
+      const requestStream = new PassThrough();
       up.makeRequestStream = async () => {
         up.deleteConfig = done;
         return requestStream;
@@ -554,7 +541,7 @@ describe('gcs-resumable-upload', () => {
 
     it('should uncork the stream', (done) => {
       const RESP = {data: ''};
-      const requestStream = through();
+      const requestStream = new PassThrough();
       up.makeRequestStream = () => {
         up.uncork = done;
         up.emit('response', RESP);
@@ -602,8 +589,8 @@ describe('gcs-resumable-upload', () => {
 
       describe('continued upload', () => {
         beforeEach(() => {
-          up.bufferStream = through();
-          up.offsetStream = through();
+          up.bufferStream = new PassThrough();
+          up.offsetStream = new PassThrough();
           up.get = () => CHUNK;
           up.restart = () => {};
         });
@@ -619,7 +606,7 @@ describe('gcs-resumable-upload', () => {
            });
 
         it('should unpipe the offset stream', (done) => {
-          up.bufferStream.unpipe = (stream: stream.Readable) => {
+          up.bufferStream.unpipe = (stream: Stream) => {
             assert.strictEqual(stream, up.offsetStream);
             done();
           };
@@ -1164,7 +1151,7 @@ describe('gcs-resumable-upload', () => {
       const RESP = {status: 200};
 
       it('should emit the response on the stream', (done) => {
-        up.on('response', (resp: RequestResponse) => {
+        up.on('response', (resp: {}) => {
           assert.strictEqual(resp, RESP);
           done();
         });
