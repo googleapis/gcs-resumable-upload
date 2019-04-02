@@ -41,7 +41,7 @@
     "node": ">=6"
   },
   "dependencies": {
-    "abort-controller": "^2.0.2",
+    "abort-controller": "^3.0.0",
     "configstore": "^4.0.0",
     "gaxios": "^1.5.0",
     "google-auth-library": "^3.0.0",
