@@ -43,7 +43,7 @@
   "dependencies": {
     "abort-controller": "^3.0.0",
     "configstore": "^4.0.0",
-    "gaxios": "^1.5.0",
+    "gaxios": "^2.0.0",
     "google-auth-library": "^3.0.0",
     "pumpify": "^1.5.1",
     "stream-events": "^1.0.4"
