@@ -59,7 +59,7 @@
     "@types/pumpify": "^1.4.1",
     "assert-rejects": "^1.0.0",
     "codecov": "^3.0.4",
-    "gts": "^0.9.0",
+    "gts": "^1.0.0",
     "intelli-espower-loader": "^1.0.1",
     "is-stream": "^2.0.0",
     "mocha": "^6.0.0",
