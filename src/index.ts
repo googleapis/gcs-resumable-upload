@@ -23,7 +23,7 @@ export interface ErrorWithCode extends Error {
   code: number;
 }
 
-export type CreateUriCallback = (err: Error|null, uri?: string) => void;
+export type CreateUriCallback = (err: Error | null, uri?: string) => void;
 
 export interface Encryption {
   key: {};
@@ -63,7 +63,7 @@ export interface UploadConfig {
    * A customer-supplied encryption key. See
    * https://cloud.google.com/storage/docs/encryption#customer-supplied.
    */
-  key?: string|Buffer;
+  key?: string | Buffer;
 
   /**
    * Resource name of the Cloud KMS key, of the form
@@ -93,8 +93,13 @@ export interface UploadConfig {
   /**
    * Apply a predefined set of access controls to the created file.
    */
-  predefinedAcl?: 'authenticatedRead'|'bucketOwnerFullControl'|
-      'bucketOwnerRead'|'private'|'projectPrivate'|'publicRead';
+  predefinedAcl?:
+    | 'authenticatedRead'
+    | 'bucketOwnerFullControl'
+    | 'bucketOwnerRead'
+    | 'private'
+    | 'projectPrivate'
+    | 'publicRead';
 
   /**
    * Make the uploaded file private. (Alias for config.predefinedAcl =
@@ -136,16 +141,21 @@ export interface ConfigMetadata {
 export class Upload extends Pumpify {
   bucket: string;
   file: string;
-  authConfig?: {scopes?: string[];};
+  authConfig?: {scopes?: string[]};
   authClient: GoogleAuth;
   generation?: number;
-  key?: string|Buffer;
+  key?: string | Buffer;
   kmsKeyName?: string;
   metadata: ConfigMetadata;
   offset?: number;
   origin?: string;
-  predefinedAcl?: 'authenticatedRead'|'bucketOwnerFullControl'|
-      'bucketOwnerRead'|'private'|'projectPrivate'|'publicRead';
+  predefinedAcl?:
+    | 'authenticatedRead'
+    | 'bucketOwnerFullControl'
+    | 'bucketOwnerRead'
+    | 'private'
+    | 'projectPrivate'
+    | 'publicRead';
   private?: boolean;
   public?: boolean;
   uri?: string;
@@ -155,7 +165,7 @@ export class Upload extends Pumpify {
   uriProvidedManually: boolean;
   numBytesWritten = 0;
   numRetries = 0;
-  contentLength: number|'*';
+  contentLength: number | '*';
   private bufferStream?: PassThrough;
   private offsetStream?: PassThrough;
 
@@ -170,8 +180,9 @@ export class Upload extends Pumpify {
     }
 
     cfg.authConfig = cfg.authConfig || {};
-    cfg.authConfig.scopes =
-        ['https://www.googleapis.com/auth/devstorage.full_control'];
+    cfg.authConfig.scopes = [
+      'https://www.googleapis.com/auth/devstorage.full_control',
+    ];
     this.authClient = cfg.authClient || new GoogleAuth(cfg.authConfig);
 
     this.bucket = cfg.bucket;
@@ -192,7 +203,9 @@ export class Upload extends Pumpify {
       const base64Key = Buffer.from(cfg.key as string).toString('base64');
       this.encryption = {
         key: base64Key,
-        hash: createHash('sha256').update(cfg.key).digest('base64')
+        hash: createHash('sha256')
+          .update(cfg.key)
+          .digest('base64'),
       };
     }
 
@@ -208,8 +221,9 @@ export class Upload extends Pumpify {
     this.numBytesWritten = 0;
     this.numRetries = 0;
 
-    const contentLength =
-        cfg.metadata ? Number(cfg.metadata.contentLength) : NaN;
+    const contentLength = cfg.metadata
+      ? Number(cfg.metadata.contentLength)
+      : NaN;
     this.contentLength = isNaN(contentLength) ? '*' : contentLength;
 
     this.once('writing', () => {
@@ -228,7 +242,7 @@ export class Upload extends Pumpify {
 
   createURI(): Promise<string>;
   createURI(callback: CreateUriCallback): void;
-  createURI(callback?: CreateUriCallback): void|Promise<string> {
+  createURI(callback?: CreateUriCallback): void | Promise<string> {
     if (!callback) {
       return this.createURIAsync();
     }
@@ -243,12 +257,13 @@ export class Upload extends Pumpify {
       url: [BASE_URI, this.bucket, 'o'].join('/'),
       params: {name: this.file, uploadType: 'resumable'},
       data: metadata,
-      headers: {}
+      headers: {},
     };
 
     if (metadata.contentLength) {
-      reqOpts.headers!['X-Upload-Content-Length'] =
-          metadata.contentLength.toString();
+      reqOpts.headers![
+        'X-Upload-Content-Length'
+      ] = metadata.contentLength.toString();
     }
 
     if (metadata.contentType) {
@@ -297,8 +312,9 @@ export class Upload extends Pumpify {
     // The offset stream allows us to analyze each incoming
     // chunk to analyze it against what the upstream API already
     // has stored for this upload.
-    const offsetStream = this.offsetStream =
-        new Transform({transform: this.onChunk.bind(this)});
+    const offsetStream = (this.offsetStream = new Transform({
+      transform: this.onChunk.bind(this),
+    }));
 
     // The delay stream gives us a chance to catch the response
     // from the API request before we signal to the user that
@@ -350,7 +366,7 @@ export class Upload extends Pumpify {
       method: 'PUT',
       url: this.uri,
       headers: {
-        'Content-Range': 'bytes ' + this.offset + '-*/' + this.contentLength
+        'Content-Range': 'bytes ' + this.offset + '-*/' + this.contentLength,
       },
       body: requestStreamEmbeddedStream,
     };
@@ -363,13 +379,16 @@ export class Upload extends Pumpify {
   }
 
   private onChunk(
-      chunk: string, enc: string, next: (err?: Error, data?: string) => void) {
+    chunk: string,
+    enc: string,
+    next: (err?: Error, data?: string) => void
+  ) {
     const offset = this.offset!;
     const numBytesWritten = this.numBytesWritten;
 
     this.emit('progress', {
       bytesWritten: this.numBytesWritten,
-      contentLength: this.contentLength
+      contentLength: this.contentLength,
     });
 
     // check if this is the same content uploaded previously. this caches a
@@ -411,7 +430,7 @@ export class Upload extends Pumpify {
     const opts: GaxiosOptions = {
       method: 'PUT',
       url: this.uri!,
-      headers: {'Content-Length': 0, 'Content-Range': 'bytes */*'}
+      headers: {'Content-Length': 0, 'Content-Range': 'bytes */*'},
     };
     try {
       const resp = await this.makeRequest(opts);
@@ -453,8 +472,9 @@ export class Upload extends Pumpify {
       reqOpts.headers = reqOpts.headers || {};
       reqOpts.headers['x-goog-encryption-algorithm'] = 'AES256';
       reqOpts.headers['x-goog-encryption-key'] = this.encryption.key.toString();
-      reqOpts.headers['x-goog-encryption-key-sha256'] =
-          this.encryption.hash.toString();
+      reqOpts.headers[
+        'x-goog-encryption-key-sha256'
+      ] = this.encryption.hash.toString();
     }
 
     if (this.userProject) {
@@ -469,8 +489,10 @@ export class Upload extends Pumpify {
     }
     // If no error was returned, but the response had an invalid status
     // code, create a new error to be passed to the callback.
-    if ((res.status < 200 || res.status >= 300) &&
-        res.status !== RESUMABLE_INCOMPLETE_STATUS_CODE) {
+    if (
+      (res.status < 200 || res.status >= 300) &&
+      res.status !== RESUMABLE_INCOMPLETE_STATUS_CODE
+    ) {
       const e = new Error(`The request failed with a ${res.status}.`);
       (e as ErrorWithCode).code = res.status;
     }
@@ -555,7 +577,9 @@ export function upload(cfg: UploadConfig) {
 export function createURI(cfg: UploadConfig): Promise<string>;
 export function createURI(cfg: UploadConfig, callback: CreateUriCallback): void;
 export function createURI(
-    cfg: UploadConfig, callback?: CreateUriCallback): void|Promise<string> {
+  cfg: UploadConfig,
+  callback?: CreateUriCallback
+): void | Promise<string> {
   const up = new Upload(cfg);
   if (!callback) {
     return up.createURI();

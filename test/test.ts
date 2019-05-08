@@ -47,12 +47,15 @@ class ConfigStore {
 
 const queryPath = '/?userProject=user-project-id';
 
-function mockAuthorizeRequest(code = 200, data: {}|string = {
-  access_token: 'abc123'
-}) {
+function mockAuthorizeRequest(
+  code = 200,
+  data: {} | string = {
+    access_token: 'abc123',
+  }
+) {
   return nock('https://www.googleapis.com')
-      .post('/oauth2/v4/token')
-      .reply(code, data);
+    .post('/oauth2/v4/token')
+    .reply(code, data);
 }
 
 describe('gcs-resumable-upload', () => {
@@ -89,7 +92,7 @@ describe('gcs-resumable-upload', () => {
       origin: ORIGIN,
       predefinedAcl: PREDEFINED_ACL,
       userProject: USER_PROJECT,
-      authConfig: {keyFile}
+      authConfig: {keyFile},
     });
   });
 
@@ -128,7 +131,7 @@ describe('gcs-resumable-upload', () => {
       assert.strictEqual(up.metadata, METADATA);
 
       const upWithoutMetadata = upload({bucket: BUCKET, file: FILE});
-      assert.deepEqual(upWithoutMetadata.metadata, {});
+      assert.deepStrictEqual(upWithoutMetadata.metadata, {});
     });
 
     it('should set the offset if it is provided', () => {
@@ -150,9 +153,14 @@ describe('gcs-resumable-upload', () => {
       const key = crypto.randomBytes(32);
       const up = upload({bucket: BUCKET, file: FILE, key});
       const expectedKey = key.toString('base64');
-      const expectedHash =
-          crypto.createHash('sha256').update(key).digest('base64');
-      assert.deepEqual(up.encryption, {key: expectedKey, hash: expectedHash});
+      const expectedHash = crypto
+        .createHash('sha256')
+        .update(key)
+        .digest('base64');
+      assert.deepStrictEqual(up.encryption, {
+        key: expectedKey,
+        hash: expectedHash,
+      });
     });
 
     it('should localize the predefinedAcl', () => {
@@ -192,7 +200,7 @@ describe('gcs-resumable-upload', () => {
       const up = upload({
         bucket: BUCKET,
         file: FILE,
-        metadata: {contentLength: METADATA.contentLength}
+        metadata: {contentLength: METADATA.contentLength},
       });
       assert.strictEqual(up.contentLength, METADATA.contentLength);
     });
@@ -217,13 +225,13 @@ describe('gcs-resumable-upload', () => {
     describe('on write', () => {
       const URI = 'uri';
 
-      it('should continue uploading', (done) => {
+      it('should continue uploading', done => {
         up.uri = URI;
         up.continueUploading = done;
         up.emit('writing');
       });
 
-      it('should create an upload', (done) => {
+      it('should create an upload', done => {
         up.startUploading = done;
         up.createURI = (callback: CreateUriCallback) => {
           callback(null);
@@ -231,7 +239,7 @@ describe('gcs-resumable-upload', () => {
         up.emit('writing');
       });
 
-      it('should destroy the stream from an error', (done) => {
+      it('should destroy the stream from an error', done => {
         const error = new Error(':(');
         up.destroy = (err: Error) => {
           assert(err.message.indexOf(error.message) > -1);
@@ -246,17 +254,18 @@ describe('gcs-resumable-upload', () => {
   });
 
   describe('#createURI', () => {
-    it('should make the correct request', (done) => {
+    it('should make the correct request', done => {
       up.makeRequest = async (reqOpts: GaxiosOptions) => {
         assert.strictEqual(reqOpts.method, 'POST');
         assert.strictEqual(
-            reqOpts.url,
-            `https://www.googleapis.com/upload/storage/v1/b/${BUCKET}/o`);
-        assert.deepEqual(reqOpts.params, {
+          reqOpts.url,
+          `https://www.googleapis.com/upload/storage/v1/b/${BUCKET}/o`
+        );
+        assert.deepStrictEqual(reqOpts.params, {
           predefinedAcl: up.predefinedAcl,
           name: FILE,
           uploadType: 'resumable',
-          ifGenerationMatch: GENERATION
+          ifGenerationMatch: GENERATION,
         });
         assert.strictEqual(reqOpts.data, up.metadata);
         done();
@@ -265,7 +274,7 @@ describe('gcs-resumable-upload', () => {
       up.createURI();
     });
 
-    it('should pass through the KMS key name', (done) => {
+    it('should pass through the KMS key name', done => {
       const kmsKeyName = 'kms-key-name';
       const up = upload({bucket: BUCKET, file: FILE, kmsKeyName});
 
@@ -278,7 +287,7 @@ describe('gcs-resumable-upload', () => {
       up.createURI();
     });
 
-    it('should respect 0 as a generation', (done) => {
+    it('should respect 0 as a generation', done => {
       up.makeRequest = async (reqOpts: GaxiosOptions) => {
         assert.strictEqual(reqOpts.params.ifGenerationMatch, 0);
         done();
@@ -297,7 +306,7 @@ describe('gcs-resumable-upload', () => {
         };
       });
 
-      it('should exec callback with error', (done) => {
+      it('should exec callback with error', done => {
         up.createURI((err: Error) => {
           assert.strictEqual(err, error);
           done();
@@ -315,7 +324,7 @@ describe('gcs-resumable-upload', () => {
         };
       });
 
-      it('should localize the uri', (done) => {
+      it('should localize the uri', done => {
         up.createURI((err: Error) => {
           assert.ifError(err);
           assert.strictEqual(up.uri, URI);
@@ -324,16 +333,16 @@ describe('gcs-resumable-upload', () => {
         });
       });
 
-      it('should save the uri to config', (done) => {
+      it('should save the uri to config', done => {
         up.set = (props: {}) => {
-          assert.deepEqual(props, {uri: URI});
+          assert.deepStrictEqual(props, {uri: URI});
           done();
         };
 
         up.createURI(assert.ifError);
       });
 
-      it('should default the offset to 0', (done) => {
+      it('should default the offset to 0', done => {
         up.createURI((err: Error) => {
           assert.ifError(err);
           assert.strictEqual(up.offset, 0);
@@ -341,7 +350,7 @@ describe('gcs-resumable-upload', () => {
         });
       });
 
-      it('should exec callback with URI', (done) => {
+      it('should exec callback with URI', done => {
         up.createURI((err: Error, uri: string) => {
           assert.ifError(err);
           assert.strictEqual(uri, URI);
@@ -352,7 +361,7 @@ describe('gcs-resumable-upload', () => {
   });
 
   describe('#continueUploading', () => {
-    it('should start uploading if an offset was set', (done) => {
+    it('should start uploading if an offset was set', done => {
       up.offset = 0;
       up.startUploading = async () => {
         done();
@@ -360,7 +369,7 @@ describe('gcs-resumable-upload', () => {
       up.continueUploading();
     });
 
-    it('should get and set offset if no offset was set', (done) => {
+    it('should get and set offset if no offset was set', done => {
       up.getAndSetOffset = async () => {
         done();
       };
@@ -368,7 +377,7 @@ describe('gcs-resumable-upload', () => {
       up.continueUploading();
     });
 
-    it('should start uploading when done', (done) => {
+    it('should start uploading when done', done => {
       up.startUploading = async function() {
         assert.strictEqual(this, up);
         done();
@@ -383,7 +392,7 @@ describe('gcs-resumable-upload', () => {
       up.makeRequestStream = async () => new PassThrough();
     });
 
-    it('should make the correct request', (done) => {
+    it('should make the correct request', done => {
       const URI = 'uri';
       const OFFSET = 8;
 
@@ -393,9 +402,9 @@ describe('gcs-resumable-upload', () => {
       up.makeRequestStream = async (reqOpts: GaxiosOptions) => {
         assert.strictEqual(reqOpts.method, 'PUT');
         assert.strictEqual(reqOpts.url, up.uri);
-        assert.deepEqual(
-            reqOpts.headers,
-            {'Content-Range': 'bytes ' + OFFSET + '-*/' + up.contentLength});
+        assert.deepStrictEqual(reqOpts.headers, {
+          'Content-Range': 'bytes ' + OFFSET + '-*/' + up.contentLength,
+        });
         done();
         return new PassThrough();
       };
@@ -422,7 +431,7 @@ describe('gcs-resumable-upload', () => {
       assert.strictEqual(isStream(up.offsetStream), true);
     });
 
-    it('should cork the stream on prefinish', (done) => {
+    it('should cork the stream on prefinish', done => {
       up.cork = done;
       up.setPipeline = (buffer: Stream, offset: Stream, delay: Stream) => {
         setImmediate(() => {
@@ -434,7 +443,7 @@ describe('gcs-resumable-upload', () => {
       up.startUploading();
     });
 
-    it('should set the pipeline', (done) => {
+    it('should set the pipeline', done => {
       up.setPipeline = (buffer: Stream, offset: Stream, delay: Stream) => {
         assert.strictEqual(buffer, up.bufferStream);
         assert.strictEqual(offset, up.offsetStream);
@@ -447,7 +456,7 @@ describe('gcs-resumable-upload', () => {
       up.startUploading();
     });
 
-    it('should pipe to the request stream', (done) => {
+    it('should pipe to the request stream', done => {
       let requestStreamEmbeddedStream: PassThrough;
       up.pipe = (requestStream: PassThrough) => {
         requestStreamEmbeddedStream = requestStream;
@@ -460,7 +469,7 @@ describe('gcs-resumable-upload', () => {
       up.startUploading();
     });
 
-    it('should unpipe the request stream on restart', (done) => {
+    it('should unpipe the request stream on restart', done => {
       let requestStreamEmbeddedStream: PassThrough;
       up.pipe = (requestStream: PassThrough) => {
         requestStreamEmbeddedStream = requestStream;
@@ -474,7 +483,7 @@ describe('gcs-resumable-upload', () => {
       up.emit('restart');
     });
 
-    it('should emit the metadata', (done) => {
+    it('should emit the metadata', done => {
       const BODY = {hi: 1};
       const RESP = {data: BODY};
       up.on('metadata', (body: {}) => {
@@ -487,7 +496,7 @@ describe('gcs-resumable-upload', () => {
       up.emit('response', RESP);
     });
 
-    it('should destroy the stream if an error occurred', (done) => {
+    it('should destroy the stream if an error occurred', done => {
       const RESP = {data: {error: new Error('Error.')}};
       const requestStream = new PassThrough();
       up.on('metadata', done);
@@ -501,22 +510,21 @@ describe('gcs-resumable-upload', () => {
       up.emit('response', RESP);
     });
 
-    it('should destroy the stream if the status code is out of range',
-       (done) => {
-         const RESP = {data: {}, status: 300};
-         const requestStream = new PassThrough();
-         up.on('metadata', done);
-         // metadata shouldn't be emitted... will blow up test if called
-         up.destroy = (err: Error) => {
-           assert.strictEqual(err.message, 'Upload failed');
-           done();
-         };
-         up.makeRequestStream = async () => requestStream;
-         up.startUploading();
-         up.emit('response', RESP);
-       });
+    it('should destroy the stream if the status code is out of range', done => {
+      const RESP = {data: {}, status: 300};
+      const requestStream = new PassThrough();
+      up.on('metadata', done);
+      // metadata shouldn't be emitted... will blow up test if called
+      up.destroy = (err: Error) => {
+        assert.strictEqual(err.message, 'Upload failed');
+        done();
+      };
+      up.makeRequestStream = async () => requestStream;
+      up.startUploading();
+      up.emit('response', RESP);
+    });
 
-    it('should estroy the stream if hte request failed', (done) => {
+    it('should estroy the stream if hte request failed', done => {
       const error = new Error('Error.');
       up.destroy = (err: Error) => {
         assert.strictEqual(err, error);
@@ -528,7 +536,7 @@ describe('gcs-resumable-upload', () => {
       up.startUploading();
     });
 
-    it('should delete the config', (done) => {
+    it('should delete the config', done => {
       const RESP = {data: ''};
       const requestStream = new PassThrough();
       up.makeRequestStream = async () => {
@@ -539,7 +547,7 @@ describe('gcs-resumable-upload', () => {
       up.emit('response', RESP);
     });
 
-    it('should uncork the stream', (done) => {
+    it('should uncork the stream', done => {
       const RESP = {data: ''};
       const requestStream = new PassThrough();
       up.makeRequestStream = () => {
@@ -561,7 +569,7 @@ describe('gcs-resumable-upload', () => {
         up.numBytesWritten = 0;
       });
 
-      it('should get the first chunk', (done) => {
+      it('should get the first chunk', done => {
         up.get = (prop: string) => {
           assert.strictEqual(prop, 'firstChunk');
           done();
@@ -578,9 +586,9 @@ describe('gcs-resumable-upload', () => {
         it('should save the uri and first chunk if its not cached', () => {
           const URI = 'uri';
           up.uri = URI;
-          up.set = (props: {uri?: string, firstChunk: Buffer}) => {
+          up.set = (props: {uri?: string; firstChunk: Buffer}) => {
             const firstChunk = CHUNK.slice(0, 16);
-            assert.deepEqual(props.uri, URI);
+            assert.deepStrictEqual(props.uri, URI);
             assert.strictEqual(Buffer.compare(props.firstChunk, firstChunk), 0);
           };
           up.onChunk(CHUNK, ENC, NEXT);
@@ -595,17 +603,16 @@ describe('gcs-resumable-upload', () => {
           up.restart = () => {};
         });
 
-        it('should push data back to the buffer stream if different',
-           (done) => {
-             up.bufferStream.unshift = (chunk: string) => {
-               assert.strictEqual(chunk, CHUNK);
-               done();
-             };
+        it('should push data back to the buffer stream if different', done => {
+          up.bufferStream.unshift = (chunk: string) => {
+            assert.strictEqual(chunk, CHUNK);
+            done();
+          };
 
-             up.onChunk(CHUNK, ENC, NEXT);
-           });
+          up.onChunk(CHUNK, ENC, NEXT);
+        });
 
-        it('should unpipe the offset stream', (done) => {
+        it('should unpipe the offset stream', done => {
           up.bufferStream.unpipe = (stream: Stream) => {
             assert.strictEqual(stream, up.offsetStream);
             done();
@@ -614,7 +621,7 @@ describe('gcs-resumable-upload', () => {
           up.onChunk(CHUNK, ENC, NEXT);
         });
 
-        it('should restart the stream', (done) => {
+        it('should restart the stream', done => {
           up.restart = done;
 
           up.onChunk(CHUNK, ENC, NEXT);
@@ -623,15 +630,13 @@ describe('gcs-resumable-upload', () => {
     });
 
     describe('successive writes', () => {
-      it('should increase the length of the bytes written by the bytelength of the chunk',
-         () => {
-           assert.strictEqual(up.numBytesWritten, 0);
-           up.onChunk(CHUNK, ENC, NEXT);
-           assert.strictEqual(
-               up.numBytesWritten, Buffer.byteLength(CHUNK, ENC));
-         });
+      it('should increase the length of the bytes written by the bytelength of the chunk', () => {
+        assert.strictEqual(up.numBytesWritten, 0);
+        up.onChunk(CHUNK, ENC, NEXT);
+        assert.strictEqual(up.numBytesWritten, Buffer.byteLength(CHUNK, ENC));
+      });
 
-      it('should slice the chunk by the offset - numBytesWritten', (done) => {
+      it('should slice the chunk by the offset - numBytesWritten', done => {
         const OFFSET = 8;
         up.offset = OFFSET;
         up.onChunk(CHUNK, ENC, (err: Error, chunk: Buffer) => {
@@ -643,7 +648,7 @@ describe('gcs-resumable-upload', () => {
         });
       });
 
-      it('should emit a progress event with the bytes written', (done) => {
+      it('should emit a progress event with the bytes written', done => {
         let happened = false;
         up.on('progress', (progress: {}) => {
           happened = true;
@@ -655,29 +660,27 @@ describe('gcs-resumable-upload', () => {
     });
 
     describe('next()', () => {
-      it('should push data to the stream if the bytes written is > offset',
-         (done) => {
-           up.numBytesWritten = 10;
-           up.offset = 0;
+      it('should push data to the stream if the bytes written is > offset', done => {
+        up.numBytesWritten = 10;
+        up.offset = 0;
 
-           up.onChunk(CHUNK, ENC, (err: Error, chunk: string) => {
-             assert.ifError(err);
-             assert.strictEqual(Buffer.isBuffer(chunk), true);
-             done();
-           });
-         });
+        up.onChunk(CHUNK, ENC, (err: Error, chunk: string) => {
+          assert.ifError(err);
+          assert.strictEqual(Buffer.isBuffer(chunk), true);
+          done();
+        });
+      });
 
-      it('should not push data to the stream if the bytes written is < offset',
-         (done) => {
-           up.numBytesWritten = 0;
-           up.offset = 1000;
+      it('should not push data to the stream if the bytes written is < offset', done => {
+        up.numBytesWritten = 0;
+        up.offset = 1000;
 
-           up.onChunk(CHUNK, ENC, (err: Error, chunk: string) => {
-             assert.ifError(err);
-             assert.strictEqual(chunk, undefined);
-             done();
-           });
-         });
+        up.onChunk(CHUNK, ENC, (err: Error, chunk: string) => {
+          assert.ifError(err);
+          assert.strictEqual(chunk, undefined);
+          done();
+        });
+      });
     });
   });
 
@@ -685,15 +688,16 @@ describe('gcs-resumable-upload', () => {
     const RANGE = 123456;
     const RESP = {status: 308, headers: {range: `range-${RANGE}`}};
 
-    it('should make the correct request', (done) => {
+    it('should make the correct request', done => {
       const URI = 'uri';
       up.uri = URI;
       up.makeRequest = async (reqOpts: GaxiosOptions) => {
         assert.strictEqual(reqOpts.method, 'PUT');
         assert.strictEqual(reqOpts.url, URI);
-        assert.deepEqual(
-            reqOpts.headers,
-            {'Content-Length': 0, 'Content-Range': 'bytes */*'});
+        assert.deepStrictEqual(reqOpts.headers, {
+          'Content-Length': 0,
+          'Content-Range': 'bytes */*',
+        });
         done();
         return {};
       };
@@ -711,14 +715,14 @@ describe('gcs-resumable-upload', () => {
         };
       });
 
-      it('should restart the upload', (done) => {
+      it('should restart the upload', done => {
         up.restart = done;
         up.getAndSetOffset();
       });
 
-      it('should not restart if URI provided manually', (done) => {
+      it('should not restart if URI provided manually', done => {
         up.uriProvidedManually = true;
-        up.restart = done;  // will cause test to fail
+        up.restart = done; // will cause test to fail
         up.on('error', (err: Error) => {
           assert.strictEqual(err, ERROR);
           done();
@@ -738,7 +742,7 @@ describe('gcs-resumable-upload', () => {
         };
       });
 
-      it('should restart the upload', (done) => {
+      it('should restart the upload', done => {
         up.restart = done;
         up.getAndSetOffset();
       });
@@ -750,53 +754,68 @@ describe('gcs-resumable-upload', () => {
       assert.strictEqual(up.offset, RANGE + 1);
     });
 
-    it('should set the offset to 0 if no range is back from the API',
-       async () => {
-         up.makeRequest = async () => {
-           return {};
-         };
-         await up.getAndSetOffset();
-         assert.strictEqual(up.offset, 0);
-       });
+    it('should set the offset to 0 if no range is back from the API', async () => {
+      up.makeRequest = async () => {
+        return {};
+      };
+      await up.getAndSetOffset();
+      assert.strictEqual(up.offset, 0);
+    });
   });
 
   describe('#makeRequest', () => {
     it('should set encryption headers', async () => {
       const key = crypto.randomBytes(32);
-      const up =
-          upload({bucket: 'BUCKET', file: FILE, key, authConfig: {keyFile}});
-      const scopes =
-          [mockAuthorizeRequest(), nock(REQ_OPTS.url!).get('/').reply(200, {})];
+      const up = upload({
+        bucket: 'BUCKET',
+        file: FILE,
+        key,
+        authConfig: {keyFile},
+      });
+      const scopes = [
+        mockAuthorizeRequest(),
+        nock(REQ_OPTS.url!)
+          .get('/')
+          .reply(200, {}),
+      ];
       const res = await up.makeRequest(REQ_OPTS);
       scopes.forEach(x => x.done());
       const headers = res.config.headers;
-      assert.equal(headers['x-goog-encryption-algorithm'], 'AES256');
-      assert.equal(headers['x-goog-encryption-key'], up.encryption.key);
-      assert.equal(headers['x-goog-encryption-key-sha256'], up.encryption.hash);
+      assert.strictEqual(headers['x-goog-encryption-algorithm'], 'AES256');
+      assert.strictEqual(headers['x-goog-encryption-key'], up.encryption.key);
+      assert.strictEqual(
+        headers['x-goog-encryption-key-sha256'],
+        up.encryption.hash
+      );
     });
 
     it('should set userProject', async () => {
       const scopes = [
         mockAuthorizeRequest(),
-        nock(REQ_OPTS.url!).get(queryPath).reply(200, {})
+        nock(REQ_OPTS.url!)
+          .get(queryPath)
+          .reply(200, {}),
       ];
       const res: GaxiosResponse = await up.makeRequest(REQ_OPTS);
       assert.strictEqual(res.config.url, REQ_OPTS.url + queryPath);
       scopes.forEach(x => x.done());
     });
 
-    it('should execute the callback with error & response if one occurred',
-       async () => {
-         const scope = mockAuthorizeRequest(500, ':(');
-         await assertRejects(
-             up.makeRequest({}), /Request failed with status code 500/);
-         scope.done();
-       });
+    it('should execute the callback with error & response if one occurred', async () => {
+      const scope = mockAuthorizeRequest(500, ':(');
+      await assertRejects(
+        up.makeRequest({}),
+        /Request failed with status code 500/
+      );
+      scope.done();
+    });
 
     it('should make the correct request', async () => {
       const scopes = [
         mockAuthorizeRequest(),
-        nock(REQ_OPTS.url!).get(queryPath).reply(200, undefined, {})
+        nock(REQ_OPTS.url!)
+          .get(queryPath)
+          .reply(200, undefined, {}),
       ];
       const res = await up.makeRequest(REQ_OPTS);
       scopes.forEach(x => x.done());
@@ -807,23 +826,30 @@ describe('gcs-resumable-upload', () => {
     it('should execute the callback with error & response', async () => {
       const response = {body: 'wooo'};
       mockAuthorizeRequest();
-      const scope =
-          nock(REQ_OPTS.url!).get(queryPath).reply(500, response.body);
+      const scope = nock(REQ_OPTS.url!)
+        .get(queryPath)
+        .reply(500, response.body);
       const resp = await up.makeRequest(REQ_OPTS);
       assert.strictEqual(resp.data, response.body);
       scope.done();
     });
 
     it('should execute the callback with a body error & response', async () => {
-      const error = new GaxiosError('Error message', {}, {
-        config: {},
-        data: {},
-        status: 500,
-        statusText: 'sad trombone',
-        headers: {}
-      });
+      const error = new GaxiosError(
+        'Error message',
+        {},
+        {
+          config: {},
+          data: {},
+          status: 500,
+          statusText: 'sad trombone',
+          headers: {},
+        }
+      );
       mockAuthorizeRequest();
-      const scope = nock(REQ_OPTS.url!).get(queryPath).reply(500, {error});
+      const scope = nock(REQ_OPTS.url!)
+        .get(queryPath)
+        .reply(500, {error});
       await assertRejects(up.makeRequest(REQ_OPTS), (err: GaxiosError) => {
         scope.done();
         assert.strictEqual(err.code, '500');
@@ -831,29 +857,36 @@ describe('gcs-resumable-upload', () => {
       });
     });
 
-    it('should execute the callback with a body error & response for non-2xx status codes',
-       async () => {
-         const error = new GaxiosError('Error message', {}, {
-           config: {},
-           data: {},
-           status: 500,
-           statusText: 'sad trombone',
-           headers: {}
-         });
-         mockAuthorizeRequest();
-         const scope = nock(REQ_OPTS.url!).get(queryPath).reply(500, {error});
-         await assertRejects(up.makeRequest(REQ_OPTS), (err: GaxiosError) => {
-           scope.done();
-           assert.deepStrictEqual(err.code, '500');
-           return true;
-         });
-       });
+    it('should execute the callback with a body error & response for non-2xx status codes', async () => {
+      const error = new GaxiosError(
+        'Error message',
+        {},
+        {
+          config: {},
+          data: {},
+          status: 500,
+          statusText: 'sad trombone',
+          headers: {},
+        }
+      );
+      mockAuthorizeRequest();
+      const scope = nock(REQ_OPTS.url!)
+        .get(queryPath)
+        .reply(500, {error});
+      await assertRejects(up.makeRequest(REQ_OPTS), (err: GaxiosError) => {
+        scope.done();
+        assert.deepStrictEqual(err.code, '500');
+        return true;
+      });
+    });
 
     it('should execute the callback', async () => {
       const data = {red: 'tape'};
       mockAuthorizeRequest();
       up.onResponse = () => true;
-      const scope = nock(REQ_OPTS.url!).get(queryPath).reply(200, data);
+      const scope = nock(REQ_OPTS.url!)
+        .get(queryPath)
+        .reply(200, data);
       const res = await up.makeRequest(REQ_OPTS);
       scope.done();
       assert.strictEqual(res.status, 200);
@@ -867,7 +900,7 @@ describe('gcs-resumable-upload', () => {
       up.onResponse = () => {};
     });
 
-    it('should pass a signal from the abort controller', (done) => {
+    it('should pass a signal from the abort controller', done => {
       up.authClient = {
         request: (reqOpts: GaxiosOptions) => {
           assert(reqOpts.signal instanceof AbortController);
@@ -877,7 +910,7 @@ describe('gcs-resumable-upload', () => {
       up.makeRequestStream(REQ_OPTS);
     });
 
-    it('should abort on an error', (done) => {
+    it('should abort on an error', done => {
       up.on('error', () => {});
 
       let abortController: AbortController;
@@ -897,7 +930,7 @@ describe('gcs-resumable-upload', () => {
       });
     });
 
-    it('should set userProject', (done) => {
+    it('should set userProject', done => {
       up.userProject = 'user-project';
       up.authClient = {
         request: (reqOpts: GaxiosOptions) => {
@@ -908,7 +941,7 @@ describe('gcs-resumable-upload', () => {
       up.makeRequestStream(REQ_OPTS);
     });
 
-    it('should not remove existing params when userProject is set', (done) => {
+    it('should not remove existing params when userProject is set', done => {
       REQ_OPTS.params = {a: 'b', c: 'd'};
       up.userProject = 'user-project';
       up.authClient = {
@@ -924,7 +957,7 @@ describe('gcs-resumable-upload', () => {
       up.makeRequestStream(REQ_OPTS);
     });
 
-    it('should always validate the status', (done) => {
+    it('should always validate the status', done => {
       up.authClient = {
         request: (reqOpts: GaxiosOptions) => {
           assert.strictEqual(reqOpts.validateStatus!(0), true);
@@ -934,7 +967,7 @@ describe('gcs-resumable-upload', () => {
       up.makeRequestStream(REQ_OPTS);
     });
 
-    it('should pass the response to the handler', (done) => {
+    it('should pass the response to the handler', done => {
       const response = {};
       up.authClient = {
         request: async () => response,
@@ -961,7 +994,7 @@ describe('gcs-resumable-upload', () => {
       up.createURI = () => {};
     });
 
-    it('should emit the restart event', (done) => {
+    it('should emit the restart event', done => {
       up.on('restart', done);
       up.restart();
     });
@@ -972,13 +1005,13 @@ describe('gcs-resumable-upload', () => {
       assert.strictEqual(up.numBytesWritten, 0);
     });
 
-    it('should delete the config', (done) => {
+    it('should delete the config', done => {
       up.deleteConfig = done;
       up.restart();
     });
 
     describe('starting a new upload', () => {
-      it('should create a new URI', (done) => {
+      it('should create a new URI', done => {
         up.createURI = () => {
           done();
         };
@@ -986,7 +1019,7 @@ describe('gcs-resumable-upload', () => {
         up.restart();
       });
 
-      it('should destroy stream if it cannot create a URI', (done) => {
+      it('should destroy stream if it cannot create a URI', done => {
         const error = new Error(':(');
 
         up.createURI = (callback: Function) => {
@@ -1001,7 +1034,7 @@ describe('gcs-resumable-upload', () => {
         up.restart();
       });
 
-      it('should start uploading', (done) => {
+      it('should start uploading', done => {
         up.createURI = (callback: Function) => {
           up.startUploading = done;
           callback();
@@ -1022,14 +1055,14 @@ describe('gcs-resumable-upload', () => {
           const obj: {[i: string]: string} = {};
           obj[prop] = value;
           return obj;
-        }
+        },
       };
       assert.strictEqual(up.get(prop), value);
     });
   });
 
   describe('#set', () => {
-    it('should set the value to the config store', (done) => {
+    it('should set the value to the config store', done => {
       const props = {setting: true};
       up.configStore = {
         set(name: string, prps: {}) {
@@ -1037,22 +1070,22 @@ describe('gcs-resumable-upload', () => {
           assert.strictEqual(name, actualKey);
           assert.strictEqual(prps, props);
           done();
-        }
+        },
       };
       up.set(props);
     });
   });
 
   describe('#deleteConfig', () => {
-    it('should delete the entry from the config store', (done) => {
+    it('should delete the entry from the config store', done => {
       const props = {setting: true};
 
       up.configStore = {
-        delete (name: string) {
+        delete(name: string) {
           const actualKey = [up.bucket, up.file].join('/');
           assert.strictEqual(name, actualKey);
           done();
-        }
+        },
       };
 
       up.deleteConfig(props);
@@ -1075,7 +1108,7 @@ describe('gcs-resumable-upload', () => {
         assert.strictEqual(up.numRetries, 1);
       });
 
-      it('should destroy the stream if gte limit', (done) => {
+      it('should destroy the stream if gte limit', done => {
         up.destroy = (err: Error) => {
           assert.strictEqual(err.message, 'Retry limit exceeded');
           done();
@@ -1089,7 +1122,7 @@ describe('gcs-resumable-upload', () => {
         up.onResponse(RESP);
       });
 
-      it('should start an upload', (done) => {
+      it('should start an upload', done => {
         up.startUploading = done;
         up.onResponse(RESP);
       });
@@ -1104,7 +1137,7 @@ describe('gcs-resumable-upload', () => {
         assert.strictEqual(up.numRetries, 1);
       });
 
-      it('should destroy the stream if greater than limit', (done) => {
+      it('should destroy the stream if greater than limit', done => {
         up.destroy = (err: Error) => {
           assert.strictEqual(err.message, 'Retry limit exceeded');
           done();
@@ -1118,7 +1151,7 @@ describe('gcs-resumable-upload', () => {
         up.onResponse(RESP);
       });
 
-      it('should continue uploading after retry count^2 * random', (done) => {
+      it('should continue uploading after retry count^2 * random', done => {
         up.continueUploading = function() {
           assert.strictEqual(this, up);
           // make it keep retrying until the limit is reached
@@ -1150,7 +1183,7 @@ describe('gcs-resumable-upload', () => {
     describe('all others', () => {
       const RESP = {status: 200};
 
-      it('should emit the response on the stream', (done) => {
+      it('should emit the response on the stream', done => {
         up.on('response', (resp: {}) => {
           assert.strictEqual(resp, RESP);
           done();
