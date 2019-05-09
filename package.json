@@ -1,6 +1,6 @@
 {
   "name": "gcs-resumable-upload",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "description": "Upload a file to Google Cloud Storage with built-in resumable behavior",
   "repository": "googleapis/gcs-resumable-upload",
   "main": "build/src/index.js",
