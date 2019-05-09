@@ -38,7 +38,7 @@ describe('end to end', () => {
     fs.stat('daw.jpg', (err, fd) => {
       assert.ifError(err);
 
-      const size = fd.size;
+      const size = Number(fd.size);
 
       // tslint:disable-next-line no-any
       type DoUploadCallback = (...args: any[]) => void;
@@ -77,6 +77,7 @@ describe('end to end', () => {
 
         doUpload({interrupt: false}, (err: Error, metadata: {size: number}) => {
           assert.ifError(err);
+          console.info('>>>>', typeof metadata.size, size);
           assert.strictEqual(metadata.size, size);
           done();
         });
