@@ -4,6 +4,25 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+## [2.0.0](https://www.github.com/googleapis/gcs-resumable-upload/compare/v1.1.0...v2.0.0) (2019-05-09)
+
+
+### Bug Fixes
+
+* **deps:** update dependency abort-controller to v3 ([0c4f6c0](https://www.github.com/googleapis/gcs-resumable-upload/commit/0c4f6c0))
+* **deps:** update dependency gaxios to v2 ([#210](https://www.github.com/googleapis/gcs-resumable-upload/issues/210)) ([d5a1a5c](https://www.github.com/googleapis/gcs-resumable-upload/commit/d5a1a5c))
+* **deps:** update dependency google-auth-library to v4 ([#219](https://www.github.com/googleapis/gcs-resumable-upload/issues/219)) ([1e60178](https://www.github.com/googleapis/gcs-resumable-upload/commit/1e60178))
+
+
+### Build System
+
+* upgrade engines field to >=8.10.0 ([#213](https://www.github.com/googleapis/gcs-resumable-upload/issues/213)) ([5a81a8b](https://www.github.com/googleapis/gcs-resumable-upload/commit/5a81a8b))
+
+
+### BREAKING CHANGES
+
+* upgrade engines field to >=8.10.0 (#213)
+
 ## v1.1.0
 
 03-26-2019 07:13 PDT
@@ -158,4 +177,3 @@ BREAKING CHANGE:
 ### Internal / Testing Changes
 - chore: make it OSPO compliant (#73)
 - fix: quarantine axios types (#70)
-
