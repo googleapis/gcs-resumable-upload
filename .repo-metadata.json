@@ -1,0 +1,8 @@
+{
+  "name": "gcs-resumable-upload",
+  "name_pretty": "Google Cloud Storage Resumable Upload",
+  "release_level": "ga",
+  "language": "nodejs",
+  "repo": "googleapis/gcs-resumable-upload",
+  "distribution_name": "gcs-resumable-upload"
+}
