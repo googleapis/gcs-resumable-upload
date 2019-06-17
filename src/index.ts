@@ -14,7 +14,6 @@ import * as Pumpify from 'pumpify';
 import {PassThrough, Transform} from 'stream';
 import * as streamEvents from 'stream-events';
 
-const BASE_URI = 'https://www.googleapis.com/upload/storage/v1/b';
 const TERMINATED_UPLOAD_STATUS_CODE = 410;
 const RESUMABLE_INCOMPLETE_STATUS_CODE = 308;
 const RETRY_LIMIT = 5;
@@ -32,6 +31,12 @@ export interface Encryption {
 
 export interface UploadConfig {
   /**
+   * The API endpoint used for the request.
+   * Defaults to `storage.googleapis.com`.
+   */
+  apiEndpoint?: string;
+
+  /**
    * The name of the destination bucket.
    */
   bucket: string;
@@ -40,7 +45,12 @@ export interface UploadConfig {
    * The name of the destination file.
    */
   file: string;
+
+  /**
+   * The GoogleAuthOptions passed to google-auth-library
+   */
   authConfig?: GoogleAuthOptions;
+
   /**
    * If you want to re-use an auth client from google-auto-auth, pass an
    * instance here.
@@ -141,6 +151,7 @@ export interface ConfigMetadata {
 export class Upload extends Pumpify {
   bucket: string;
   file: string;
+  apiEndpoint: string;
   authConfig?: {scopes?: string[]};
   authClient: GoogleAuth;
   generation?: number;
@@ -169,6 +180,10 @@ export class Upload extends Pumpify {
   private bufferStream?: PassThrough;
   private offsetStream?: PassThrough;
 
+  private get baseURI() {
+    return `https://${this.apiEndpoint}/upload/storage/v1/b`;
+  }
+
   constructor(cfg: UploadConfig) {
     super();
     streamEvents(this);
@@ -185,6 +200,7 @@ export class Upload extends Pumpify {
     ];
     this.authClient = cfg.authClient || new GoogleAuth(cfg.authConfig);
 
+    this.apiEndpoint = cfg.apiEndpoint || 'storage.googleapis.com';
     this.bucket = cfg.bucket;
     this.file = cfg.file;
     this.generation = cfg.generation;
@@ -254,7 +270,7 @@ export class Upload extends Pumpify {
 
     const reqOpts: GaxiosOptions = {
       method: 'POST',
-      url: [BASE_URI, this.bucket, 'o'].join('/'),
+      url: [this.baseURI, this.bucket, 'o'].join('/'),
       params: {name: this.file, uploadType: 'resumable'},
       data: metadata,
       headers: {},

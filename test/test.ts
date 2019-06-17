@@ -71,6 +71,8 @@ describe('gcs-resumable-upload', () => {
   const ORIGIN = '*';
   const PREDEFINED_ACL = 'authenticatedRead';
   const USER_PROJECT = 'user-project-id';
+  const API_ENDPOINT = 'fake.googleapis.com';
+  const BASE_URI = `https://${API_ENDPOINT}/upload/storage/v1/b`;
   let REQ_OPTS: GaxiosOptions;
   const keyFile = path.join(__dirname, '../../test/fixtures/keys.json');
 
@@ -93,6 +95,7 @@ describe('gcs-resumable-upload', () => {
       predefinedAcl: PREDEFINED_ACL,
       userProject: USER_PROJECT,
       authConfig: {keyFile},
+      apiEndpoint: API_ENDPOINT,
     });
   });
 
@@ -119,6 +122,11 @@ describe('gcs-resumable-upload', () => {
 
     it('should localize the generation', () => {
       assert.strictEqual(up.generation, GENERATION);
+    });
+
+    it('should localize the apiEndpoint', () => {
+      assert.strictEqual(up.apiEndpoint, API_ENDPOINT);
+      assert.strictEqual(up.baseURI, BASE_URI);
     });
 
     it('should localize the KMS key name', () => {
@@ -257,10 +265,7 @@ describe('gcs-resumable-upload', () => {
     it('should make the correct request', done => {
       up.makeRequest = async (reqOpts: GaxiosOptions) => {
         assert.strictEqual(reqOpts.method, 'POST');
-        assert.strictEqual(
-          reqOpts.url,
-          `https://www.googleapis.com/upload/storage/v1/b/${BUCKET}/o`
-        );
+        assert.strictEqual(reqOpts.url, `${BASE_URI}/${BUCKET}/o`);
         assert.deepStrictEqual(reqOpts.params, {
           predefinedAcl: up.predefinedAcl,
           name: FILE,
