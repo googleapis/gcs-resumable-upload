@@ -4,6 +4,13 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+## [2.1.0](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.0.0...v2.1.0) (2019-06-19)
+
+
+### Features
+
+* support apiEndpoint override ([#230](https://www.github.com/googleapis/gcs-resumable-upload/issues/230)) ([41325ac](https://www.github.com/googleapis/gcs-resumable-upload/commit/41325ac))
+
 ## [2.0.0](https://www.github.com/googleapis/gcs-resumable-upload/compare/v1.1.0...v2.0.0) (2019-05-09)
 
 
