@@ -4,6 +4,13 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+### [2.1.1](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.1.0...v2.1.1) (2019-06-20)
+
+
+### Bug Fixes
+
+* **deps:** update dependency configstore to v5 ([#234](https://www.github.com/googleapis/gcs-resumable-upload/issues/234)) ([9b957c6](https://www.github.com/googleapis/gcs-resumable-upload/commit/9b957c6))
+
 ## [2.1.0](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.0.0...v2.1.0) (2019-06-19)
 
 
