@@ -41,5 +41,8 @@ module.exports = {
     sourceFiles: false,
     systemName: 'gcs-resumable-upload',
     theme: 'lumen'
+  },
+  markdown: {
+    idInHeadings: true
   }
 };
