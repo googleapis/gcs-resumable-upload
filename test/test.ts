@@ -11,6 +11,7 @@ import * as isStream from 'is-stream';
 import * as mockery from 'mockery';
 import * as nock from 'nock';
 import * as path from 'path';
+import * as sinon from 'sinon';
 import {PassThrough, Stream} from 'stream';
 
 const assertRejects = require('assert-rejects');
@@ -1156,32 +1157,42 @@ describe('gcs-resumable-upload', () => {
         up.onResponse(RESP);
       });
 
-      it('should continue uploading after retry count^2 * random', done => {
-        up.continueUploading = function() {
-          assert.strictEqual(this, up);
-          // make it keep retrying until the limit is reached
-          up.onResponse(RESP);
-        };
-
-        const setTimeout = global.setTimeout;
-        global.setTimeout = (cb: Function, delay: number) => {
-          const minTime = Math.pow(2, up.numRetries - 1) * 1000;
-          const maxTime = minTime + 1000;
-
-          assert(delay >= minTime);
-          assert(delay <= maxTime);
-          cb();
-          return {ref() {}, unref() {}, refresh() {}};
-        };
-
-        up.on('error', (err: Error) => {
-          assert.strictEqual(up.numRetries, 5);
-          assert.strictEqual(err.message, 'Retry limit exceeded');
-          global.setTimeout = setTimeout;
-          done();
+      describe('exponential back off', () => {
+        let clock: sinon.SinonFakeTimers;
+        // tslint:disable-next-line no-any
+        let setTimeoutSpy: sinon.SinonSpy<[() => void, number, ...any[]]>;
+        beforeEach(() => {
+          clock = sinon.useFakeTimers({toFake: ['setTimeout']});
+          setTimeoutSpy = sinon.spy(global, 'setTimeout');
+        });
+        afterEach(() => {
+          clock.restore();
         });
 
-        up.onResponse(RESP);
+        it('should continue uploading after retry count^2 * random', done => {
+          up.continueUploading = function() {
+            assert.strictEqual(this, up);
+
+            const minTime = Math.pow(2, up.numRetries - 1) * 1000;
+            const maxTime = minTime + 1000;
+
+            const delay = setTimeoutSpy.lastCall.args[1];
+            assert(delay >= minTime);
+            assert(delay <= maxTime);
+
+            // make it keep retrying until the limit is reached
+            up.onResponse(RESP);
+          };
+
+          up.on('error', (err: Error) => {
+            assert.strictEqual(up.numRetries, 5);
+            assert.strictEqual(err.message, `Retry limit exceeded`);
+            done();
+          });
+
+          up.onResponse(RESP);
+          clock.runAll();
+        });
       });
     });
 
