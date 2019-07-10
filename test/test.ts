@@ -1182,7 +1182,10 @@ describe('gcs-resumable-upload', () => {
 
         up.on('error', (err: Error) => {
           assert.strictEqual(up.numRetries, 5);
-          assert.strictEqual(err.message, 'Retry limit exceeded');
+          assert.strictEqual(
+            err.message,
+            `Retry limit exceeded - ${RESP.data}`
+          );
           global.setTimeout = setTimeout;
           done();
         });
