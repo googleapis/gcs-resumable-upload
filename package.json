@@ -21,7 +21,7 @@
     "samples-test": "echo no samples 🤷‍♂️",
     "presystem-test": "npm run compile",
     "docs": "compodoc src/",
-    "docs-test": "linkinator docs -r",
+    "docs-test": "linkinator docs",
     "predocs-test": "npm run docs"
   },
   "keywords": [
@@ -64,7 +64,7 @@
     "gts": "^1.0.0",
     "intelli-espower-loader": "^1.0.1",
     "is-stream": "^2.0.0",
-    "linkinator": "^1.1.2",
+    "linkinator": "^1.5.0",
     "mocha": "^6.1.4",
     "mockery": "^2.1.0",
     "nock": "^10.0.0",
