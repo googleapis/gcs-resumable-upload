@@ -561,7 +561,7 @@ export class Upload extends Pumpify {
     this.configStore.set(this.cacheKey, props);
   }
 
-  deleteConfig() {
+  private deleteConfig() {
     this.configStore.delete(this.cacheKey);
   }
 
