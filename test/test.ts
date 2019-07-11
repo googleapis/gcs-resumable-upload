@@ -116,8 +116,24 @@ describe('gcs-resumable-upload', () => {
       }, /A bucket and file name are required/);
     });
 
-    it('should localize the bucket and file', () => {
+    it('should localize the bucket', () => {
       assert.strictEqual(up.bucket, BUCKET);
+    });
+
+    it('should localize the cacheKey', () => {
+      assert.strictEqual(up.cacheKey, [BUCKET, FILE, GENERATION].join('/'));
+    });
+
+    it('should not include a generation in the cacheKey if it was not set', () => {
+      const up = upload({
+        bucket: BUCKET,
+        file: FILE,
+      });
+
+      assert.strictEqual(up.cacheKey, [BUCKET, FILE].join('/'));
+    });
+
+    it('should localize the file', () => {
       assert.strictEqual(up.file, FILE);
     });
 
@@ -225,7 +241,7 @@ describe('gcs-resumable-upload', () => {
       assert.strictEqual(upWithUri.uriProvidedManually, true);
       assert.strictEqual(upWithUri.uri, uri);
 
-      configData[[BUCKET, FILE].join('/')] = {uri: 'fake-uri'};
+      configData[`${BUCKET}/${FILE}`] = {uri: 'fake-uri'};
       const up = upload({bucket: BUCKET, file: FILE});
       assert.strictEqual(up.uriProvidedManually, false);
       assert.strictEqual(up.uri, 'fake-uri');
@@ -1056,8 +1072,7 @@ describe('gcs-resumable-upload', () => {
       const value = 'abc';
       up.configStore = {
         get(name: string) {
-          const actualKey = [up.bucket, up.file].join('/');
-          assert.strictEqual(name, actualKey);
+          assert.strictEqual(name, up.cacheKey);
           const obj: {[i: string]: string} = {};
           obj[prop] = value;
           return obj;
@@ -1072,8 +1087,7 @@ describe('gcs-resumable-upload', () => {
       const props = {setting: true};
       up.configStore = {
         set(name: string, prps: {}) {
-          const actualKey = [up.bucket, up.file].join('/');
-          assert.strictEqual(name, actualKey);
+          assert.strictEqual(name, up.cacheKey);
           assert.strictEqual(prps, props);
           done();
         },
@@ -1088,8 +1102,7 @@ describe('gcs-resumable-upload', () => {
 
       up.configStore = {
         delete(name: string) {
-          const actualKey = [up.bucket, up.file].join('/');
-          assert.strictEqual(name, actualKey);
+          assert.strictEqual(name, up.cacheKey);
           done();
         },
       };
