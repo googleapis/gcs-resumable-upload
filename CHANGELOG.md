@@ -4,6 +4,13 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+### [2.1.2](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.1.1...v2.1.2) (2019-07-13)
+
+
+### Bug Fixes
+
+* **docs:** make anchors work in jsdoc ([#238](https://www.github.com/googleapis/gcs-resumable-upload/issues/238)) ([86e4433](https://www.github.com/googleapis/gcs-resumable-upload/commit/86e4433))
+
 ### [2.1.1](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.1.0...v2.1.1) (2019-06-20)
 
 
