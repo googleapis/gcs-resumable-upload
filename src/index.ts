@@ -562,7 +562,7 @@ export class Upload extends Pumpify {
   }
 
   deleteConfig() {
-    this.configStore.delete([this.bucket, this.file].join('/'));
+    this.configStore.delete(this.cacheKey);
   }
 
   /**
