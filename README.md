@@ -40,78 +40,105 @@ Oh, right. This module uses [google-auth-library](http://gitnpm.com/google-auth-
 
 ## API
 
-### {upload} = require('gcs-resumable-upload')
+```js
+const {gcsResumableUpload} = require('gcs-resumable-upload')
+const upload = gcsResumableUpload(config)
+```
+
+`upload` is an instance of [`Duplexify`](http://gitnpm.com/duplexify).
 
 ---
+<a name="methods"></a>
+### Methods
 
-#### upload(config)
+#### upload.createURI(callback)
 
-- Returns: [`Duplexify`](http://gitnpm.com/duplexify)
+##### callback(err, resumableURI)
 
+###### callback.err
+
+- Type: `Error`
+
+Invoked if the authorization failed or the request to start a resumable session failed.
+
+###### callback.resumableURI
+
+- Type: `String`
+
+The resumable upload session URI.
+
+
+#### upload.deleteConfig()
+
+This will remove the config data associated with the provided file.
+
+---
 <a name="config"></a>
-##### config
+### Configuration
+
+#### config
 
 - Type: `object`
 
 Configuration object.
 
-###### config.authClient
+##### config.authClient
 
 - Type: [`GoogleAuth`](http://gitnpm.com/google-auth-library)
 - *Optional*
 
 If you want to re-use an auth client from [google-auth-library](http://gitnpm.com/google-auth-library), pass an instance here.
 
-###### config.authConfig
+##### config.authConfig
 
 - Type: `object`
 - *Optional*
 
 See [`authConfig`](https://github.com/google/google-auth-library-nodejs/#choosing-the-correct-credential-type-automatically).
 
-###### config.bucket
+##### config.bucket
 
 - Type: `string`
 - **Required**
 
 The name of the destination bucket.
 
-###### config.configPath
+##### config.configPath
 
 - Type: `string`
 - *Optional*
 
 Where the gcs-resumable-upload configuration file should be stored on your system. This maps to the [configstore option by the same name](https://github.com/yeoman/configstore/tree/0df1ec950d952b1f0dfb39ce22af8e505dffc71a#configpath).
 
-###### config.file
+##### config.file
 
 - Type: `string`
 - **Required**
 
 The name of the destination file.
 
-###### config.generation
+##### config.generation
 
 - Type: `number`
 - *Optional*
 
 This will cause the upload to fail if the current generation of the remote object does not match the one provided here.
 
-###### config.key
+##### config.key
 
 - Type: `string|buffer`
 - *Optional*
 
 A [customer-supplied encryption key](https://cloud.google.com/storage/docs/encryption#customer-supplied).
 
-###### config.kmsKeyName
+##### config.kmsKeyName
 
 - Type: `string`
 - *Optional*
 
 Resource name of the Cloud KMS key, of the form `projects/my-project/locations/global/keyRings/my-kr/cryptoKeys/my-key`, that will be used to encrypt the object. Overrides the object metadata's `kms_key_name` value, if any.
 
-###### config.metadata
+##### config.metadata
 
 - Type: `object`
 - *Optional*
@@ -126,21 +153,21 @@ Set the length of the file being uploaded.
 
 Set the content type of the incoming data.
 
-###### config.offset
+##### config.offset
 
 - Type: `number`
 - *Optional*
 
 The starting byte of the upload stream, for [resuming an interrupted upload](https://cloud.google.com/storage/docs/json_api/v1/how-tos/resumable-upload#resume-upload).
 
-###### config.origin
+##### config.origin
 
 - Type: `string`
 - *Optional*
 
 Set an Origin header when creating the resumable upload URI.
 
-###### config.predefinedAcl
+##### config.predefinedAcl
 
 - Type: `string`
 - *Optional*
@@ -156,67 +183,71 @@ Acceptable values are:
   - **`projectPrivate`** - Object owner gets `OWNER` access, and project team members get access according to their roles.
   - **`publicRead`** - Object owner gets `OWNER` access, and `allUsers` get `READER` access.
 
-###### config.private
+##### config.private
 
 - Type: `boolean`
 - *Optional*
 
 Make the uploaded file private. (Alias for `config.predefinedAcl = 'private'`)
 
-###### config.public
+##### config.public
 
 - Type: `boolean`
 - *Optional*
 
 Make the uploaded file public. (Alias for `config.predefinedAcl = 'publicRead'`)
 
-###### config.uri
+##### config.uri
 
 - Type: `string`
 - *Optional*
 
 If you already have a resumable URI from a previously-created resumable upload, just pass it in here and we'll use that.
 
-###### config.userProject
+##### config.userProject
 
 - Type: `string`
 - *Optional*
 
 If the bucket being accessed has `requesterPays` functionality enabled, this can be set to control which project is billed for the access of this file.
 
---
+---
+<a name="events"></a>
+### Events
 
-#### Events
+#### .on('error', function (err) {})
 
-##### .on('error', function (err) {})
-
-###### err
+##### err
 
 - Type: `Error`
 
 Invoked if the authorization failed, the request failed, or the file wasn't successfully uploaded.
 
-##### .on('response', function (response) {})
+#### .on('response', function (response) {})
 
-###### resp
+##### resp
 
 - Type: `Object`
 
 The [response object from Gaxios](https://github.com/JustinBeckwith/gaxios/blob/88a47e000625d8192689acac5c40c0b1e1d963a2/src/gaxios.ts#L197-L203).
 
-###### metadata
+##### metadata
 
 - Type: `Object`
 
 The file's new metadata.
 
-##### .on('finish', function () {})
+#### .on('finish', function () {})
 
 The file was uploaded successfully.
 
 ---
+<a name="static-methods"></a>
+### Static Methods
 
-### {createURI} = require('gcs-resumable-upload);
+```js
+const {createURI} = require('gcs-resumable-upload')
+````
 
 #### createURI([config](#config), callback)
 
