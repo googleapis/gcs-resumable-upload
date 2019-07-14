@@ -574,7 +574,7 @@ export class Upload extends Pumpify {
         this.numRetries++;
         this.startUploading();
       } else {
-        this.destroy(new Error('Retry limit exceeded'));
+        this.destroy(new Error('Retry limit exceeded - ' + resp.data));
       }
       return false;
     }
@@ -585,7 +585,7 @@ export class Upload extends Pumpify {
         this.numRetries++;
         setTimeout(this.continueUploading.bind(this), waitTime);
       } else {
-        this.destroy(new Error('Retry limit exceeded'));
+        this.destroy(new Error('Retry limit exceeded - ' + resp.data));
       }
       return false;
     }

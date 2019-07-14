@@ -1119,7 +1119,7 @@ describe('gcs-resumable-upload', () => {
     });
 
     describe('404', () => {
-      const RESP = {status: 404};
+      const RESP = {status: 404, data: 'error message from server'};
 
       it('should increase the retry count if less than limit', () => {
         assert.strictEqual(up.numRetries, 0);
@@ -1129,7 +1129,10 @@ describe('gcs-resumable-upload', () => {
 
       it('should destroy the stream if gte limit', done => {
         up.destroy = (err: Error) => {
-          assert.strictEqual(err.message, 'Retry limit exceeded');
+          assert.strictEqual(
+            err.message,
+            `Retry limit exceeded - ${RESP.data}`
+          );
           done();
         };
 
@@ -1148,7 +1151,7 @@ describe('gcs-resumable-upload', () => {
     });
 
     describe('500s', () => {
-      const RESP = {status: 500};
+      const RESP = {status: 500, data: 'error message from server'};
 
       it('should increase the retry count if less than limit', () => {
         assert.strictEqual(up.numRetries, 0);
@@ -1158,7 +1161,10 @@ describe('gcs-resumable-upload', () => {
 
       it('should destroy the stream if greater than limit', done => {
         up.destroy = (err: Error) => {
-          assert.strictEqual(err.message, 'Retry limit exceeded');
+          assert.strictEqual(
+            err.message,
+            `Retry limit exceeded - ${RESP.data}`
+          );
           done();
         };
 
@@ -1199,7 +1205,10 @@ describe('gcs-resumable-upload', () => {
 
           up.on('error', (err: Error) => {
             assert.strictEqual(up.numRetries, 5);
-            assert.strictEqual(err.message, `Retry limit exceeded`);
+            assert.strictEqual(
+              err.message,
+              `Retry limit exceeded - ${RESP.data}`
+            );
             done();
           });
 
