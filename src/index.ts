@@ -154,6 +154,7 @@ export class Upload extends Pumpify {
   apiEndpoint: string;
   authConfig?: {scopes?: string[]};
   authClient: GoogleAuth;
+  cacheKey: string;
   generation?: number;
   key?: string | Buffer;
   kmsKeyName?: string;
@@ -202,6 +203,13 @@ export class Upload extends Pumpify {
 
     this.apiEndpoint = cfg.apiEndpoint || 'storage.googleapis.com';
     this.bucket = cfg.bucket;
+
+    const cacheKeyElements = [cfg.bucket, cfg.file];
+    if (cfg.generation) {
+      cacheKeyElements.push(`${cfg.generation}`);
+    }
+    this.cacheKey = cacheKeyElements.join('/');
+
     this.file = cfg.file;
     this.generation = cfg.generation;
     this.kmsKeyName = cfg.kmsKeyName;
@@ -544,17 +552,17 @@ export class Upload extends Pumpify {
   }
 
   private get(prop: string) {
-    const store = this.configStore.get([this.bucket, this.file].join('/'));
+    const store = this.configStore.get(this.cacheKey);
     return store && store[prop];
   }
 
   // tslint:disable-next-line no-any
   private set(props: any) {
-    this.configStore.set([this.bucket, this.file].join('/'), props);
+    this.configStore.set(this.cacheKey, props);
   }
 
-  private deleteConfig() {
-    this.configStore.delete([this.bucket, this.file].join('/'));
+  deleteConfig() {
+    this.configStore.delete(this.cacheKey);
   }
 
   /**
@@ -566,7 +574,7 @@ export class Upload extends Pumpify {
         this.numRetries++;
         this.startUploading();
       } else {
-        this.destroy(new Error('Retry limit exceeded'));
+        this.destroy(new Error('Retry limit exceeded - ' + resp.data));
       }
       return false;
     }
@@ -577,7 +585,7 @@ export class Upload extends Pumpify {
         this.numRetries++;
         setTimeout(this.continueUploading.bind(this), waitTime);
       } else {
-        this.destroy(new Error('Retry limit exceeded'));
+        this.destroy(new Error('Retry limit exceeded - ' + resp.data));
       }
       return false;
     }
