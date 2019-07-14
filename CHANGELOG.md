@@ -4,6 +4,20 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+## [2.2.0](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.1.1...v2.2.0) (2019-07-14)
+
+
+### Bug Fixes
+
+* **docs:** make anchors work in jsdoc ([#238](https://www.github.com/googleapis/gcs-resumable-upload/issues/238)) ([86e4433](https://www.github.com/googleapis/gcs-resumable-upload/commit/86e4433))
+* expose 'Retry limit exceeded' server error message ([#240](https://www.github.com/googleapis/gcs-resumable-upload/issues/240)) ([40a1306](https://www.github.com/googleapis/gcs-resumable-upload/commit/40a1306))
+* make cache key unique by including generation ([#243](https://www.github.com/googleapis/gcs-resumable-upload/issues/243)) ([85f80ab](https://www.github.com/googleapis/gcs-resumable-upload/commit/85f80ab))
+
+
+### Features
+
+* allow removing cache file ([#244](https://www.github.com/googleapis/gcs-resumable-upload/issues/244)) ([eb8976a](https://www.github.com/googleapis/gcs-resumable-upload/commit/eb8976a))
+
 ### [2.1.1](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.1.0...v2.1.1) (2019-06-20)
 
 
