@@ -64,7 +64,7 @@ describe('end to end', () => {
               // stop sending data half way through
               destroyed = true;
               this.destroy();
-              ws.destroy(new Error('Interrupted'));
+              process.nextTick(() => ws.destroy(new Error('Interrupted')));
             }
           })
           .pipe(ws)
