@@ -4,6 +4,13 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+### [2.2.1](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.2.0...v2.2.1) (2019-07-17)
+
+
+### Bug Fixes
+
+* handle a `0` generation ([#247](https://www.github.com/googleapis/gcs-resumable-upload/issues/247)) ([0b991d5](https://www.github.com/googleapis/gcs-resumable-upload/commit/0b991d5)), closes [#246](https://www.github.com/googleapis/gcs-resumable-upload/issues/246)
+
 ## [2.2.0](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.1.1...v2.2.0) (2019-07-14)
 
 
