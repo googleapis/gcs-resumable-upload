@@ -205,7 +205,7 @@ export class Upload extends Pumpify {
     this.bucket = cfg.bucket;
 
     const cacheKeyElements = [cfg.bucket, cfg.file];
-    if (cfg.generation) {
+    if (typeof cfg.generation === 'number') {
       cacheKeyElements.push(`${cfg.generation}`);
     }
     this.cacheKey = cacheKeyElements.join('/');
