@@ -4,6 +4,13 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+### [2.2.2](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.2.1...v2.2.2) (2019-07-17)
+
+
+### Bug Fixes
+
+* **deps:** update dependency pumpify to v2 ([#237](https://www.github.com/googleapis/gcs-resumable-upload/issues/237)) ([a2a2636](https://www.github.com/googleapis/gcs-resumable-upload/commit/a2a2636))
+
 ### [2.2.1](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.2.0...v2.2.1) (2019-07-17)
 
 
