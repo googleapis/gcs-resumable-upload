@@ -124,6 +124,24 @@ describe('gcs-resumable-upload', () => {
       assert.strictEqual(up.cacheKey, [BUCKET, FILE, GENERATION].join('/'));
     });
 
+    it('should include ZERO generation value in the cacheKey', () => {
+      const upWithZeroGeneration = upload({
+        bucket: BUCKET,
+        file: FILE,
+        generation: 0,
+        metadata: METADATA,
+        origin: ORIGIN,
+        predefinedAcl: PREDEFINED_ACL,
+        userProject: USER_PROJECT,
+        authConfig: {keyFile},
+        apiEndpoint: API_ENDPOINT,
+      });
+      assert.strictEqual(
+        upWithZeroGeneration.cacheKey,
+        [BUCKET, FILE, 0].join('/')
+      );
+    });
+
     it('should not include a generation in the cacheKey if it was not set', () => {
       const up = upload({
         bucket: BUCKET,
