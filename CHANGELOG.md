@@ -4,6 +4,13 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+### [2.2.3](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.2.2...v2.2.3) (2019-07-26)
+
+
+### Bug Fixes
+
+* **deps:** update dependency google-auth-library to v5 ([#250](https://www.github.com/googleapis/gcs-resumable-upload/issues/250)) ([8bc4798](https://www.github.com/googleapis/gcs-resumable-upload/commit/8bc4798))
+
 ### [2.2.2](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.2.1...v2.2.2) (2019-07-17)
 
 
