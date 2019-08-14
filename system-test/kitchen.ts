@@ -8,19 +8,24 @@
 import * as assert from 'assert';
 import * as fs from 'fs';
 import {Readable} from 'stream';
-import {createURI, upload} from '../src';
+import {createURI, ErrorWithCode, upload} from '../src';
 
 const bucketName = process.env.BUCKET_NAME || 'gcs-resumable-upload-test';
+const fileName = 'daw.jpg';
 
 describe('end to end', () => {
+  beforeEach(() => {
+    upload({bucket: bucketName, file: fileName}).deleteConfig();
+  });
+
   it('should work', done => {
     let uploadSucceeded = false;
-    fs.createReadStream('daw.jpg')
+    fs.createReadStream(fileName)
       .on('error', done)
       .pipe(
         upload({
           bucket: bucketName,
-          file: 'daw.jpg',
+          file: fileName,
           metadata: {contentType: 'image/jpg'},
         })
       )
@@ -35,7 +40,7 @@ describe('end to end', () => {
   });
 
   it('should resume an interrupted upload', done => {
-    fs.stat('daw.jpg', (err, fd) => {
+    fs.stat(fileName, (err, fd) => {
       assert.ifError(err);
 
       const size = fd.size;
@@ -51,11 +56,11 @@ describe('end to end', () => {
 
         const ws = upload({
           bucket: bucketName,
-          file: 'daw.jpg',
+          file: fileName,
           metadata: {contentType: 'image/jpg'},
         });
 
-        fs.createReadStream('daw.jpg')
+        fs.createReadStream(fileName)
           .on('error', callback)
           .on('data', function(this: Readable, chunk) {
             sizeStreamed += chunk.length;
@@ -88,10 +93,30 @@ describe('end to end', () => {
     createURI(
       {
         bucket: bucketName,
-        file: 'daw.jpg',
+        file: fileName,
         metadata: {contentType: 'image/jpg'},
       },
       done
     );
+  });
+
+  it('should return a non-resumable failed upload', done => {
+    const metadata = {
+      metadata: {largeString: 'a'.repeat(2.1e6)},
+    };
+
+    fs.createReadStream(fileName)
+      .on('error', done)
+      .pipe(
+        upload({
+          bucket: bucketName,
+          file: fileName,
+          metadata,
+        })
+      )
+      .on('error', (err: ErrorWithCode) => {
+        assert.strictEqual(err.code, '400');
+        done();
+      });
   });
 });
