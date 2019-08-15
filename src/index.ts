@@ -86,7 +86,7 @@ export interface UploadConfig {
   /**
    * Any metadata you wish to set on the object.
    */
-  metadata?: object;
+  metadata?: any;
 
   /**
    * The starting byte of the upload stream, for resuming an interrupted upload.
@@ -146,7 +146,7 @@ export class Upload extends Pumpify {
   generation?: number;
   key?: string | Buffer;
   kmsKeyName?: string;
-  metadata: object;
+  metadata: any;
   offset?: number;
   origin?: string;
   predefinedAcl?:
