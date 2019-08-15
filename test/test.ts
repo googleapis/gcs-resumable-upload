@@ -850,13 +850,25 @@ describe('gcs-resumable-upload', () => {
       scopes.forEach(x => x.done());
     });
 
-    it('should execute the callback with error & response if one occurred', async () => {
-      const scope = mockAuthorizeRequest(500, ':(');
-      await assertRejects(
-        up.makeRequest({}),
-        /Request failed with status code 500/
-      );
-      scope.done();
+    it('should set validate status', done => {
+      up.authClient = {
+        request: (reqOpts: GaxiosOptions) => {
+          assert.strictEqual(reqOpts.validateStatus!(100), false);
+          assert.strictEqual(reqOpts.validateStatus!(199), false);
+          assert.strictEqual(reqOpts.validateStatus!(300), false);
+          assert.strictEqual(reqOpts.validateStatus!(400), false);
+          assert.strictEqual(reqOpts.validateStatus!(500), false);
+
+          assert.strictEqual(reqOpts.validateStatus!(200), true);
+          assert.strictEqual(reqOpts.validateStatus!(299), true);
+          assert.strictEqual(reqOpts.validateStatus!(308), true);
+
+          done();
+
+          return {};
+        },
+      };
+      up.makeRequest(REQ_OPTS);
     });
 
     it('should make the correct request', async () => {
@@ -870,17 +882,6 @@ describe('gcs-resumable-upload', () => {
       scopes.forEach(x => x.done());
       assert.strictEqual(res.config.url, REQ_OPTS.url + queryPath);
       assert.deepStrictEqual(res.headers, {});
-    });
-
-    it('should execute the callback with error & response', async () => {
-      const response = {body: 'wooo'};
-      mockAuthorizeRequest();
-      const scope = nock(REQ_OPTS.url!)
-        .get(queryPath)
-        .reply(500, response.body);
-      const resp = await up.makeRequest(REQ_OPTS);
-      assert.strictEqual(resp.data, response.body);
-      scope.done();
     });
 
     it('should execute the callback with a body error & response', async () => {
