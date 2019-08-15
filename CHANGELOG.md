@@ -4,6 +4,13 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+### [2.2.4](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.2.3...v2.2.4) (2019-08-15)
+
+
+### Bug Fixes
+
+* let gaxios handle API errors ([#255](https://www.github.com/googleapis/gcs-resumable-upload/issues/255)) ([7a913ef](https://www.github.com/googleapis/gcs-resumable-upload/commit/7a913ef))
+
 ### [2.2.3](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.2.2...v2.2.3) (2019-07-26)
 
 
