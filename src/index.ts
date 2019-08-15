@@ -86,7 +86,7 @@ export interface UploadConfig {
   /**
    * Any metadata you wish to set on the object.
    */
-  metadata?: any;
+  metadata?: ConfigMetadata;
 
   /**
    * The starting byte of the upload stream, for resuming an interrupted upload.
@@ -136,6 +136,21 @@ export interface UploadConfig {
   userProject?: string;
 }
 
+export interface ConfigMetadata {
+  // tslint:disable-next-line no-any
+  [key: string]: any;
+
+  /**
+   * Set the length of the file being uploaded.
+   */
+  contentLength?: number;
+
+  /**
+   * Set the content type of the incoming data.
+   */
+  contentType?: string;
+}
+
 export class Upload extends Pumpify {
   bucket: string;
   file: string;
@@ -146,7 +161,7 @@ export class Upload extends Pumpify {
   generation?: number;
   key?: string | Buffer;
   kmsKeyName?: string;
-  metadata: any;
+  metadata: ConfigMetadata;
   offset?: number;
   origin?: string;
   predefinedAcl?:
