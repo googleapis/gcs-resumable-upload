@@ -137,6 +137,9 @@ export interface UploadConfig {
 }
 
 export interface ConfigMetadata {
+  // tslint:disable-next-line no-any
+  [key: string]: any;
+
   /**
    * Set the length of the file being uploaded.
    */
@@ -505,20 +508,17 @@ export class Upload extends Pumpify {
       reqOpts.params = reqOpts.params || {};
       reqOpts.params.userProject = this.userProject;
     }
-    reqOpts.validateStatus = () => true;
+    // Let gaxios know we will handle a 308 error code ourselves.
+    reqOpts.validateStatus = (status: number) => {
+      return (
+        (status >= 200 && status < 300) ||
+        status === RESUMABLE_INCOMPLETE_STATUS_CODE
+      );
+    };
 
     const res = await this.authClient.request(reqOpts);
     if (res.data && res.data.error) {
       throw res.data.error;
-    }
-    // If no error was returned, but the response had an invalid status
-    // code, create a new error to be passed to the callback.
-    if (
-      (res.status < 200 || res.status >= 300) &&
-      res.status !== RESUMABLE_INCOMPLETE_STATUS_CODE
-    ) {
-      const e = new Error(`The request failed with a ${res.status}.`);
-      (e as ErrorWithCode).code = res.status;
     }
     return res;
   }
