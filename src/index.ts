@@ -250,7 +250,9 @@ export class Upload extends Pumpify {
     if (cfg.public) this.predefinedAcl = 'publicRead';
 
     const configPath = cfg.configPath;
-    this.configStore = new ConfigStore('gcs-resumable-upload', {configPath});
+    this.configStore = new ConfigStore('gcs-resumable-upload', null, {
+      configPath,
+    });
 
     this.uriProvidedManually = !!cfg.uri;
     this.uri = cfg.uri || this.get('uri');

@@ -40,7 +40,7 @@ class AbortController {
 
 let configData = {} as {[index: string]: {}};
 class ConfigStore {
-  constructor(packageName: string, config: object) {
+  constructor(packageName: string, defaults: object, config: object) {
     this.set('packageName', packageName);
     this.set('config', config);
   }
