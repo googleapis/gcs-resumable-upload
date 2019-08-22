@@ -16,8 +16,10 @@
 
 import * as assert from 'assert';
 import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 import {Readable} from 'stream';
-import {createURI, ErrorWithCode, upload} from '../src';
+import {createURI, ErrorWithCode, upload, UploadConfig} from '../src';
 
 const bucketName = process.env.BUCKET_NAME || 'gcs-resumable-upload-test';
 const fileName = 'daw.jpg';
@@ -125,6 +127,40 @@ describe('end to end', () => {
       )
       .on('error', (err: ErrorWithCode) => {
         assert.strictEqual(err.code, '400');
+        done();
+      });
+  });
+
+  it('should set custom config file', done => {
+    const uploadOptions = {
+      bucket: bucketName,
+      file: fileName,
+      metadata: {contentType: 'image/jpg'},
+      configPath: path.join(
+        os.tmpdir(),
+        `test-gcs-resumable-${Date.now()}.json`
+      ),
+    };
+    let uploadSucceeded = false;
+
+    fs.createReadStream(fileName)
+      .on('error', done)
+      .pipe(upload(uploadOptions))
+      .on('error', done)
+      .on('response', resp => {
+        uploadSucceeded = resp.status === 200;
+      })
+      .on('finish', () => {
+        assert.strictEqual(uploadSucceeded, true);
+
+        const configData = JSON.parse(
+          fs.readFileSync(uploadOptions.configPath, 'utf8')
+        );
+        const keyName = `${uploadOptions.bucket}/${uploadOptions.file}`.replace(
+          '.jpg',
+          ''
+        );
+        assert.ok(Object.keys(configData).includes(keyName));
         done();
       });
   });
