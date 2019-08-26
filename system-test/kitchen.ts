@@ -93,7 +93,8 @@ describe('end to end', () => {
 
         doUpload({interrupt: false}, (err: Error, metadata: {size: number}) => {
           assert.ifError(err);
-          assert.strictEqual(Number(metadata.size), size);
+          assert.strictEqual(metadata.size, size);
+          assert.strictEqual(typeof metadata.size, 'number');
           done();
         });
       });
