@@ -546,7 +546,7 @@ export class Upload extends Pumpify {
     reqOpts.validateStatus = () => true;
 
     const res = await this.authClient.request(reqOpts);
-    if (res && res.data && res.data.size && typeof res.data.size === 'string') {
+    if (res && res.data) {
       res.data.size = Number(res.data.size);
     }
     this.onResponse(res);
