@@ -381,7 +381,9 @@ export class Upload extends Pumpify {
         this.destroy(new Error('Upload failed'));
         return;
       }
-
+      if (resp && resp.data) {
+        resp.data.size = Number(resp.data.size);
+      }
       this.emit('metadata', resp.data);
       this.deleteConfig();
 
@@ -546,9 +548,6 @@ export class Upload extends Pumpify {
     reqOpts.validateStatus = () => true;
 
     const res = await this.authClient.request(reqOpts);
-    if (res && res.data) {
-      res.data.size = Number(res.data.size);
-    }
     this.onResponse(res);
     return res;
   }
@@ -603,6 +602,7 @@ export class Upload extends Pumpify {
       }
       return false;
     }
+
     this.emit('response', resp);
     return true;
   }
