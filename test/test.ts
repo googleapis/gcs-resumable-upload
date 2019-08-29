@@ -1006,7 +1006,21 @@ describe('gcs-resumable-upload', () => {
       };
       up.makeRequestStream(REQ_OPTS);
     });
-
+    it('should return response data size in number', done => {
+      const data = {
+        size: '0',
+      };
+      const response = {data};
+      up.authClient = {
+        request: async () => response,
+      };
+      up.onResponse = (res: GaxiosResponse) => {
+        assert.strictEqual(res.data.size, data.size);
+        assert.strictEqual(typeof res.data.size, 'number');
+        done();
+      };
+      up.makeRequestStream(REQ_OPTS);
+    });
     it('should always validate the status', done => {
       up.authClient = {
         request: (reqOpts: GaxiosOptions) => {
