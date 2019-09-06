@@ -545,6 +545,22 @@ describe('gcs-resumable-upload', () => {
       up.emit('response', RESP);
     });
 
+    it('should return response data size as number', done => {
+      const metadata = {
+        size: '0',
+      };
+      const RESP = {data: metadata};
+      up.on('metadata', (data: {size: number}) => {
+        assert.strictEqual(Number(metadata.size), data.size);
+        assert.strictEqual(typeof data.size, 'number');
+        done();
+      });
+      const requestStream = new PassThrough();
+      up.makeRequestStream = async () => requestStream;
+      up.startUploading();
+      up.emit('response', RESP);
+    });
+
     it('should destroy the stream if an error occurred', done => {
       const RESP = {data: {error: new Error('Error.')}};
       const requestStream = new PassThrough();
