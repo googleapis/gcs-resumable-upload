@@ -545,13 +545,13 @@ describe('gcs-resumable-upload', () => {
       up.emit('response', RESP);
     });
 
-    it('should return response data size in number', done => {
-      const data = {
+    it('should return response data size as number', done => {
+      const metadata = {
         size: '0',
       };
-      const RESP = {data};
+      const RESP = {data: metadata};
       up.on('metadata', (data: {size: number}) => {
-        assert.strictEqual(data.size, data.size);
+        assert.strictEqual(Number(metadata.size), data.size);
         assert.strictEqual(typeof data.size, 'number');
         done();
       });
