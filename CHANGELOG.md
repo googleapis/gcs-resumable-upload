@@ -4,6 +4,13 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+### [2.2.5](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.2.4...v2.2.5) (2019-09-07)
+
+
+### Bug Fixes
+
+* typecast metadata.size from string to number ([#263](https://www.github.com/googleapis/gcs-resumable-upload/issues/263)) ([64ea7a1](https://www.github.com/googleapis/gcs-resumable-upload/commit/64ea7a1))
+
 ### [2.2.4](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.2.3...v2.2.4) (2019-08-15)
 
 
