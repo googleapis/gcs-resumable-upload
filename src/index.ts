@@ -38,20 +38,22 @@ export interface Encryption {
   hash: {};
 }
 
-export interface QueryParameters {
-  contentEncoding?: string;
-  ifGenerationMatch?: number;
-  ifGenerationNotMatch?: number;
-  ifMetagenerationMatch?: number;
-  ifMetagenerationNotMatch?: number;
-  kmsKeyName?: number;
-  predefinedAcl?:
+export type PredefinedAcl =
     | 'authenticatedRead'
     | 'bucketOwnerFullControl'
     | 'bucketOwnerRead'
     | 'private'
     | 'projectPrivate'
     | 'publicRead';
+
+export interface QueryParameters {
+  contentEncoding?: string;
+  ifGenerationMatch?: number;
+  ifGenerationNotMatch?: number;
+  ifMetagenerationMatch?: number;
+  ifMetagenerationNotMatch?: number;
+  kmsKeyName?: string;
+  predefinedAcl?: PredefinedAcl;
   projection?: 'full' | 'noAcl';
   userProject?: string;
 }
@@ -136,7 +138,7 @@ export interface UploadConfig {
   /**
    * Apply a predefined set of access controls to the created file.
    */
-  predefinedAcl?: QueryParameters['predefinedAcl'];
+  predefinedAcl?: PredefinedAcl;
 
   /**
    * Make the uploaded file private. (Alias for config.predefinedAcl =
@@ -192,7 +194,7 @@ export class Upload extends Pumpify {
   offset?: number;
   origin?: string;
   params: QueryParameters;
-  predefinedAcl?: QueryParameters['predefinedAcl'];
+  predefinedAcl?: PredefinedAcl;
   private?: boolean;
   public?: boolean;
   uri?: string;
