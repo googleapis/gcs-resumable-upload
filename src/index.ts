@@ -38,6 +38,24 @@ export interface Encryption {
   hash: {};
 }
 
+export interface QueryParameters {
+  contentEncoding?: string;
+  ifGenerationMatch?: number;
+  ifGenerationNotMatch?: number;
+  ifMetagenerationMatch?: number;
+  ifMetagenerationNotMatch?: number;
+  kmsKeyName?: number;
+  predefinedAcl?:
+    | 'authenticatedRead'
+    | 'bucketOwnerFullControl'
+    | 'bucketOwnerRead'
+    | 'private'
+    | 'projectPrivate'
+    | 'publicRead';
+  projection?: 'full' | 'noAcl';
+  userProject?: string;
+}
+
 export interface UploadConfig {
   /**
    * The API endpoint used for the request.
@@ -76,7 +94,7 @@ export interface UploadConfig {
    * This will cause the upload to fail if the current generation of the remote
    * object does not match the one provided here.
    */
-  generation?: number;
+  generation?: QueryParameters['ifGenerationMatch'];
 
   /**
    * A customer-supplied encryption key. See
@@ -90,7 +108,7 @@ export interface UploadConfig {
    * that will be used to encrypt the object. Overrides the object metadata's
    * `kms_key_name` value, if any.
    */
-  kmsKeyName?: string;
+  kmsKeyName?: QueryParameters['kmsKeyName'];
 
   /**
    * Any metadata you wish to set on the object.
@@ -110,15 +128,15 @@ export interface UploadConfig {
   origin?: string;
 
   /**
+   * Specify query parameters that go along with the initial upload request. See
+   * https://cloud.google.com/storage/docs/json_api/v1/objects/insert#parameters
+   */
+  params?: QueryParameters;
+
+  /**
    * Apply a predefined set of access controls to the created file.
    */
-  predefinedAcl?:
-    | 'authenticatedRead'
-    | 'bucketOwnerFullControl'
-    | 'bucketOwnerRead'
-    | 'private'
-    | 'projectPrivate'
-    | 'publicRead';
+  predefinedAcl?: QueryParameters['predefinedAcl'];
 
   /**
    * Make the uploaded file private. (Alias for config.predefinedAcl =
@@ -142,7 +160,7 @@ export interface UploadConfig {
    * If the bucket being accessed has requesterPays functionality enabled, this
    * can be set to control which project is billed for the access of this file.
    */
-  userProject?: string;
+  userProject?: QueryParameters['userProject'];
 }
 
 export interface ConfigMetadata {
@@ -169,21 +187,16 @@ export class Upload extends Pumpify {
   cacheKey: string;
   generation?: number;
   key?: string | Buffer;
-  kmsKeyName?: string;
+  kmsKeyName?: QueryParameters['kmsKeyName'];
   metadata: ConfigMetadata;
   offset?: number;
   origin?: string;
-  predefinedAcl?:
-    | 'authenticatedRead'
-    | 'bucketOwnerFullControl'
-    | 'bucketOwnerRead'
-    | 'private'
-    | 'projectPrivate'
-    | 'publicRead';
+  params: QueryParameters;
+  predefinedAcl?: QueryParameters['predefinedAcl'];
   private?: boolean;
   public?: boolean;
   uri?: string;
-  userProject?: string;
+  userProject?: QueryParameters['userProject'];
   encryption?: Encryption;
   configStore: ConfigStore;
   uriProvidedManually: boolean;
@@ -228,6 +241,7 @@ export class Upload extends Pumpify {
     this.metadata = cfg.metadata || {};
     this.offset = cfg.offset;
     this.origin = cfg.origin;
+    this.params = cfg.params || {};
     this.userProject = cfg.userProject;
 
     if (cfg.key) {
@@ -293,7 +307,13 @@ export class Upload extends Pumpify {
     const reqOpts: GaxiosOptions = {
       method: 'POST',
       url: [this.baseURI, this.bucket, 'o'].join('/'),
-      params: {name: this.file, uploadType: 'resumable'},
+      params: Object.assign(
+        {
+          name: this.file,
+          uploadType: 'resumable',
+        },
+        this.params
+      ),
       data: metadata,
       headers: {},
     };
