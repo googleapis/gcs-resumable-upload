@@ -96,7 +96,7 @@ export interface UploadConfig {
    * This will cause the upload to fail if the current generation of the remote
    * object does not match the one provided here.
    */
-  generation?: QueryParameters['ifGenerationMatch'];
+  generation?: number;
 
   /**
    * A customer-supplied encryption key. See
@@ -110,7 +110,7 @@ export interface UploadConfig {
    * that will be used to encrypt the object. Overrides the object metadata's
    * `kms_key_name` value, if any.
    */
-  kmsKeyName?: QueryParameters['kmsKeyName'];
+  kmsKeyName?: string;
 
   /**
    * Any metadata you wish to set on the object.
@@ -162,7 +162,7 @@ export interface UploadConfig {
    * If the bucket being accessed has requesterPays functionality enabled, this
    * can be set to control which project is billed for the access of this file.
    */
-  userProject?: QueryParameters['userProject'];
+  userProject?: string;
 }
 
 export interface ConfigMetadata {
@@ -189,7 +189,7 @@ export class Upload extends Pumpify {
   cacheKey: string;
   generation?: number;
   key?: string | Buffer;
-  kmsKeyName?: QueryParameters['kmsKeyName'];
+  kmsKeyName?: string;
   metadata: ConfigMetadata;
   offset?: number;
   origin?: string;
@@ -198,7 +198,7 @@ export class Upload extends Pumpify {
   private?: boolean;
   public?: boolean;
   uri?: string;
-  userProject?: QueryParameters['userProject'];
+  userProject?: string;
   encryption?: Encryption;
   configStore: ConfigStore;
   uriProvidedManually: boolean;
