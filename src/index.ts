@@ -39,12 +39,12 @@ export interface Encryption {
 }
 
 export type PredefinedAcl =
-    | 'authenticatedRead'
-    | 'bucketOwnerFullControl'
-    | 'bucketOwnerRead'
-    | 'private'
-    | 'projectPrivate'
-    | 'publicRead';
+  | 'authenticatedRead'
+  | 'bucketOwnerFullControl'
+  | 'bucketOwnerRead'
+  | 'private'
+  | 'projectPrivate'
+  | 'publicRead';
 
 export interface QueryParameters {
   contentEncoding?: string;
