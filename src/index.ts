@@ -38,6 +38,26 @@ export interface Encryption {
   hash: {};
 }
 
+export type PredefinedAcl =
+  | 'authenticatedRead'
+  | 'bucketOwnerFullControl'
+  | 'bucketOwnerRead'
+  | 'private'
+  | 'projectPrivate'
+  | 'publicRead';
+
+export interface QueryParameters {
+  contentEncoding?: string;
+  ifGenerationMatch?: number;
+  ifGenerationNotMatch?: number;
+  ifMetagenerationMatch?: number;
+  ifMetagenerationNotMatch?: number;
+  kmsKeyName?: string;
+  predefinedAcl?: PredefinedAcl;
+  projection?: 'full' | 'noAcl';
+  userProject?: string;
+}
+
 export interface UploadConfig {
   /**
    * The API endpoint used for the request.
@@ -110,15 +130,15 @@ export interface UploadConfig {
   origin?: string;
 
   /**
+   * Specify query parameters that go along with the initial upload request. See
+   * https://cloud.google.com/storage/docs/json_api/v1/objects/insert#parameters
+   */
+  params?: QueryParameters;
+
+  /**
    * Apply a predefined set of access controls to the created file.
    */
-  predefinedAcl?:
-    | 'authenticatedRead'
-    | 'bucketOwnerFullControl'
-    | 'bucketOwnerRead'
-    | 'private'
-    | 'projectPrivate'
-    | 'publicRead';
+  predefinedAcl?: PredefinedAcl;
 
   /**
    * Make the uploaded file private. (Alias for config.predefinedAcl =
@@ -173,13 +193,8 @@ export class Upload extends Pumpify {
   metadata: ConfigMetadata;
   offset?: number;
   origin?: string;
-  predefinedAcl?:
-    | 'authenticatedRead'
-    | 'bucketOwnerFullControl'
-    | 'bucketOwnerRead'
-    | 'private'
-    | 'projectPrivate'
-    | 'publicRead';
+  params: QueryParameters;
+  predefinedAcl?: PredefinedAcl;
   private?: boolean;
   public?: boolean;
   uri?: string;
@@ -228,6 +243,7 @@ export class Upload extends Pumpify {
     this.metadata = cfg.metadata || {};
     this.offset = cfg.offset;
     this.origin = cfg.origin;
+    this.params = cfg.params || {};
     this.userProject = cfg.userProject;
 
     if (cfg.key) {
@@ -293,7 +309,13 @@ export class Upload extends Pumpify {
     const reqOpts: GaxiosOptions = {
       method: 'POST',
       url: [this.baseURI, this.bucket, 'o'].join('/'),
-      params: {name: this.file, uploadType: 'resumable'},
+      params: Object.assign(
+        {
+          name: this.file,
+          uploadType: 'resumable',
+        },
+        this.params
+      ),
       data: metadata,
       headers: {},
     };

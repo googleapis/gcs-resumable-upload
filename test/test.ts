@@ -79,6 +79,7 @@ describe('gcs-resumable-upload', () => {
   const GENERATION = Date.now();
   const METADATA = {contentLength: 1024, contentType: 'application/json'};
   const ORIGIN = '*';
+  const PARAMS = {ifMetagenerationNotMatch: 3};
   const PREDEFINED_ACL = 'authenticatedRead';
   const USER_PROJECT = 'user-project-id';
   const API_ENDPOINT = 'fake.googleapis.com';
@@ -102,6 +103,7 @@ describe('gcs-resumable-upload', () => {
       generation: GENERATION,
       metadata: METADATA,
       origin: ORIGIN,
+      params: PARAMS,
       predefinedAcl: PREDEFINED_ACL,
       userProject: USER_PROJECT,
       authConfig: {keyFile},
@@ -195,6 +197,10 @@ describe('gcs-resumable-upload', () => {
 
     it('should localize the origin', () => {
       assert.strictEqual(up.origin, ORIGIN);
+    });
+
+    it('should localize the params', () => {
+      assert.strictEqual(up.params, PARAMS);
     });
 
     it('should localize userProject', () => {
@@ -315,6 +321,7 @@ describe('gcs-resumable-upload', () => {
           name: FILE,
           uploadType: 'resumable',
           ifGenerationMatch: GENERATION,
+          ifMetagenerationNotMatch: PARAMS.ifMetagenerationNotMatch,
         });
         assert.strictEqual(reqOpts.data, up.metadata);
         done();
