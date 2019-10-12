@@ -4,6 +4,13 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+## [2.3.0](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.2.5...v2.3.0) (2019-10-09)
+
+
+### Features
+
+* support all query parameters during URI creation ([#275](https://www.github.com/googleapis/gcs-resumable-upload/issues/275)) ([383a490](https://www.github.com/googleapis/gcs-resumable-upload/commit/383a490))
+
 ### [2.2.5](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.2.4...v2.2.5) (2019-09-07)
 
 
