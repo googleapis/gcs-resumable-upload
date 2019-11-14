@@ -4,6 +4,13 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+### [2.3.1](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.3.0...v2.3.1) (2019-11-14)
+
+
+### Bug Fixes
+
+* **docs:** add jsdoc-region-tag plugin ([#282](https://www.github.com/googleapis/gcs-resumable-upload/issues/282)) ([4942669](https://www.github.com/googleapis/gcs-resumable-upload/commit/494266901b0cdcc9956dda721a4ca19d3b4ced53))
+
 ## [2.3.0](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.2.5...v2.3.0) (2019-10-09)
 
 
