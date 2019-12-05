@@ -4,6 +4,14 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+### [2.3.2](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.3.1...v2.3.2) (2019-12-05)
+
+
+### Bug Fixes
+
+* **deps:** TypeScript 3.7.0 causes breaking change in typings ([#285](https://www.github.com/googleapis/gcs-resumable-upload/issues/285)) ([3e671b2](https://www.github.com/googleapis/gcs-resumable-upload/commit/3e671b262a7ef5383fbc5e5b6232d7bcd2c6641e))
+* **typescript:** add return type for base uri getter ([#286](https://www.github.com/googleapis/gcs-resumable-upload/issues/286)) ([7121624](https://www.github.com/googleapis/gcs-resumable-upload/commit/71216249ee781714b73826ee7902ed1847402102))
+
 ### [2.3.1](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.3.0...v2.3.1) (2019-11-14)
 
 
