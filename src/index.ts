@@ -208,7 +208,7 @@ export class Upload extends Pumpify {
   private bufferStream?: PassThrough;
   private offsetStream?: PassThrough;
 
-  private get baseURI() {
+  private get baseURI(): string {
     return `https://${this.apiEndpoint}/upload/storage/v1/b`;
   }
 
