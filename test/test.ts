@@ -15,6 +15,7 @@
  */
 
 import * as assert from 'assert';
+import {describe, it} from 'mocha';
 import * as crypto from 'crypto';
 import * as isStream from 'is-stream';
 import * as mockery from 'mockery';
