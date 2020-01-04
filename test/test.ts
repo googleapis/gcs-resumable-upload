@@ -15,6 +15,7 @@
  */
 
 import * as assert from 'assert';
+import {describe, it} from 'mocha';
 import * as crypto from 'crypto';
 import * as isStream from 'is-stream';
 import * as mockery from 'mockery';
@@ -908,17 +909,13 @@ describe('gcs-resumable-upload', () => {
     });
 
     it('should execute the callback with a body error & response', async () => {
-      const error = new GaxiosError(
-        'Error message',
-        {},
-        {
-          config: {},
-          data: {},
-          status: 500,
-          statusText: 'sad trombone',
-          headers: {},
-        }
-      );
+      const error = new GaxiosError('Error message', {}, {
+        config: {},
+        data: {},
+        status: 500,
+        statusText: 'sad trombone',
+        headers: {},
+      } as GaxiosResponse);
       mockAuthorizeRequest();
       const scope = nock(REQ_OPTS.url!)
         .get(queryPath)
@@ -931,17 +928,13 @@ describe('gcs-resumable-upload', () => {
     });
 
     it('should execute the callback with a body error & response for non-2xx status codes', async () => {
-      const error = new GaxiosError(
-        'Error message',
-        {},
-        {
-          config: {},
-          data: {},
-          status: 500,
-          statusText: 'sad trombone',
-          headers: {},
-        }
-      );
+      const error = new GaxiosError('Error message', {}, {
+        config: {},
+        data: {},
+        status: 500,
+        statusText: 'sad trombone',
+        headers: {},
+      } as GaxiosResponse);
       mockAuthorizeRequest();
       const scope = nock(REQ_OPTS.url!)
         .get(queryPath)
