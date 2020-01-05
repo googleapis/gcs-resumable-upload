@@ -65,7 +65,7 @@
     "intelli-espower-loader": "^1.0.1",
     "is-stream": "^2.0.0",
     "linkinator": "^1.5.0",
-    "mocha": "^6.1.4",
+    "mocha": "^7.0.0",
     "mockery": "^2.1.0",
     "nock": "^11.0.0",
     "sinon": "^8.0.0",
