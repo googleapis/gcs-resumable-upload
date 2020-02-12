@@ -22,8 +22,7 @@
     "presystem-test": "npm run compile",
     "docs": "compodoc src/",
     "docs-test": "linkinator docs",
-    "predocs-test": "npm run docs",
-    "prelint": "cd samples; npm link ../; npm i"
+    "predocs-test": "npm run docs"
   },
   "keywords": [
     "google",
