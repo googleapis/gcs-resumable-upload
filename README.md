@@ -243,9 +243,17 @@ The file's new metadata.
 
 #### .on('progress', function (progress) {})
 
-##### progress
+#### progress
 
 - Type: `Object`
+
+##### progress.bytesWritten
+
+- Type: `number`
+
+##### progress.contentLength
+
+- Type: `number`
 
 Progress event provides upload stats like Transferred Bytes and content length.
 
