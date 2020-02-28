@@ -10,6 +10,10 @@ const fs = require('fs');
 
 fs.createReadStream('titanic.mov')
   .pipe(upload({ bucket: 'legally-owned-movies', file: 'titanic.mov' }))
+  .on('progress', (progress) => {
+    console.log('Progress event:')
+    console.log('\t bytes: ', progress.bytesWritten);
+  })
   .on('finish', () => {
     // Uploaded!
   });
@@ -236,6 +240,22 @@ The [response object from Gaxios](https://github.com/JustinBeckwith/gaxios/blob/
 - Type: `Object`
 
 The file's new metadata.
+
+#### .on('progress', function (progress) {})
+
+#### progress
+
+- Type: `Object`
+
+##### progress.bytesWritten
+
+- Type: `number`
+
+##### progress.contentLength
+
+- Type: `number`
+
+Progress event provides upload stats like Transferred Bytes and content length.
 
 #### .on('finish', function () {})
 
