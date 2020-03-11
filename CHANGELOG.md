@@ -4,6 +4,13 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+### [2.3.3](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.3.2...v2.3.3) (2020-03-06)
+
+
+### Bug Fixes
+
+* **docs:** progress event in readme file  ([#313](https://www.github.com/googleapis/gcs-resumable-upload/issues/313)) ([0dfdd07](https://www.github.com/googleapis/gcs-resumable-upload/commit/0dfdd07d7472e63eb19e5c216171a13a517bf29a))
+
 ### [2.3.2](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.3.1...v2.3.2) (2019-12-05)
 
 
