@@ -159,10 +159,9 @@ describe('end to end', () => {
           fs.readFileSync(uploadOptions.configPath, 'utf8')
         );
         const keyName = `${uploadOptions.bucket}/${uploadOptions.file}`.replace(
-          '.jpg',
+          path.extname(fileName),
           ''
         );
-        console.log(configData);
         assert.ok(Object.keys(configData).includes(keyName));
         done();
       });
