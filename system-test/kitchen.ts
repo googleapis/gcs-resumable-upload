@@ -162,6 +162,7 @@ describe('end to end', () => {
           '.jpg',
           ''
         );
+        console.log(configData);
         assert.ok(Object.keys(configData).includes(keyName));
         done();
       });
