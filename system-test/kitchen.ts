@@ -23,7 +23,7 @@ import {Readable} from 'stream';
 import {createURI, ErrorWithCode, upload, UploadConfig} from '../src';
 
 const bucketName = process.env.BUCKET_NAME || 'gcs-resumable-upload-test';
-const fileName = 'daw.jpg';
+const fileName = '20MB.zip';
 
 describe('end to end', () => {
   beforeEach(() => {
