@@ -23,7 +23,7 @@ import {Readable} from 'stream';
 import {createURI, ErrorWithCode, upload, UploadConfig} from '../src';
 
 const bucketName = process.env.BUCKET_NAME || 'gcs-resumable-upload-test';
-const fileName = 'daw.jpg';
+const fileName = '20MB.zip';
 
 describe('end to end', () => {
   beforeEach(() => {
@@ -159,7 +159,7 @@ describe('end to end', () => {
           fs.readFileSync(uploadOptions.configPath, 'utf8')
         );
         const keyName = `${uploadOptions.bucket}/${uploadOptions.file}`.replace(
-          '.jpg',
+          path.extname(fileName),
           ''
         );
         assert.ok(Object.keys(configData).includes(keyName));
