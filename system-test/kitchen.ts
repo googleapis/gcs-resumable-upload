@@ -15,12 +15,12 @@
  */
 
 import * as assert from 'assert';
-import {describe, it} from 'mocha';
+import {describe, it, beforeEach} from 'mocha';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import {Readable} from 'stream';
-import {createURI, ErrorWithCode, upload, UploadConfig} from '../src';
+import {createURI, ErrorWithCode, upload} from '../src';
 
 const bucketName = process.env.BUCKET_NAME || 'gcs-resumable-upload-test';
 const fileName = '20MB.zip';
@@ -57,7 +57,7 @@ describe('end to end', () => {
 
       const size = fd.size;
 
-      // tslint:disable-next-line no-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       type DoUploadCallback = (...args: any[]) => void;
       const doUpload = (
         opts: {interrupt?: boolean},
@@ -74,7 +74,7 @@ describe('end to end', () => {
 
         fs.createReadStream(fileName)
           .on('error', callback)
-          .on('data', function(this: Readable, chunk) {
+          .on('data', function (this: Readable, chunk) {
             sizeStreamed += chunk.length;
 
             if (!destroyed && opts.interrupt && sizeStreamed >= size / 2) {

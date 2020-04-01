@@ -15,7 +15,7 @@
  */
 
 import * as assert from 'assert';
-import {describe, it} from 'mocha';
+import {describe, it, beforeEach, before, afterEach, after} from 'mocha';
 import * as crypto from 'crypto';
 import * as isStream from 'is-stream';
 import * as mockery from 'mockery';
@@ -24,7 +24,7 @@ import * as path from 'path';
 import * as sinon from 'sinon';
 import {PassThrough, Stream} from 'stream';
 
-const assertRejects = require('assert-rejects');
+import assertRejects = require('assert-rejects');
 
 import {CreateUriCallback} from '../src';
 import {GaxiosOptions, GaxiosError, GaxiosResponse} from 'gaxios';
@@ -70,9 +70,9 @@ function mockAuthorizeRequest(
 }
 
 describe('gcs-resumable-upload', () => {
-  // tslint:disable-next-line no-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let upload: any;
-  // tslint:disable-next-line no-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let up: any;
 
   const BUCKET = 'bucket-name';
@@ -237,12 +237,12 @@ describe('gcs-resumable-upload', () => {
     });
 
     it('should create a ConfigStore instance', () => {
-      const up = upload({bucket: BUCKET, file: FILE});
       assert.strictEqual(configData.packageName, 'gcs-resumable-upload');
     });
 
     it('should set the configPath', () => {
       const configPath = '/custom/config/path';
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const up = upload({bucket: BUCKET, file: FILE, configPath});
       assert.deepStrictEqual(configData.config, {configPath});
     });
@@ -376,7 +376,7 @@ describe('gcs-resumable-upload', () => {
       const RESP = {headers: {location: URI}};
 
       beforeEach(() => {
-        up.makeRequest = async (reqOpts: GaxiosOptions) => {
+        up.makeRequest = async () => {
           return RESP;
         };
       });
@@ -435,7 +435,7 @@ describe('gcs-resumable-upload', () => {
     });
 
     it('should start uploading when done', done => {
-      up.startUploading = async function() {
+      up.startUploading = async function () {
         assert.strictEqual(this, up);
         done();
       };
@@ -723,7 +723,7 @@ describe('gcs-resumable-upload', () => {
 
       it('should emit a progress event with the bytes written', done => {
         let happened = false;
-        up.on('progress', (progress: {}) => {
+        up.on('progress', () => {
           happened = true;
         });
         up.onChunk(CHUNK, ENC, NEXT);
@@ -847,9 +847,7 @@ describe('gcs-resumable-upload', () => {
       });
       const scopes = [
         mockAuthorizeRequest(),
-        nock(REQ_OPTS.url!)
-          .get('/')
-          .reply(200, {}),
+        nock(REQ_OPTS.url!).get('/').reply(200, {}),
       ];
       const res = await up.makeRequest(REQ_OPTS);
       scopes.forEach(x => x.done());
@@ -865,9 +863,7 @@ describe('gcs-resumable-upload', () => {
     it('should set userProject', async () => {
       const scopes = [
         mockAuthorizeRequest(),
-        nock(REQ_OPTS.url!)
-          .get(queryPath)
-          .reply(200, {}),
+        nock(REQ_OPTS.url!).get(queryPath).reply(200, {}),
       ];
       const res: GaxiosResponse = await up.makeRequest(REQ_OPTS);
       assert.strictEqual(res.config.url, REQ_OPTS.url + queryPath);
@@ -898,9 +894,7 @@ describe('gcs-resumable-upload', () => {
     it('should make the correct request', async () => {
       const scopes = [
         mockAuthorizeRequest(),
-        nock(REQ_OPTS.url!)
-          .get(queryPath)
-          .reply(200, undefined, {}),
+        nock(REQ_OPTS.url!).get(queryPath).reply(200, undefined, {}),
       ];
       const res = await up.makeRequest(REQ_OPTS);
       scopes.forEach(x => x.done());
@@ -917,9 +911,7 @@ describe('gcs-resumable-upload', () => {
         headers: {},
       } as GaxiosResponse);
       mockAuthorizeRequest();
-      const scope = nock(REQ_OPTS.url!)
-        .get(queryPath)
-        .reply(500, {error});
+      const scope = nock(REQ_OPTS.url!).get(queryPath).reply(500, {error});
       await assertRejects(up.makeRequest(REQ_OPTS), (err: GaxiosError) => {
         scope.done();
         assert.strictEqual(err.code, '500');
@@ -936,9 +928,7 @@ describe('gcs-resumable-upload', () => {
         headers: {},
       } as GaxiosResponse);
       mockAuthorizeRequest();
-      const scope = nock(REQ_OPTS.url!)
-        .get(queryPath)
-        .reply(500, {error});
+      const scope = nock(REQ_OPTS.url!).get(queryPath).reply(500, {error});
       await assertRejects(up.makeRequest(REQ_OPTS), (err: GaxiosError) => {
         scope.done();
         assert.deepStrictEqual(err.code, '500');
@@ -950,9 +940,7 @@ describe('gcs-resumable-upload', () => {
       const data = {red: 'tape'};
       mockAuthorizeRequest();
       up.onResponse = () => true;
-      const scope = nock(REQ_OPTS.url!)
-        .get(queryPath)
-        .reply(200, data);
+      const scope = nock(REQ_OPTS.url!).get(queryPath).reply(200, data);
       const res = await up.makeRequest(REQ_OPTS);
       scope.done();
       assert.strictEqual(res.status, 200);
@@ -982,7 +970,7 @@ describe('gcs-resumable-upload', () => {
       let abortController: AbortController;
       up.authClient = {
         request: (reqOpts: GaxiosOptions) => {
-          // tslint:disable-next-line no-any
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           abortController = reqOpts.signal as any;
         },
       };
@@ -1222,7 +1210,7 @@ describe('gcs-resumable-upload', () => {
 
       describe('exponential back off', () => {
         let clock: sinon.SinonFakeTimers;
-        // tslint:disable-next-line no-any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let setTimeoutSpy: sinon.SinonSpy<[() => void, number, ...any[]]>;
         beforeEach(() => {
           clock = sinon.useFakeTimers({toFake: ['setTimeout']});
@@ -1233,7 +1221,7 @@ describe('gcs-resumable-upload', () => {
         });
 
         it('should continue uploading after retry count^2 * random', done => {
-          up.continueUploading = function() {
+          up.continueUploading = function () {
             assert.strictEqual(this, up);
 
             const minTime = Math.pow(2, up.numRetries - 1) * 1000;
