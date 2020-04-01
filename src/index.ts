@@ -216,7 +216,6 @@ export class Upload extends Pumpify {
     super();
     streamEvents(this);
 
-    console.warn('---------------process.platform::', process.platform);
     cfg = cfg || {};
 
     if (!cfg.bucket || !cfg.file) {
