@@ -166,7 +166,7 @@ export interface UploadConfig {
 }
 
 export interface ConfigMetadata {
-  // tslint:disable-next-line no-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 
   /**
@@ -255,9 +255,7 @@ export class Upload extends Pumpify {
       const base64Key = Buffer.from(cfg.key as string).toString('base64');
       this.encryption = {
         key: base64Key,
-        hash: createHash('sha256')
-          .update(cfg.key)
-          .digest('base64'),
+        hash: createHash('sha256').update(cfg.key).digest('base64'),
       };
     }
 
@@ -591,7 +589,7 @@ export class Upload extends Pumpify {
     return store && store[prop];
   }
 
-  // tslint:disable-next-line no-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private set(props: any) {
     this.configStore.set(this.cacheKey, props);
   }
