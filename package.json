@@ -17,7 +17,7 @@
     "posttest": "npm run lint",
     "prepare": "npm run compile",
     "pretest": "npm run compile",
-    "system-test": "mocha build/system-test --timeout 20000",
+    "system-test": "mocha build/system-test --timeout 60000",
     "samples-test": "echo no samples 🤷‍♂️",
     "presystem-test": "npm run compile",
     "docs": "compodoc src/",
