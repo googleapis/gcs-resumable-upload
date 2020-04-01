@@ -38,7 +38,7 @@
   "author": "Stephen Sawchuk <sawchuk@gmail.com>",
   "license": "MIT",
   "engines": {
-    "node": ">=8.10.0"
+    "node": ">=10"
   },
   "dependencies": {
     "abort-controller": "^3.0.0",
