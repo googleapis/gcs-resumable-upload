@@ -24,6 +24,7 @@
  * $ node samples/quickstart.js path/to/file.ext name-of-bucket
  */
 
+// eslint-disable-next-line node/no-missing-require
 const {upload} = require('gcs-resumable-upload');
 const fs = require('fs');
 const util = require('util');
