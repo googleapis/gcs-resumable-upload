@@ -41,22 +41,22 @@ async function main() {
 
   return new Promise((resolve, reject) => {
     fs.createReadStream(file)
-      .pipe(upload({ bucket, file }))
-      .on('progress', (progress) => {
-        console.log('Progress event:')
+      .pipe(upload({bucket, file}))
+      .on('progress', progress => {
+        console.log('Progress event:');
         console.log('\t bytes: ', progress.bytesWritten);
-        const pct = Math.round(progress.bytesWritten/fileSize*100);
-        console.log(`\t ${pct}%`)
+        const pct = Math.round((progress.bytesWritten / fileSize) * 100);
+        console.log(`\t ${pct}%`);
       })
       .on('finish', () => {
         console.log('Upload complete!');
         resolve();
       })
-      .on('error', (err) => {
+      .on('error', err => {
         console.error('There was a problem uploading the file :(');
         reject(err);
-      })
-    });
+      });
+  });
 }
 
 main().catch(console.error);
