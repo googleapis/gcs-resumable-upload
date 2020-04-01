@@ -14,7 +14,6 @@
     "clean": "gts clean",
     "compile": "tsc -p .",
     "fix": "gts fix",
-    "posttest": "npm run lint",
     "prepare": "npm run compile",
     "pretest": "npm run compile",
     "system-test": "mocha build/system-test --timeout 60000",
