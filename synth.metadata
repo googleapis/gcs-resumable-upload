@@ -1,6 +1,12 @@
 {
-  "updateTime": "2020-03-22T11:09:50.281977Z",
   "sources": [
+    {
+      "git": {
+        "name": ".",
+        "remote": "https://github.com/googleapis/gcs-resumable-upload.git",
+        "sha": "f69a18494646206fb634b2400ec21348b690d78e"
+      }
+    },
     {
       "git": {
         "name": "synthtool",
