@@ -21,7 +21,7 @@ import * as path from 'path';
 import * as os from 'os';
 import {Readable} from 'stream';
 import {createURI, ErrorWithCode, upload} from '../src';
-import {delay} from './util';
+import delay from './util';
 
 const bucketName = process.env.BUCKET_NAME || 'gcs-resumable-upload-test';
 const fileName = '20MB.zip';
@@ -52,9 +52,11 @@ describe('end to end', () => {
       });
   });
 
+  let retries = 0;
   it('should resume an interrupted upload', function (done) {
     this.retries(3);
-    delay(this.test, () => {
+    delay(this.test!.title, retries, () => {
+      retries++;
       // If we've retried, delay.
       fs.stat(fileName, (err, fd) => {
         assert.ifError(err);

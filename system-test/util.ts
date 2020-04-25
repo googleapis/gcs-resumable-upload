@@ -11,16 +11,14 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-// ML tests frequently run into concurrency and quota issues, for which
-// retrying with a backoff is a good strategy:
-module.exports = {
-  async delay(test, done) {
-    const retries = test.currentRetry();
-    if (retries === 0) return done(); // no retry on the first failure.
-    // see: https://cloud.google.com/storage/docs/exponential-backoff:
-    const ms = Math.pow(2, retries) * 1000 + Math.random() * 2000;
-    console.info(`retrying "${test.title}" in ${ms}ms`);
-    setTimeout(done, ms);
-  },
-};
+export default async function delay(
+  title: string,
+  retries: number,
+  done: Function
+) {
+  if (retries === 0) return done(); // no retry on the first failure.
+  // see: https://cloud.google.com/storage/docs/exponential-backoff:
+  const ms = Math.pow(2, retries) * 1000 + Math.random() * 2000;
+  console.info(`retrying "${title}" in ${ms}ms`);
+  setTimeout(done, ms);
+}
