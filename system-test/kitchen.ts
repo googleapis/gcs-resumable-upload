@@ -21,6 +21,7 @@ import * as path from 'path';
 import * as os from 'os';
 import {Readable} from 'stream';
 import {createURI, ErrorWithCode, upload} from '../src';
+import delay from './util';
 
 const bucketName = process.env.BUCKET_NAME || 'gcs-resumable-upload-test';
 const fileName = '20MB.zip';
@@ -51,52 +52,61 @@ describe('end to end', () => {
       });
   });
 
-  it('should resume an interrupted upload', done => {
-    fs.stat(fileName, (err, fd) => {
-      assert.ifError(err);
+  let retries = 0;
+  it('should resume an interrupted upload', function (done) {
+    this.retries(3);
+    delay(this.test!.title, retries, () => {
+      retries++;
+      // If we've retried, delay.
+      fs.stat(fileName, (err, fd) => {
+        assert.ifError(err);
 
-      const size = fd.size;
+        const size = fd.size;
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      type DoUploadCallback = (...args: any[]) => void;
-      const doUpload = (
-        opts: {interrupt?: boolean},
-        callback: DoUploadCallback
-      ) => {
-        let sizeStreamed = 0;
-        let destroyed = false;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        type DoUploadCallback = (...args: any[]) => void;
+        const doUpload = (
+          opts: {interrupt?: boolean},
+          callback: DoUploadCallback
+        ) => {
+          let sizeStreamed = 0;
+          let destroyed = false;
 
-        const ws = upload({
-          bucket: bucketName,
-          file: fileName,
-          metadata: {contentType: 'image/jpg'},
-        });
+          const ws = upload({
+            bucket: bucketName,
+            file: fileName,
+            metadata: {contentType: 'image/jpg'},
+          });
 
-        fs.createReadStream(fileName)
-          .on('error', callback)
-          .on('data', function (this: Readable, chunk) {
-            sizeStreamed += chunk.length;
+          fs.createReadStream(fileName)
+            .on('error', callback)
+            .on('data', function (this: Readable, chunk) {
+              sizeStreamed += chunk.length;
 
-            if (!destroyed && opts.interrupt && sizeStreamed >= size / 2) {
-              // stop sending data half way through
-              destroyed = true;
-              this.destroy();
-              process.nextTick(() => ws.destroy(new Error('Interrupted')));
+              if (!destroyed && opts.interrupt && sizeStreamed >= size / 2) {
+                // stop sending data half way through
+                destroyed = true;
+                this.destroy();
+                process.nextTick(() => ws.destroy(new Error('Interrupted')));
+              }
+            })
+            .pipe(ws)
+            .on('error', callback)
+            .on('metadata', callback.bind(null, null));
+        };
+
+        doUpload({interrupt: true}, (err: Error) => {
+          assert.strictEqual(err.message, 'Interrupted');
+
+          doUpload(
+            {interrupt: false},
+            (err: Error, metadata: {size: number}) => {
+              assert.ifError(err);
+              assert.strictEqual(metadata.size, size);
+              assert.strictEqual(typeof metadata.size, 'number');
+              done();
             }
-          })
-          .pipe(ws)
-          .on('error', callback)
-          .on('metadata', callback.bind(null, null));
-      };
-
-      doUpload({interrupt: true}, (err: Error) => {
-        assert.strictEqual(err.message, 'Interrupted');
-
-        doUpload({interrupt: false}, (err: Error, metadata: {size: number}) => {
-          assert.ifError(err);
-          assert.strictEqual(metadata.size, size);
-          assert.strictEqual(typeof metadata.size, 'number');
-          done();
+          );
         });
       });
     });
