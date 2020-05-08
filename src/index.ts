@@ -631,10 +631,9 @@ export class Upload extends Pumpify {
 /*
  * Prepend protocol to url if not present.
  */
-const sanitize = (url: string|undefined): string|void => {
-  if (url)
-    return url.match(/^https?:\/\//) ? url : `https://${url}`;
-}
+const sanitize = (url: string | undefined): string | void => {
+  if (url) return url.match(/^https?:\/\//) ? url : `https://${url}`;
+};
 
 export function upload(cfg: UploadConfig) {
   return new Upload(cfg);

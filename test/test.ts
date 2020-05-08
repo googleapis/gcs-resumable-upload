@@ -180,8 +180,8 @@ describe('gcs-resumable-upload', () => {
       const up = upload({
         bucket: BUCKET,
         file: FILE,
-        apiEndpoint: 'fake.googleapis.com' 
-      })
+        apiEndpoint: 'fake.googleapis.com',
+      });
       assert.strictEqual(up.apiEndpoint, API_ENDPOINT);
       assert.strictEqual(up.baseURI, BASE_URI);
     });
