@@ -228,7 +228,7 @@ export class Upload extends Pumpify {
     ];
     this.authClient = cfg.authClient || new GoogleAuth(cfg.authConfig);
 
-    this.apiEndpoint = sanitize(cfg.apiEndpoint) || 'storage.googleapis.com';
+    this.apiEndpoint = sanitize(cfg.apiEndpoint) || 'https://storage.googleapis.com';
     this.bucket = cfg.bucket;
 
     const cacheKeyElements = [cfg.bucket, cfg.file];
