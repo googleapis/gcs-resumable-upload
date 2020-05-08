@@ -83,8 +83,8 @@ describe('gcs-resumable-upload', () => {
   const PARAMS = {ifMetagenerationNotMatch: 3};
   const PREDEFINED_ACL = 'authenticatedRead';
   const USER_PROJECT = 'user-project-id';
-  const API_ENDPOINT = 'fake.googleapis.com';
-  const BASE_URI = `https://${API_ENDPOINT}/upload/storage/v1/b`;
+  const API_ENDPOINT = 'https://fake.googleapis.com';
+  const BASE_URI = `${API_ENDPOINT}/upload/storage/v1/b`;
   let REQ_OPTS: GaxiosOptions;
   const keyFile = path.join(__dirname, '../../test/fixtures/keys.json');
 
@@ -172,6 +172,16 @@ describe('gcs-resumable-upload', () => {
     });
 
     it('should localize the apiEndpoint', () => {
+      assert.strictEqual(up.apiEndpoint, API_ENDPOINT);
+      assert.strictEqual(up.baseURI, BASE_URI);
+    });
+
+    it('should prepend https:// to apiEndpoint if not present', () => {
+      const up = upload({
+        bucket: BUCKET,
+        file: FILE,
+        apiEndpoint: 'fake.googleapis.com' 
+      })
       assert.strictEqual(up.apiEndpoint, API_ENDPOINT);
       assert.strictEqual(up.baseURI, BASE_URI);
     });

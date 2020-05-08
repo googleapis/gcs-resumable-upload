@@ -209,7 +209,7 @@ export class Upload extends Pumpify {
   private offsetStream?: PassThrough;
 
   private get baseURI(): string {
-    return `https://${this.apiEndpoint}/upload/storage/v1/b`;
+    return `${this.apiEndpoint}/upload/storage/v1/b`;
   }
 
   constructor(cfg: UploadConfig) {
@@ -228,7 +228,7 @@ export class Upload extends Pumpify {
     ];
     this.authClient = cfg.authClient || new GoogleAuth(cfg.authConfig);
 
-    this.apiEndpoint = cfg.apiEndpoint || 'storage.googleapis.com';
+    this.apiEndpoint = sanitize(cfg.apiEndpoint) || 'storage.googleapis.com';
     this.bucket = cfg.bucket;
 
     const cacheKeyElements = [cfg.bucket, cfg.file];
@@ -626,6 +626,14 @@ export class Upload extends Pumpify {
     this.emit('response', resp);
     return true;
   }
+}
+
+/*
+ * Prepend protocol to url if not present.
+ */
+const sanitize = (url: string|undefined): string|void => {
+  if (url)
+    return url.match(/^https?:\/\//) ? url : `https://${url}`;
 }
 
 export function upload(cfg: UploadConfig) {
