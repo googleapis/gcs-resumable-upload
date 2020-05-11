@@ -27,6 +27,8 @@ const TERMINATED_UPLOAD_STATUS_CODE = 410;
 const RESUMABLE_INCOMPLETE_STATUS_CODE = 308;
 const RETRY_LIMIT = 5;
 
+export const PROTOCOL_REGEX = /^(\w*):\/\//;
+
 export interface ErrorWithCode extends Error {
   code: number;
 }
@@ -184,6 +186,7 @@ export class Upload extends Pumpify {
   bucket: string;
   file: string;
   apiEndpoint: string;
+  baseURI: string;
   authConfig?: {scopes?: string[]};
   authClient: GoogleAuth;
   cacheKey: string;
@@ -208,10 +211,6 @@ export class Upload extends Pumpify {
   private bufferStream?: PassThrough;
   private offsetStream?: PassThrough;
 
-  private get baseURI(): string {
-    return `${this.apiEndpoint}/upload/storage/v1/b`;
-  }
-
   constructor(cfg: UploadConfig) {
     super();
     streamEvents(this);
@@ -228,8 +227,11 @@ export class Upload extends Pumpify {
     ];
     this.authClient = cfg.authClient || new GoogleAuth(cfg.authConfig);
 
-    this.apiEndpoint =
-      sanitize(cfg.apiEndpoint) || 'https://storage.googleapis.com';
+    this.apiEndpoint = 'https://storage.googleapis.com';
+    if (cfg.apiEndpoint) {
+      this.apiEndpoint = this.sanitizeEndpoint(cfg.apiEndpoint);
+    }
+    this.baseURI = `${this.apiEndpoint}/upload/storage/v1/b`;
     this.bucket = cfg.bucket;
 
     const cacheKeyElements = [cfg.bucket, cfg.file];
@@ -627,14 +629,17 @@ export class Upload extends Pumpify {
     this.emit('response', resp);
     return true;
   }
-}
 
-/*
- * Prepend protocol to url if not present.
- */
-const sanitize = (url: string | undefined): string | void => {
-  if (url) return url.match(/^https?:\/\//) ? url : `https://${url}`;
-};
+  /*
+   * Prepare user-defined API endpoint for compatibility with our API.
+   */
+  private sanitizeEndpoint(url: string) {
+    if (!PROTOCOL_REGEX.test(url)) {
+      url = `https://${url}`;
+    }
+    return url.replace(/\/+$/, ''); // Remove trailing slashes
+  }
+}
 
 export function upload(cfg: UploadConfig) {
   return new Upload(cfg);

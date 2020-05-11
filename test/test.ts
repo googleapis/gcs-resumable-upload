@@ -26,7 +26,7 @@ import {PassThrough, Stream} from 'stream';
 
 import assertRejects = require('assert-rejects');
 
-import {CreateUriCallback} from '../src';
+import {CreateUriCallback, PROTOCOL_REGEX} from '../src';
 import {GaxiosOptions, GaxiosError, GaxiosResponse} from 'gaxios';
 
 nock.disableNetConnect();
@@ -1274,6 +1274,54 @@ describe('gcs-resumable-upload', () => {
       it('should return true', () => {
         assert.strictEqual(up.onResponse(RESP), true);
       });
+    });
+  });
+
+  describe('PROTOCOL_REGEX', () => {
+    it('should match a protocol', () => {
+      const urls = [
+        {input: 'http://www.hi.com', match: 'http'},
+        {input: 'mysite://www.hi.com', match: 'mysite'},
+        {input: 'www.hi.com', match: null},
+      ];
+
+      for (const url of urls) {
+        assert.strictEqual(
+          url.input.match(PROTOCOL_REGEX) &&
+            url.input.match(PROTOCOL_REGEX)![1],
+          url.match
+        );
+      }
+    });
+  });
+
+  describe('#sanitizeEndpoint', () => {
+    const USER_DEFINED_SHORT_API_ENDPOINT = 'myapi.com:8080';
+    const USER_DEFINED_PROTOCOL = 'myproto';
+    const USER_DEFINED_FULL_API_ENDPOINT = `${USER_DEFINED_PROTOCOL}://myapi.com:8080`;
+
+    it('should default protocol to https', () => {
+      const endpoint = up.sanitizeEndpoint(USER_DEFINED_SHORT_API_ENDPOINT);
+      assert.strictEqual(endpoint.match(PROTOCOL_REGEX)![1], 'https');
+    });
+
+    it('should not override protocol', () => {
+      const endpoint = up.sanitizeEndpoint(USER_DEFINED_FULL_API_ENDPOINT);
+      assert.strictEqual(
+        endpoint.match(PROTOCOL_REGEX)![1],
+        USER_DEFINED_PROTOCOL
+      );
+    });
+
+    it('should remove trailing slashes from URL', () => {
+      const endpointsWithTrailingSlashes = [
+        `${USER_DEFINED_FULL_API_ENDPOINT}/`,
+        `${USER_DEFINED_FULL_API_ENDPOINT}//`,
+      ];
+      for (const endpointWithTrailingSlashes of endpointsWithTrailingSlashes) {
+        const endpoint = up.sanitizeEndpoint(endpointWithTrailingSlashes);
+        assert.strictEqual(endpoint.endsWith('/'), false);
+      }
     });
   });
 });
