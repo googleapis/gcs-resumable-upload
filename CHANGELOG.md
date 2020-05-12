@@ -4,6 +4,34 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+## [3.0.0](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.3.3...v3.0.0) (2020-05-12)
+
+
+### ⚠ BREAKING CHANGES
+
+* **dep:** upgrade gts 2.0.0/drop Node 8 (#329)
+* drop support for Node 8 (see: https://github.com/googleapis/gcs-resumable-upload/pull/330) (#333)
+
+### Features
+
+* allow user-specified protocol for options.apiEndpoint ([#349](https://www.github.com/googleapis/gcs-resumable-upload/issues/349)) ([47f76d0](https://www.github.com/googleapis/gcs-resumable-upload/commit/47f76d0ac189d70341410dc5fc52374681ad15e9))
+
+
+### Bug Fixes
+
+* **deps:** update dependency gaxios to v3 ([#325](https://www.github.com/googleapis/gcs-resumable-upload/issues/325)) ([584ea71](https://www.github.com/googleapis/gcs-resumable-upload/commit/584ea7109d1af161af47785e48ca2498597db2e8))
+* **deps:** update dependency google-auth-library to v6 ([#327](https://www.github.com/googleapis/gcs-resumable-upload/issues/327)) ([609bf9a](https://www.github.com/googleapis/gcs-resumable-upload/commit/609bf9aeda5c40bfedefa0a7b934173014ea3d39))
+
+
+### Miscellaneous Chores
+
+* **dep:** upgrade gts 2.0.0/drop Node 8 ([#329](https://www.github.com/googleapis/gcs-resumable-upload/issues/329)) ([f69a184](https://www.github.com/googleapis/gcs-resumable-upload/commit/f69a18494646206fb634b2400ec21348b690d78e))
+
+
+### Build System
+
+* drop support for Node 8 (see: https://github.com/googleapis/gcs-resumable-upload/pull/330) ([#333](https://www.github.com/googleapis/gcs-resumable-upload/issues/333)) ([165cd3b](https://www.github.com/googleapis/gcs-resumable-upload/commit/165cd3bdde1c3d9988dcd7349710da23545d68c3)), closes [#330](https://www.github.com/googleapis/gcs-resumable-upload/issues/330)
+
 ### [2.3.3](https://www.github.com/googleapis/gcs-resumable-upload/compare/v2.3.2...v2.3.3) (2020-03-06)
 
 
