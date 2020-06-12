@@ -30,7 +30,7 @@ If somewhere during the operation, you lose your connection to the internet or y
 
 ## How it works
 
-This module stores a file using [ConfigStore](http://gitnpm.com/configstore) that is written to when you first start an upload. It is aliased by the file name you are uploading to and holds the first 16kb chunk of data* as well as the unique resumable upload URI. ([Resumable uploads are complicated](https://cloud.google.com/storage/docs/json_api/v1/how-tos/upload#resumable))
+This module stores a file using [ConfigStore](https://www.npmjs.com/package/configstore) that is written to when you first start an upload. It is aliased by the file name you are uploading to and holds the first 16kb chunk of data* as well as the unique resumable upload URI. ([Resumable uploads are complicated](https://cloud.google.com/storage/docs/json_api/v1/how-tos/upload#resumable))
 
 If your upload was interrupted, next time you run the code, we ask the API how much data it has already, then simply dump all of the data coming through the pipe that it already has.
 
@@ -40,7 +40,7 @@ After the upload completes, the entry in the config file is removed. Done!
 
 ## Authentication
 
-Oh, right. This module uses [google-auth-library](http://gitnpm.com/google-auth-library) and accepts all of the configuration that module does to strike up a connection as `config.authConfig`. See [`authConfig`](https://github.com/google/google-auth-library-nodejs/#choosing-the-correct-credential-type-automatically).
+Oh, right. This module uses [google-auth-library](https://www.npmjs.com/package/google-auth-library) and accepts all of the configuration that module does to strike up a connection as `config.authConfig`. See [`authConfig`](https://github.com/google/google-auth-library-nodejs/#choosing-the-correct-credential-type-automatically).
 
 ## API
 
@@ -49,7 +49,7 @@ const {gcsResumableUpload} = require('gcs-resumable-upload')
 const upload = gcsResumableUpload(config)
 ```
 
-`upload` is an instance of [`Duplexify`](http://gitnpm.com/duplexify).
+`upload` is an instance of [`Duplexify`](https://www.npmjs.com/package/duplexify).
 
 ---
 <a name="methods"></a>
@@ -88,10 +88,10 @@ Configuration object.
 
 ##### config.authClient
 
-- Type: [`GoogleAuth`](http://gitnpm.com/google-auth-library)
+- Type: [`GoogleAuth`](https://www.npmjs.com/package/google-auth-library)
 - *Optional*
 
-If you want to re-use an auth client from [google-auth-library](http://gitnpm.com/google-auth-library), pass an instance here.
+If you want to re-use an auth client from [google-auth-library](https://www.npmjs.com/package/google-auth-library), pass an instance here.
 
 ##### config.authConfig
 
