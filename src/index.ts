@@ -97,10 +97,10 @@ export interface UploadConfig {
 
   /**
    * For each API request we send, you may specify custom request options that
-   * we'll add onto the request. The request options follow the node-fetch API:
-   * https://github.com/node-fetch/node-fetch#options.
+   * we'll add onto the request. The request options follow the gaxios API:
+   * https://github.com/googleapis/gaxios#request-options.
    */
-  customRequestOptions?: object;
+  customRequestOptions?: GaxiosOptions;
 
   /**
    * This will cause the upload to fail if the current generation of the remote
@@ -198,7 +198,7 @@ export class Upload extends Pumpify {
   authConfig?: {scopes?: string[]};
   authClient: GoogleAuth;
   cacheKey: string;
-  customRequestOptions: object;
+  customRequestOptions: GaxiosOptions;
   generation?: number;
   key?: string | Buffer;
   kmsKeyName?: string;

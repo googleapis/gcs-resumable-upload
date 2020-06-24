@@ -119,7 +119,7 @@ Where the gcs-resumable-upload configuration file should be stored on your syste
 - Type: `object`
 - *Optional*
 
-For each API request we send, you may specify custom request options that we'll add onto the request. The request options follow the node-fetch API: https://github.com/node-fetch/node-fetch#options.
+For each API request we send, you may specify custom request options that we'll add onto the request. The request options follow the gaxios API: https://github.com/googleapis/gaxios#request-options.
 
 For example, to set your own HTTP headers:
 
