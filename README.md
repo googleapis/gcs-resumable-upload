@@ -114,6 +114,25 @@ The name of the destination bucket.
 
 Where the gcs-resumable-upload configuration file should be stored on your system. This maps to the [configstore option by the same name](https://github.com/yeoman/configstore/tree/0df1ec950d952b1f0dfb39ce22af8e505dffc71a#configpath).
 
+##### config.customRequestOptions
+
+- Type: `object`
+- *Optional*
+
+For each API request we send, you may specify custom request options that we'll add onto the request. The request options follow the node-fetch API: https://github.com/node-fetch/node-fetch#options.
+
+For example, to set your own HTTP headers:
+
+```js
+const stream = upload({
+  customRequestOptions: {
+    headers: {
+      'X-My-Header': 'My custom value',
+    },
+  },
+})
+```
+
 ##### config.file
 
 - Type: `string`

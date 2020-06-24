@@ -44,6 +44,7 @@
   "dependencies": {
     "abort-controller": "^3.0.0",
     "configstore": "^5.0.0",
+    "extend": "^3.0.2",
     "gaxios": "^3.0.0",
     "google-auth-library": "^6.0.0",
     "pumpify": "^2.0.0",
