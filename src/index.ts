@@ -17,7 +17,7 @@
 import AbortController from 'abort-controller';
 import * as ConfigStore from 'configstore';
 import {createHash} from 'crypto';
-const extend = require('extend');
+import * as extend from 'extend';
 import {GaxiosOptions, GaxiosPromise, GaxiosResponse} from 'gaxios';
 import {GoogleAuth, GoogleAuthOptions} from 'google-auth-library';
 import * as Pumpify from 'pumpify';
@@ -562,7 +562,12 @@ export class Upload extends Pumpify {
       );
     };
 
-    const combinedReqOpts = extend(true, {}, this.customRequestOptions, reqOpts);
+    const combinedReqOpts = extend(
+      true,
+      {},
+      this.customRequestOptions,
+      reqOpts
+    );
     const res = await this.authClient.request(combinedReqOpts);
     if (res.data && res.data.error) {
       throw res.data.error;
@@ -581,7 +586,12 @@ export class Upload extends Pumpify {
     reqOpts.signal = controller.signal;
     reqOpts.validateStatus = () => true;
 
-    const combinedReqOpts = extend(true, {}, this.customRequestOptions, reqOpts);
+    const combinedReqOpts = extend(
+      true,
+      {},
+      this.customRequestOptions,
+      reqOpts
+    );
     const res = await this.authClient.request(combinedReqOpts);
     this.onResponse(res);
     return res;

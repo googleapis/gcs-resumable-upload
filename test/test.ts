@@ -936,7 +936,8 @@ describe('gcs-resumable-upload', () => {
       mockAuthorizeRequest();
       up.authClient = {
         request: (reqOpts: GaxiosOptions) => {
-          const customHeader = reqOpts.headers && reqOpts.headers['X-My-Header'];
+          const customHeader =
+            reqOpts.headers && reqOpts.headers['X-My-Header'];
           assert.strictEqual(customHeader, 'My custom value');
           setImmediate(done);
           return {};
@@ -1077,7 +1078,8 @@ describe('gcs-resumable-upload', () => {
       mockAuthorizeRequest();
       up.authClient = {
         request: (reqOpts: GaxiosOptions) => {
-          const customHeader = reqOpts.headers && reqOpts.headers['X-My-Header'];
+          const customHeader =
+            reqOpts.headers && reqOpts.headers['X-My-Header'];
           assert.strictEqual(customHeader, 'My custom value');
           setImmediate(done);
           return {};
