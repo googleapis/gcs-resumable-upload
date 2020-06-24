@@ -76,6 +76,7 @@ describe('gcs-resumable-upload', () => {
   let up: any;
 
   const BUCKET = 'bucket-name';
+  const CUSTOM_REQUEST_OPTIONS = {headers: {'X-My-Header': 'My custom value'}};
   const FILE = 'file-name';
   const GENERATION = Date.now();
   const METADATA = {contentLength: 1024, contentType: 'application/json'};
@@ -101,6 +102,7 @@ describe('gcs-resumable-upload', () => {
     up = upload({
       bucket: BUCKET,
       file: FILE,
+      customRequestOptions: CUSTOM_REQUEST_OPTIONS,
       generation: GENERATION,
       metadata: METADATA,
       origin: ORIGIN,
@@ -134,6 +136,15 @@ describe('gcs-resumable-upload', () => {
 
     it('should localize the cacheKey', () => {
       assert.strictEqual(up.cacheKey, [BUCKET, FILE, GENERATION].join('/'));
+    });
+
+    it('should localize customRequestOptions', () => {
+      assert.strictEqual(up.customRequestOptions, CUSTOM_REQUEST_OPTIONS);
+    });
+
+    it('should default customRequestOptions to empty object', () => {
+      const up = upload({bucket: BUCKET, file: FILE});
+      assert.deepStrictEqual(up.customRequestOptions, {});
     });
 
     it('should include ZERO generation value in the cacheKey', () => {
@@ -912,6 +923,29 @@ describe('gcs-resumable-upload', () => {
       assert.deepStrictEqual(res.headers, {});
     });
 
+    it('should combine customRequestOptions', done => {
+      const up = upload({
+        bucket: BUCKET,
+        file: FILE,
+        customRequestOptions: {
+          headers: {
+            'X-My-Header': 'My custom value',
+          },
+        },
+      });
+      mockAuthorizeRequest();
+      up.authClient = {
+        request: (reqOpts: GaxiosOptions) => {
+          const customHeader =
+            reqOpts.headers && reqOpts.headers['X-My-Header'];
+          assert.strictEqual(customHeader, 'My custom value');
+          setImmediate(done);
+          return {};
+        },
+      };
+      up.makeRequest(REQ_OPTS);
+    });
+
     it('should execute the callback with a body error & response', async () => {
       const error = new GaxiosError('Error message', {}, {
         config: {},
@@ -1026,6 +1060,29 @@ describe('gcs-resumable-upload', () => {
         request: (reqOpts: GaxiosOptions) => {
           assert.strictEqual(reqOpts.validateStatus!(0), true);
           done();
+        },
+      };
+      up.makeRequestStream(REQ_OPTS);
+    });
+
+    it('should combine customRequestOptions', done => {
+      const up = upload({
+        bucket: BUCKET,
+        file: FILE,
+        customRequestOptions: {
+          headers: {
+            'X-My-Header': 'My custom value',
+          },
+        },
+      });
+      mockAuthorizeRequest();
+      up.authClient = {
+        request: (reqOpts: GaxiosOptions) => {
+          const customHeader =
+            reqOpts.headers && reqOpts.headers['X-My-Header'];
+          assert.strictEqual(customHeader, 'My custom value');
+          setImmediate(done);
+          return {};
         },
       };
       up.makeRequestStream(REQ_OPTS);
