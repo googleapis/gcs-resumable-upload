@@ -17,6 +17,7 @@
 import AbortController from 'abort-controller';
 import * as ConfigStore from 'configstore';
 import {createHash} from 'crypto';
+import * as extend from 'extend';
 import {GaxiosOptions, GaxiosPromise, GaxiosResponse} from 'gaxios';
 import {GoogleAuth, GoogleAuthOptions} from 'google-auth-library';
 import * as Pumpify from 'pumpify';
@@ -93,6 +94,13 @@ export interface UploadConfig {
    * system. This maps to the configstore option by the same name.
    */
   configPath?: string;
+
+  /**
+   * For each API request we send, you may specify custom request options that
+   * we'll add onto the request. The request options follow the gaxios API:
+   * https://github.com/googleapis/gaxios#request-options.
+   */
+  customRequestOptions?: GaxiosOptions;
 
   /**
    * This will cause the upload to fail if the current generation of the remote
@@ -190,6 +198,7 @@ export class Upload extends Pumpify {
   authConfig?: {scopes?: string[]};
   authClient: GoogleAuth;
   cacheKey: string;
+  customRequestOptions: GaxiosOptions;
   generation?: number;
   key?: string | Buffer;
   kmsKeyName?: string;
@@ -240,6 +249,7 @@ export class Upload extends Pumpify {
     }
     this.cacheKey = cacheKeyElements.join('/');
 
+    this.customRequestOptions = cfg.customRequestOptions || {};
     this.file = cfg.file;
     this.generation = cfg.generation;
     this.kmsKeyName = cfg.kmsKeyName;
@@ -552,7 +562,13 @@ export class Upload extends Pumpify {
       );
     };
 
-    const res = await this.authClient.request(reqOpts);
+    const combinedReqOpts = extend(
+      true,
+      {},
+      this.customRequestOptions,
+      reqOpts
+    );
+    const res = await this.authClient.request(combinedReqOpts);
     if (res.data && res.data.error) {
       throw res.data.error;
     }
@@ -570,7 +586,13 @@ export class Upload extends Pumpify {
     reqOpts.signal = controller.signal;
     reqOpts.validateStatus = () => true;
 
-    const res = await this.authClient.request(reqOpts);
+    const combinedReqOpts = extend(
+      true,
+      {},
+      this.customRequestOptions,
+      reqOpts
+    );
+    const res = await this.authClient.request(combinedReqOpts);
     this.onResponse(res);
     return res;
   }

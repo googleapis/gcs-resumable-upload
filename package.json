@@ -44,6 +44,7 @@
   "dependencies": {
     "abort-controller": "^3.0.0",
     "configstore": "^5.0.0",
+    "extend": "^3.0.2",
     "gaxios": "^3.0.0",
     "google-auth-library": "^6.0.0",
     "pumpify": "^2.0.0",
@@ -52,6 +53,7 @@
   "devDependencies": {
     "@compodoc/compodoc": "^1.1.7",
     "@types/configstore": "^4.0.0",
+    "@types/extend": "^3.0.1",
     "@types/is-stream": "^1.1.0",
     "@types/mocha": "^7.0.0",
     "@types/mockery": "^1.4.29",
