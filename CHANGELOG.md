@@ -4,6 +4,13 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+### [3.1.1](https://www.github.com/googleapis/gcs-resumable-upload/compare/v3.1.0...v3.1.1) (2020-07-09)
+
+
+### Bug Fixes
+
+* typeo in nodejs .gitattribute ([#362](https://www.github.com/googleapis/gcs-resumable-upload/issues/362)) ([bd44456](https://www.github.com/googleapis/gcs-resumable-upload/commit/bd44456b92941237ac824dbb5365e704e4a1faea))
+
 ## [3.1.0](https://www.github.com/googleapis/gcs-resumable-upload/compare/v3.0.0...v3.1.0) (2020-06-24)
 
 
