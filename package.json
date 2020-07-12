@@ -55,7 +55,7 @@
     "@types/configstore": "^4.0.0",
     "@types/extend": "^3.0.1",
     "@types/is-stream": "^1.1.0",
-    "@types/mocha": "^7.0.0",
+    "@types/mocha": "^8.0.0",
     "@types/mockery": "^1.4.29",
     "@types/nock": "^10.0.0",
     "@types/node": "^10.3.0",
