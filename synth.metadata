@@ -4,7 +4,7 @@
       "git": {
         "name": ".",
         "remote": "https://github.com/googleapis/gcs-resumable-upload.git",
-        "sha": "82b6261cdbe68b1a58cfd238304b211b71031b99"
+        "sha": "af8eba5783e6f834d375d6d0d53344e6ba53e147"
       }
     },
     {
