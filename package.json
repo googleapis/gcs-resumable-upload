@@ -23,7 +23,9 @@
     "docs-test": "linkinator docs",
     "predocs-test": "npm run docs",
     "prelint": "cd samples; npm link ../; npm install",
-    "precompile": "gts clean"
+    "precompile": "gts clean",
+    "api-extractor": "api-extractor run --local",
+    "api-documenter": "api-documenter yaml --input-folder=temp"
   },
   "keywords": [
     "google",
@@ -71,6 +73,8 @@
     "mockery": "^2.1.0",
     "nock": "^13.0.0",
     "sinon": "^9.0.0",
-    "typescript": "^3.8.3"
+    "typescript": "^3.8.3",
+    "@microsoft/api-documenter": "^7.8.10",
+    "@microsoft/api-extractor": "^7.8.10"
   }
 }
