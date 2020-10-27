@@ -4,14 +4,14 @@
       "git": {
         "name": ".",
         "remote": "https://github.com/googleapis/gcs-resumable-upload.git",
-        "sha": "09432df732481c93fb2aeac0559a89a84de3d718"
+        "sha": "05f3af2820590551a5212df67130eb17e144d9a2"
       }
     },
     {
       "git": {
         "name": "synthtool",
         "remote": "https://github.com/googleapis/synthtool.git",
-        "sha": "901ddd44e9ef7887ee681b9183bbdea99437fdcc"
+        "sha": "89c849ba5013e45e8fb688b138f33c2ec6083dc5"
       }
     }
   ],
