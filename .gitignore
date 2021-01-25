@@ -8,3 +8,4 @@ __pycache__
 .coverage
 .nyc_output
 docs/
+.idea
