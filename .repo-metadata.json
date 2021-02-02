@@ -4,5 +4,6 @@
   "release_level": "ga",
   "language": "nodejs",
   "repo": "googleapis/gcs-resumable-upload",
-  "distribution_name": "gcs-resumable-upload"
+  "distribution_name": "gcs-resumable-upload",
+  "codeowner_team": "@googleapis/storage-dpe"
 }
