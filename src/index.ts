@@ -656,6 +656,16 @@ export class Upload extends Pumpify {
 }
 
 export function upload(cfg: UploadConfig) {
+  // If the user has specified a STORAGE_EMULAT_RHOST
+  if (process.env.STORAGE_EMULATOR_HOST) {
+    // then we stub out auth using a fake private key
+    cfg.authClient = new JWT({
+      key: "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDDgeS/97CpIPJS\nML2aeeDtzy7UY4zTqvoob81vpQ7DXqRHc+GN0tFVVDrlpTsc31PV7M5uj5+AfKct\n9rWihXYsBQ4rGDs6JLXkMbEIpvwkqb9On1jAsDlM5VS951cccJidca5n1ZEexIbd\nakCPwM93wsjQdhGJgfsy5nRzqc6v3zeuKTLHp4GnuDy2sJ2e0H3F9fvLehusWnxn\n5FWlkHmp3om/qK98W4RiqqmWom025rOJPQ2OBKyT0jvxQ984flnZvAathmtjCj8p\nNWHMDLnChIy27pq9YcBzYCd6Euna0CX18yrmVtK52UTB3tjb7lt+Lg4XSSbVmUX5\nEP0BxaYLAgMBAAECggEAQ0tMj38UQcLjZcL9IFTfRTvRJK33ZUwuuwhwsAMiZ8EF\nzspmUsjD4RkTBMSw6ik81B+klo29Gx7M9Jc8weoqWNCMpey7RjIooZkxFIdVttDu\n1oMmq3x83Kj7WDpu0402GstserUaNHr06PWPr2twfgp/0LEzLB+fdU+5ua4zRHl3\n4Lvbx4RlhPS/Mep3cot9HM5S1XARNTNm6EQXP4qGyLD6Ec/iRrqc3hjB0UAfLc7v\ndHmk+tfwXTC44K7jLrAjsGNPfOYO9M087RkoEXuA9MiFj0nKv0uzC5SBrH9gnWKU\nJksYuGk2KtZqfoe96QfLixHuY0Xnaz2IsxdjhnGd0QKBgQD5w4s05i4QZLlqDT0l\nsXWnbXB47G+xmNMjxzCEV5nlfDm1dSrA1B51g4xlP8NR7X4yRU4nkCJoHPbSD8Kf\nthG6uJTjpbFn91wh/VZSi91zgwbvtKX7cMga4wiabszwWpjVnsJtxBKWcTeYvCgl\nvTiP7FA2rcfavaT/4rIefIfFNQKBgQDIY4zN4jLdlFDe+pjKJafUXigjwCmXwETd\nhdFaGpRjQJk+wP5lg8EXZci5BlfTyrZF/MP2Nu8OC/EQ2NwmuqcP7YdIbtYgjcql\nsLdZZQyt21Wj0fgR7f5q8g7QvOlEakb1FqvWCcEnSdPuSXYwjsqf5A78mVMONVvX\nUZYPusVmPwKBgQCyfG1UxlGQ4YonIYLbFvBPT8QahkxjjCUG4mfni3qtJpNO+4Yr\n+uoxbGq+SEzalW+jmSd62mPcJyazgxPAcqpE13d/H3+iHoE2wQYZQ15kF/SzBFPB\nVh2KKUiSpC/Ma9Hghu3G52GpJQtoGL5QCeML5wKDsLirtu7c9jH322JjKQKBgQCI\n/Eyn/cap5Jb4JzVFk0JMkeU8s0N7oosxKCZ6QwtHYkSgOoxt1wirtv/lRCnL9Zpu\n86D+coUvBAjSbHzq2NQVtlmxsVsdu/BZHhnouYRWYUcFCydbEmfGshxgo5OPGlvR\ndaMYWWi6M+T10zBBd4uai+uW0DWP0/gplHNR42rIPwKBgBfNEo6WWSl0hQQN54YJ\nn9pGZZweKBka+sRmsYZIWD5rp0Kcgi0j0GH3w1SOVMhmKV1gAM2l9xBgC5yqMvZ3\nNDaaS7BikTfCBlm9cUJ49XsMHxmA38nJi0rUnZqkDqjAJZgNwMZK5eW7Xf3JjRuR\ntiZwD2dJIbIXNdNWetbqAnSN\n-----END PRIVATE KEY-----\n"
+    });
+    // and set the apiEndpoint to the host (even though this may be redudant)
+    cfg.apiEndpoint = process.env.STORAGE_EMULATOR_HOST;
+  }
+
   return new Upload(cfg);
 }
 
