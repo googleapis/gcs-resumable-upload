@@ -656,7 +656,7 @@ export class Upload extends Pumpify {
 }
 
 export function upload(cfg: UploadConfig) {
-  // If the user has specified a STORAGE_EMULAT_RHOST
+  // If the user has specified a STORAGE_EMULATOR_HOST
   if (process.env.STORAGE_EMULATOR_HOST) {
     // then we stub out auth using a fake private key
     cfg.authClient = new JWT({
