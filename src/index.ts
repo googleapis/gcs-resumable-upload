@@ -11,7 +11,7 @@ import * as ConfigStore from 'configstore';
 import {createHash} from 'crypto';
 import * as extend from 'extend';
 import {GaxiosOptions, GaxiosPromise, GaxiosResponse} from 'gaxios';
-import {GoogleAuth, GoogleAuthOptions} from 'google-auth-library';
+import {GoogleAuth, GoogleAuthOptions, JWT} from 'google-auth-library';
 import * as Pumpify from 'pumpify';
 import {PassThrough, Transform} from 'stream';
 import * as streamEvents from 'stream-events';
