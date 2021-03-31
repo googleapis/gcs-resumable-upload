@@ -54,7 +54,7 @@
   },
   "devDependencies": {
     "@compodoc/compodoc": "^1.1.7",
-    "@types/configstore": "^4.0.0",
+    "@types/configstore": "^5.0.0",
     "@types/extend": "^3.0.1",
     "@types/is-stream": "^1.1.0",
     "@types/mocha": "^8.0.0",
