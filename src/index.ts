@@ -10,7 +10,8 @@ import AbortController from 'abort-controller';
 import * as ConfigStore from 'configstore';
 import {createHash} from 'crypto';
 import * as extend from 'extend';
-import {GaxiosOptions, GaxiosPromise, GaxiosResponse} from 'gaxios';
+import {Gaxios, GaxiosOptions, GaxiosPromise, GaxiosResponse} from 'gaxios';
+import * as gaxios from 'gaxios';
 import {GoogleAuth, GoogleAuthOptions} from 'google-auth-library';
 import * as Pumpify from 'pumpify';
 import {PassThrough, Transform} from 'stream';
@@ -79,7 +80,7 @@ export interface UploadConfig {
    * If you want to re-use an auth client from google-auto-auth, pass an
    * instance here.
    */
-  authClient?: GoogleAuth;
+  authClient?: GoogleAuth | Gaxios;
 
   /**
    * Where the gcs-resumable-upload configuration file should be stored on your
@@ -188,7 +189,7 @@ export class Upload extends Pumpify {
   apiEndpoint: string;
   baseURI: string;
   authConfig?: {scopes?: string[]};
-  authClient: GoogleAuth;
+  authClient: GoogleAuth | any;
   cacheKey: string;
   customRequestOptions: GaxiosOptions;
   generation?: number;
@@ -228,10 +229,15 @@ export class Upload extends Pumpify {
     ];
     this.authClient = cfg.authClient || new GoogleAuth(cfg.authConfig);
 
-    this.apiEndpoint = 'https://storage.googleapis.com';
+    const STORAGE_DEFAULT_ENDPOINT = 'https://storage.googleapis.com';
+    this.apiEndpoint = STORAGE_DEFAULT_ENDPOINT;
     if (cfg.apiEndpoint) {
       this.apiEndpoint = this.sanitizeEndpoint(cfg.apiEndpoint);
+      if (cfg.apiEndpoint !== STORAGE_DEFAULT_ENDPOINT) {
+        this.authClient = gaxios;
+      }
     }
+
     this.baseURI = `${this.apiEndpoint}/upload/storage/v1/b`;
     this.bucket = cfg.bucket;
 
