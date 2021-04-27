@@ -874,9 +874,7 @@ describe('gcs-resumable-upload', () => {
     });
 
     it('should set userProject', async () => {
-      const scopes = [
-        nock(REQ_OPTS.url!).get(queryPath).reply(200, {}),
-      ];
+      const scopes = [nock(REQ_OPTS.url!).get(queryPath).reply(200, {})];
       const res: GaxiosResponse = await up.makeRequest(REQ_OPTS);
       assert.strictEqual(res.config.url, REQ_OPTS.url + queryPath.slice(1));
       scopes.forEach(x => x.done());
