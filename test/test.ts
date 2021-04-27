@@ -875,7 +875,6 @@ describe('gcs-resumable-upload', () => {
 
     it('should set userProject', async () => {
       const scopes = [
-        mockAuthorizeRequest(),
         nock(REQ_OPTS.url!).get(queryPath).reply(200, {}),
       ];
       const res: GaxiosResponse = await up.makeRequest(REQ_OPTS);
@@ -906,7 +905,6 @@ describe('gcs-resumable-upload', () => {
 
     it('should make the correct request', async () => {
       const scopes = [
-        mockAuthorizeRequest(),
         nock(REQ_OPTS.url!).get(queryPath).reply(200, undefined, {}),
       ];
       const res = await up.makeRequest(REQ_OPTS);
