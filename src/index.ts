@@ -10,7 +10,7 @@ import AbortController from 'abort-controller';
 import * as ConfigStore from 'configstore';
 import {createHash} from 'crypto';
 import * as extend from 'extend';
-import {Gaxios, GaxiosOptions, GaxiosPromise, GaxiosResponse} from 'gaxios';
+import {GaxiosOptions, GaxiosPromise, GaxiosResponse} from 'gaxios';
 import * as gaxios from 'gaxios';
 import {GoogleAuth, GoogleAuthOptions} from 'google-auth-library';
 import * as Pumpify from 'pumpify';
@@ -83,8 +83,14 @@ export interface UploadConfig {
   /**
    * If you want to re-use an auth client from google-auto-auth, pass an
    * instance here.
+   * Defaults to GoogleAuth and gets automatically overriden if an
+   * emulator context is detected.
    */
-  authClient?: GoogleAuth | Gaxios;
+  authClient?: {
+    request: <T = any>(
+      opts: GaxiosOptions
+    ) => Promise<GaxiosResponse<T>> | GaxiosPromise<T>;
+  };
 
   /**
    * Where the gcs-resumable-upload configuration file should be stored on your
@@ -193,7 +199,15 @@ export class Upload extends Pumpify {
   apiEndpoint: string;
   baseURI: string;
   authConfig?: {scopes?: string[]};
-  authClient: GoogleAuth | any;
+  /*
+   * Defaults to GoogleAuth and gets automatically overriden if an
+   * emulator context is detected.
+   */
+  authClient: {
+    request: <T = any>(
+      opts: GaxiosOptions
+    ) => Promise<GaxiosResponse<T>> | GaxiosPromise<T>;
+  };
   cacheKey: string;
   customRequestOptions: GaxiosOptions;
   generation?: number;

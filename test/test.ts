@@ -915,6 +915,29 @@ describe('gcs-resumable-upload', () => {
       assert.deepStrictEqual(res.headers, {});
     });
 
+    it('should bypass authentication if emulator context detected', async () => {
+      up = upload({
+        bucket: BUCKET,
+        file: FILE,
+        customRequestOptions: CUSTOM_REQUEST_OPTIONS,
+        generation: GENERATION,
+        metadata: METADATA,
+        origin: ORIGIN,
+        params: PARAMS,
+        predefinedAcl: PREDEFINED_ACL,
+        userProject: USER_PROJECT,
+        authConfig: {keyFile},
+        apiEndpoint: 'https://fake.endpoint.com',
+      });
+      const scopes = [
+        nock(REQ_OPTS.url!).get(queryPath).reply(200, undefined, {}),
+      ];
+      const res = await up.makeRequest(REQ_OPTS);
+      scopes.forEach(x => x.done());
+      assert.strictEqual(res.config.url, REQ_OPTS.url + queryPath.slice(1));
+      assert.deepStrictEqual(res.headers, {});
+    });
+
     it('should combine customRequestOptions', done => {
       const up = upload({
         bucket: BUCKET,
