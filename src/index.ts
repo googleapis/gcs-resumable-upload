@@ -58,6 +58,9 @@ export interface UploadConfig {
   /**
    * The API endpoint used for the request.
    * Defaults to `storage.googleapis.com`.
+   * **Warning**:
+   * If this value does not match the pattern *.googleapis.com,
+   * an emulator context will be assumed and authentication will be bypassed.
    */
   apiEndpoint?: string;
 
@@ -229,11 +232,10 @@ export class Upload extends Pumpify {
     ];
     this.authClient = cfg.authClient || new GoogleAuth(cfg.authConfig);
 
-    const STORAGE_DEFAULT_ENDPOINT = 'https://storage.googleapis.com';
-    this.apiEndpoint = STORAGE_DEFAULT_ENDPOINT;
+    this.apiEndpoint = 'https://storage.googleapis.com';
     if (cfg.apiEndpoint) {
       this.apiEndpoint = this.sanitizeEndpoint(cfg.apiEndpoint);
-      if (cfg.apiEndpoint !== STORAGE_DEFAULT_ENDPOINT) {
+      if (!/.*\.googleapis\.com/.test(cfg.apiEndpoint)) {
         this.authClient = gaxios;
       }
     }
