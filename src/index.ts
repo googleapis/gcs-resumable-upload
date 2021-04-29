@@ -20,6 +20,7 @@ import * as streamEvents from 'stream-events';
 const TERMINATED_UPLOAD_STATUS_CODE = 410;
 const RESUMABLE_INCOMPLETE_STATUS_CODE = 308;
 const RETRY_LIMIT = 5;
+const DEFAULT_API_ENDPOINT_REGEX = /.*\.googleapis\.com/;
 
 export const PROTOCOL_REGEX = /^(\w*):\/\//;
 
@@ -235,7 +236,7 @@ export class Upload extends Pumpify {
     this.apiEndpoint = 'https://storage.googleapis.com';
     if (cfg.apiEndpoint) {
       this.apiEndpoint = this.sanitizeEndpoint(cfg.apiEndpoint);
-      if (!/.*\.googleapis\.com/.test(cfg.apiEndpoint)) {
+      if (!DEFAULT_API_ENDPOINT_REGEX.test(cfg.apiEndpoint)) {
         this.authClient = gaxios;
       }
     }
