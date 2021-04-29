@@ -83,7 +83,7 @@ export interface UploadConfig {
   /**
    * If you want to re-use an auth client from google-auto-auth, pass an
    * instance here.
-   * Defaults to GoogleAuth and gets automatically overriden if an
+   * Defaults to GoogleAuth and gets automatically overridden if an
    * emulator context is detected.
    */
   authClient?: {
@@ -200,7 +200,7 @@ export class Upload extends Pumpify {
   baseURI: string;
   authConfig?: {scopes?: string[]};
   /*
-   * Defaults to GoogleAuth and gets automatically overriden if an
+   * Defaults to GoogleAuth and gets automatically overridden if an
    * emulator context is detected.
    */
   authClient: {
