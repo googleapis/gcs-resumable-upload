@@ -11,6 +11,7 @@ import * as ConfigStore from 'configstore';
 import {createHash} from 'crypto';
 import * as extend from 'extend';
 import {GaxiosOptions, GaxiosPromise, GaxiosResponse} from 'gaxios';
+import * as gaxios from 'gaxios';
 import {GoogleAuth, GoogleAuthOptions} from 'google-auth-library';
 import * as Pumpify from 'pumpify';
 import {PassThrough, Transform} from 'stream';
@@ -19,6 +20,7 @@ import * as streamEvents from 'stream-events';
 const TERMINATED_UPLOAD_STATUS_CODE = 410;
 const RESUMABLE_INCOMPLETE_STATUS_CODE = 308;
 const RETRY_LIMIT = 5;
+const DEFAULT_API_ENDPOINT_REGEX = /.*\.googleapis\.com/;
 
 export const PROTOCOL_REGEX = /^(\w*):\/\//;
 
@@ -57,6 +59,9 @@ export interface UploadConfig {
   /**
    * The API endpoint used for the request.
    * Defaults to `storage.googleapis.com`.
+   * **Warning**:
+   * If this value does not match the pattern *.googleapis.com,
+   * an emulator context will be assumed and authentication will be bypassed.
    */
   apiEndpoint?: string;
 
@@ -78,8 +83,14 @@ export interface UploadConfig {
   /**
    * If you want to re-use an auth client from google-auto-auth, pass an
    * instance here.
+   * Defaults to GoogleAuth and gets automatically overridden if an
+   * emulator context is detected.
    */
-  authClient?: GoogleAuth;
+  authClient?: {
+    request: <T = any>(
+      opts: GaxiosOptions
+    ) => Promise<GaxiosResponse<T>> | GaxiosPromise<T>;
+  };
 
   /**
    * Where the gcs-resumable-upload configuration file should be stored on your
@@ -188,7 +199,15 @@ export class Upload extends Pumpify {
   apiEndpoint: string;
   baseURI: string;
   authConfig?: {scopes?: string[]};
-  authClient: GoogleAuth;
+  /*
+   * Defaults to GoogleAuth and gets automatically overridden if an
+   * emulator context is detected.
+   */
+  authClient: {
+    request: <T = any>(
+      opts: GaxiosOptions
+    ) => Promise<GaxiosResponse<T>> | GaxiosPromise<T>;
+  };
   cacheKey: string;
   customRequestOptions: GaxiosOptions;
   generation?: number;
@@ -231,7 +250,11 @@ export class Upload extends Pumpify {
     this.apiEndpoint = 'https://storage.googleapis.com';
     if (cfg.apiEndpoint) {
       this.apiEndpoint = this.sanitizeEndpoint(cfg.apiEndpoint);
+      if (!DEFAULT_API_ENDPOINT_REGEX.test(cfg.apiEndpoint)) {
+        this.authClient = gaxios;
+      }
     }
+
     this.baseURI = `${this.apiEndpoint}/upload/storage/v1/b`;
     this.bucket = cfg.bucket;
 
