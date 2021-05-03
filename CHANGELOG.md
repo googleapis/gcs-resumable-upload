@@ -4,6 +4,13 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+### [3.1.4](https://www.github.com/googleapis/gcs-resumable-upload/compare/v3.1.3...v3.1.4) (2021-05-03)
+
+
+### Bug Fixes
+
+* bypass auth when using emulator ([#416](https://www.github.com/googleapis/gcs-resumable-upload/issues/416)) ([9b9ecce](https://www.github.com/googleapis/gcs-resumable-upload/commit/9b9ecceb39ec46e4bb0dcf356e518c0b03d1c1ae))
+
 ### [3.1.3](https://www.github.com/googleapis/gcs-resumable-upload/compare/v3.1.2...v3.1.3) (2021-02-12)
 
 
