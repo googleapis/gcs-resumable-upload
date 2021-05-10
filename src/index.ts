@@ -347,9 +347,8 @@ export class Upload extends Pumpify {
     };
 
     if (metadata.contentLength) {
-      reqOpts.headers![
-        'X-Upload-Content-Length'
-      ] = metadata.contentLength.toString();
+      reqOpts.headers!['X-Upload-Content-Length'] =
+        metadata.contentLength.toString();
     }
 
     if (metadata.contentType) {
@@ -560,9 +559,8 @@ export class Upload extends Pumpify {
       reqOpts.headers = reqOpts.headers || {};
       reqOpts.headers['x-goog-encryption-algorithm'] = 'AES256';
       reqOpts.headers['x-goog-encryption-key'] = this.encryption.key.toString();
-      reqOpts.headers[
-        'x-goog-encryption-key-sha256'
-      ] = this.encryption.hash.toString();
+      reqOpts.headers['x-goog-encryption-key-sha256'] =
+        this.encryption.hash.toString();
     }
 
     if (this.userProject) {
