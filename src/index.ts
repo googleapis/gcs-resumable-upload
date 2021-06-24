@@ -310,10 +310,11 @@ export class Upload extends Pumpify {
       if (this.uri) {
         this.continueUploading();
       } else {
-        this.createURI(err => {
+        this.createURI((err, uri) => {
           if (err) {
             return this.destroy(err);
           }
+          this.set({uri});
           this.startUploading();
         });
       }
@@ -374,7 +375,6 @@ export class Upload extends Pumpify {
     const resp = await this.makeRequest(reqOpts);
     const uri = resp.headers.location;
     this.uri = uri;
-    this.set({uri});
     this.offset = 0;
     return uri;
   }
@@ -614,10 +614,11 @@ export class Upload extends Pumpify {
     this.emit('restart');
     this.numBytesWritten = 0;
     this.deleteConfig();
-    this.createURI(err => {
+    this.createURI((err, uri) => {
       if (err) {
         return this.destroy(err);
       }
+      this.set({uri});
       this.startUploading();
     });
   }
