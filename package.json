@@ -1,6 +1,6 @@
 {
   "name": "gcs-resumable-upload",
-  "version": "3.1.4",
+  "version": "3.2.1",
   "description": "Upload a file to Google Cloud Storage with built-in resumable behavior",
   "repository": "googleapis/gcs-resumable-upload",
   "main": "build/src/index.js",
@@ -23,9 +23,7 @@
     "docs-test": "linkinator docs",
     "predocs-test": "npm run docs",
     "prelint": "cd samples; npm link ../; npm install",
-    "precompile": "gts clean",
-    "api-extractor": "api-extractor run --local",
-    "api-documenter": "api-documenter yaml --input-folder=temp"
+    "precompile": "gts clean"
   },
   "keywords": [
     "google",
@@ -70,8 +68,6 @@
     "mockery": "^2.1.0",
     "nock": "^13.0.0",
     "sinon": "^11.0.0",
-    "typescript": "^3.8.3",
-    "@microsoft/api-documenter": "^7.8.10",
-    "@microsoft/api-extractor": "^7.8.10"
+    "typescript": "^3.8.3"
   }
 }

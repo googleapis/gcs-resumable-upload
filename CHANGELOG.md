@@ -4,6 +4,20 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+### [3.2.1](https://www.github.com/googleapis/gcs-resumable-upload/compare/v3.2.0...v3.2.1) (2021-06-28)
+
+
+### Bug Fixes
+
+* createURI() should not persist uri ([#437](https://www.github.com/googleapis/gcs-resumable-upload/issues/437)) ([5fbad65](https://www.github.com/googleapis/gcs-resumable-upload/commit/5fbad65b7f7b7a7e4f7f8ba5ba1573405b31afff))
+
+## [3.2.0](https://www.github.com/googleapis/gcs-resumable-upload/compare/v3.1.4...v3.2.0) (2021-06-10)
+
+
+### Features
+
+* add `gcf-owl-bot[bot]` to `ignoreAuthors` ([#421](https://www.github.com/googleapis/gcs-resumable-upload/issues/421)) ([b842b41](https://www.github.com/googleapis/gcs-resumable-upload/commit/b842b417d319af06ec2cc11b4078dd3f3a65c31b))
+
 ### [3.1.4](https://www.github.com/googleapis/gcs-resumable-upload/compare/v3.1.3...v3.1.4) (2021-05-03)
 
 
