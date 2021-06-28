@@ -322,6 +322,18 @@ describe('gcs-resumable-upload', () => {
         };
         up.emit('writing');
       });
+
+      it('should save the uri to config on first write event', done => {
+        const uri = 'http://newly-created-uri';
+        up.createURI = (callback: CreateUriCallback) => {
+          callback(null, uri);
+        };
+        up.set = (props: {}) => {
+          assert.deepStrictEqual(props, {uri});
+          done();
+        };
+        up.emit('writing');
+      });
     });
   });
 
@@ -401,15 +413,6 @@ describe('gcs-resumable-upload', () => {
           assert.strictEqual(up.offset, 0);
           done();
         });
-      });
-
-      it('should save the uri to config', done => {
-        up.set = (props: {}) => {
-          assert.deepStrictEqual(props, {uri: URI});
-          done();
-        };
-
-        up.createURI(assert.ifError);
       });
 
       it('should default the offset to 0', done => {
@@ -1164,6 +1167,21 @@ describe('gcs-resumable-upload', () => {
 
         up.destroy = (err: Error) => {
           assert.strictEqual(err, error);
+          done();
+        };
+
+        up.restart();
+      });
+
+      it('should save the uri to config when restarting', done => {
+        const uri = 'http://newly-created-uri';
+
+        up.createURI = (callback: Function) => {
+          callback(null, uri);
+        };
+
+        up.set = (props: {}) => {
+          assert.deepStrictEqual(props, {uri});
           done();
         };
 
