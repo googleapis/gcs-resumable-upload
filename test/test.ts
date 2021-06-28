@@ -323,7 +323,7 @@ describe('gcs-resumable-upload', () => {
         up.emit('writing');
       });
 
-      it('should save the uri to config', done => {
+      it('should save the uri to config on first write event', done => {
         const uri = 'http://newly-created-uri';
         up.createURI = (callback: CreateUriCallback) => {
           callback(null, uri);
@@ -1173,7 +1173,7 @@ describe('gcs-resumable-upload', () => {
         up.restart();
       });
 
-      it('should save the uri to config', done => {
+      it('should save the uri to config when restarting', done => {
         const uri = 'http://newly-created-uri';
 
         up.createURI = (callback: Function) => {
