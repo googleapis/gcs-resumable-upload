@@ -467,7 +467,7 @@ export class Upload extends Pumpify {
 
   private onChunk(
     chunk: string,
-    enc: string,
+    enc: BufferEncoding,
     next: (err?: Error, data?: string) => void
   ) {
     const offset = this.offset!;
@@ -504,8 +504,12 @@ export class Upload extends Pumpify {
 
     let length = chunk.length;
 
-    if (typeof chunk === 'string') length = Buffer.byteLength(chunk, enc);
-    if (numBytesWritten < offset) chunk = chunk.slice(offset - numBytesWritten);
+    if (typeof chunk === 'string') {
+      length = Buffer.byteLength(chunk, enc);
+    }
+    if (numBytesWritten < offset) {
+      chunk = chunk.slice(offset - numBytesWritten);
+    }
 
     this.numBytesWritten += length;
 

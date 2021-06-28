@@ -16,8 +16,6 @@ import * as path from 'path';
 import * as sinon from 'sinon';
 import {PassThrough, Stream} from 'stream';
 
-import assertRejects = require('assert-rejects');
-
 import {CreateUriCallback, PROTOCOL_REGEX} from '../src';
 import {GaxiosOptions, GaxiosError, GaxiosResponse} from 'gaxios';
 
@@ -974,7 +972,7 @@ describe('gcs-resumable-upload', () => {
       } as GaxiosResponse);
       mockAuthorizeRequest();
       const scope = nock(REQ_OPTS.url!).get(queryPath).reply(500, {error});
-      await assertRejects(up.makeRequest(REQ_OPTS), (err: GaxiosError) => {
+      await assert.rejects(up.makeRequest(REQ_OPTS), (err: GaxiosError) => {
         scope.done();
         assert.strictEqual(err.code, '500');
         return true;
@@ -991,7 +989,7 @@ describe('gcs-resumable-upload', () => {
       } as GaxiosResponse);
       mockAuthorizeRequest();
       const scope = nock(REQ_OPTS.url!).get(queryPath).reply(500, {error});
-      await assertRejects(up.makeRequest(REQ_OPTS), (err: GaxiosError) => {
+      await assert.rejects(up.makeRequest(REQ_OPTS), (err: GaxiosError) => {
         scope.done();
         assert.deepStrictEqual(err.code, '500');
         return true;
@@ -1310,8 +1308,7 @@ describe('gcs-resumable-upload', () => {
 
       describe('exponential back off', () => {
         let clock: sinon.SinonFakeTimers;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let setTimeoutSpy: sinon.SinonSpy<[() => void, number, ...any[]]>;
+        let setTimeoutSpy: sinon.SinonSpy;
         beforeEach(() => {
           clock = sinon.useFakeTimers({toFake: ['setTimeout']});
           setTimeoutSpy = sinon.spy(global, 'setTimeout');
