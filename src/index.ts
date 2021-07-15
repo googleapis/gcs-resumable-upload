@@ -250,10 +250,10 @@ export class Upload extends Pumpify {
   numBytesWritten = 0;
   numRetries = 0;
   contentLength: number | '*';
-  retryLimit: number;
-  maxRetryDelay: number;
-  retryDelayMultiplier: number;
-  maxRetryTotalTimeout: number;
+  retryLimit: number = RETRY_LIMIT;
+  maxRetryDelay: number = MAX_RETRY_DELAY;
+  retryDelayMultiplier: number = RETRY_DELAY_MULTIPLIER;
+  maxRetryTotalTimeout: number = MAX_TOTAL_RETRY_TIMEOUT;
   timeOfFirstRequest: number;
   retryableErrorFn?: (err: ApiError) => boolean;
   private bufferStream?: PassThrough;
@@ -329,14 +329,25 @@ export class Upload extends Pumpify {
     this.uri = cfg.uri || this.get('uri');
     this.numBytesWritten = 0;
     this.numRetries = 0;
-    this.retryLimit = autoRetry
-      ? cfg?.retryOptions?.maxRetries || RETRY_LIMIT
-      : 0;
-    this.maxRetryDelay = cfg?.retryOptions?.maxRetryDelay || MAX_RETRY_DELAY;
-    this.retryDelayMultiplier =
-      cfg?.retryOptions?.retryDelayMultiplier || RETRY_DELAY_MULTIPLIER;
-    this.maxRetryTotalTimeout =
-      cfg?.retryOptions?.totalTimeout || MAX_TOTAL_RETRY_TIMEOUT;
+
+    if (autoRetry && cfg?.retryOptions?.maxRetries !== undefined) {
+      this.retryLimit = cfg.retryOptions.maxRetries;
+    } else if (!autoRetry) {
+      this.retryLimit = 0;
+    }
+
+    if (cfg?.retryOptions?.maxRetryDelay !== undefined) {
+      this.maxRetryDelay = cfg.retryOptions.maxRetryDelay;
+    }
+
+    if (cfg?.retryOptions?.retryDelayMultiplier !== undefined) {
+      this.retryDelayMultiplier = cfg.retryOptions.retryDelayMultiplier;
+    }
+
+    if (cfg?.retryOptions?.totalTimeout !== undefined) {
+      this.maxRetryTotalTimeout = cfg.retryOptions.totalTimeout;
+    }
+
     this.timeOfFirstRequest = Date.now();
     this.retryableErrorFn = cfg?.retryOptions?.retryableErrorFn;
 
