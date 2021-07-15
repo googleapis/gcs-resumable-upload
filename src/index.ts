@@ -329,10 +329,14 @@ export class Upload extends Pumpify {
     this.uri = cfg.uri || this.get('uri');
     this.numBytesWritten = 0;
     this.numRetries = 0;
-    this.retryLimit = autoRetry ? (cfg?.retryOptions?.maxRetries || RETRY_LIMIT) : 0;
+    this.retryLimit = autoRetry
+      ? cfg?.retryOptions?.maxRetries || RETRY_LIMIT
+      : 0;
     this.maxRetryDelay = cfg?.retryOptions?.maxRetryDelay || MAX_RETRY_DELAY;
-    this.retryDelayMultiplier = cfg?.retryOptions?.retryDelayMultiplier || RETRY_DELAY_MULTIPLIER;
-    this.maxRetryTotalTimeout = cfg?.retryOptions?.totalTimeout || MAX_TOTAL_RETRY_TIMEOUT;
+    this.retryDelayMultiplier =
+      cfg?.retryOptions?.retryDelayMultiplier || RETRY_DELAY_MULTIPLIER;
+    this.maxRetryTotalTimeout =
+      cfg?.retryOptions?.totalTimeout || MAX_TOTAL_RETRY_TIMEOUT;
     this.timeOfFirstRequest = Date.now();
     this.retryableErrorFn = cfg?.retryOptions?.retryableErrorFn;
 
@@ -680,9 +684,11 @@ export class Upload extends Pumpify {
    * @return {bool} is the request good?
    */
   private onResponse(resp: GaxiosResponse) {
-    if ((this.retryableErrorFn && this.retryableErrorFn({code: resp.status})) ||
-      (resp.status === 404 || (resp.status > 499 && resp.status < 600))) {
-      
+    if (
+      (this.retryableErrorFn && this.retryableErrorFn({code: resp.status})) ||
+      resp.status === 404 ||
+      (resp.status > 499 && resp.status < 600)
+    ) {
       this.attemptDelayedRetry(resp);
       return false;
     }
@@ -713,10 +719,12 @@ export class Upload extends Pumpify {
    */
   private getRetryDelay(): number {
     const randomMs = Math.round(Math.random() * 1000);
-    const waitTime = Math.pow(this.retryDelayMultiplier, this.numRetries) * 1000 + randomMs;
-    const maxAllowableDelayMs = (this.maxRetryTotalTimeout * 1000) - (Date.now() - this.timeOfFirstRequest);
+    const waitTime =
+      Math.pow(this.retryDelayMultiplier, this.numRetries) * 1000 + randomMs;
+    const maxAllowableDelayMs =
+      this.maxRetryTotalTimeout * 1000 - (Date.now() - this.timeOfFirstRequest);
     const maxRetryDelayMs = this.maxRetryDelay * 1000;
-    
+
     return Math.min(waitTime, maxRetryDelayMs, maxAllowableDelayMs);
   }
 

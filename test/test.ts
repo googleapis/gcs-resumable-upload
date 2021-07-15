@@ -1362,18 +1362,18 @@ describe('gcs-resumable-upload', () => {
         assert.strictEqual(up.onResponse(RESP), true);
       });
 
-      it('should handle a custom status code when passed a retry function', (() => {
+      it('should handle a custom status code when passed a retry function', () => {
         const RESP = {status: 1000};
-        const customHandlerFunction = (err: ApiError) => { 
-          if (err.code === 1000 ) {
+        const customHandlerFunction = (err: ApiError) => {
+          if (err.code === 1000) {
             return true;
           }
-          return false; 
+          return false;
         };
         up.retryableErrorFn = customHandlerFunction;
 
         assert.strictEqual(up.onResponse(RESP), false);
-      }));
+      });
     });
   });
 
@@ -1432,9 +1432,10 @@ describe('gcs-resumable-upload', () => {
 
     it('should return exponential retry delay', () => {
       const min = Math.pow(up.retryDelayMultiplier, up.numRetries) * 1000;
-      const max = (Math.pow(up.retryDelayMultiplier, up.numRetries) * 1000) + 1000;
+      const max =
+        Math.pow(up.retryDelayMultiplier, up.numRetries) * 1000 + 1000;
       const delayValue = up.getRetryDelay();
-      
+
       assert(delayValue >= min && delayValue <= max);
     });
 
@@ -1442,8 +1443,9 @@ describe('gcs-resumable-upload', () => {
       [1, 2, 3].forEach(delayMultiplier => {
         up.retryDelayMultiplier = delayMultiplier;
         const min = Math.pow(up.retryDelayMultiplier, up.numRetries) * 1000;
-        const max = (Math.pow(up.retryDelayMultiplier, up.numRetries) * 1000) + 1000;
-        const delayValue = up.getRetryDelay()
+        const max =
+          Math.pow(up.retryDelayMultiplier, up.numRetries) * 1000 + 1000;
+        const delayValue = up.getRetryDelay();
 
         assert(delayValue >= min && delayValue <= max);
       });
@@ -1453,8 +1455,9 @@ describe('gcs-resumable-upload', () => {
       [1, 2, 3].forEach(numRetry => {
         up.numRetries = numRetry;
         const min = Math.pow(up.retryDelayMultiplier, up.numRetries) * 1000;
-        const max = (Math.pow(up.retryDelayMultiplier, up.numRetries) * 1000) + 1000;
-        const delayValue = up.getRetryDelay()
+        const max =
+          Math.pow(up.retryDelayMultiplier, up.numRetries) * 1000 + 1000;
+        const delayValue = up.getRetryDelay();
 
         assert(delayValue >= min && delayValue <= max);
       });
