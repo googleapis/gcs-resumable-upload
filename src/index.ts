@@ -21,6 +21,10 @@ const TERMINATED_UPLOAD_STATUS_CODE = 410;
 const RESUMABLE_INCOMPLETE_STATUS_CODE = 308;
 const RETRY_LIMIT = 5;
 const DEFAULT_API_ENDPOINT_REGEX = /.*\.googleapis\.com/;
+const MAX_RETRY_DELAY = 64;
+const RETRY_DELAY_MULTIPLIER = 2;
+const MAX_TOTAL_RETRY_TIMEOUT = 600;
+const AUTO_RETRY_VALUE = true;
 
 export const PROTOCOL_REGEX = /^(\w*):\/\//;
 
@@ -176,6 +180,11 @@ export interface UploadConfig {
    * can be set to control which project is billed for the access of this file.
    */
   userProject?: string;
+
+  /**
+   * Configuration options for retrying retriable errors.
+   */
+  retryOptions?: RetryOptions;
 }
 
 export interface ConfigMetadata {
@@ -191,6 +200,19 @@ export interface ConfigMetadata {
    * Set the content type of the incoming data.
    */
   contentType?: string;
+}
+
+export interface RetryOptions {
+  retryDelayMultiplier?: number;
+  totalTimeout?: number;
+  maxRetryDelay?: number;
+  autoRetry?: boolean;
+  maxRetries?: number;
+  retryableErrorFn?: (err: ApiError) => boolean;
+}
+
+export interface ApiError {
+  code?: number;
 }
 
 export class Upload extends Pumpify {
@@ -228,6 +250,12 @@ export class Upload extends Pumpify {
   numBytesWritten = 0;
   numRetries = 0;
   contentLength: number | '*';
+  retryLimit: number;
+  maxRetryDelay: number;
+  retryDelayMultiplier: number;
+  maxRetryTotalTimeout: number;
+  timeOfFirstRequest: number;
+  retryableErrorFn?: (err: ApiError) => boolean;
   private bufferStream?: PassThrough;
   private offsetStream?: PassThrough;
 
@@ -296,10 +324,17 @@ export class Upload extends Pumpify {
       configPath,
     });
 
+    const autoRetry = cfg?.retryOptions?.autoRetry || AUTO_RETRY_VALUE;
     this.uriProvidedManually = !!cfg.uri;
     this.uri = cfg.uri || this.get('uri');
     this.numBytesWritten = 0;
     this.numRetries = 0;
+    this.retryLimit = autoRetry ? (cfg?.retryOptions?.maxRetries || RETRY_LIMIT) : 0;
+    this.maxRetryDelay = cfg?.retryOptions?.maxRetryDelay || MAX_RETRY_DELAY;
+    this.retryDelayMultiplier = cfg?.retryOptions?.retryDelayMultiplier || RETRY_DELAY_MULTIPLIER;
+    this.maxRetryTotalTimeout = cfg?.retryOptions?.totalTimeout || MAX_TOTAL_RETRY_TIMEOUT;
+    this.timeOfFirstRequest = Date.now();
+    this.retryableErrorFn = cfg?.retryOptions?.retryableErrorFn;
 
     const contentLength = cfg.metadata
       ? Number(cfg.metadata.contentLength)
@@ -645,29 +680,44 @@ export class Upload extends Pumpify {
    * @return {bool} is the request good?
    */
   private onResponse(resp: GaxiosResponse) {
-    if (resp.status === 404) {
-      if (this.numRetries < RETRY_LIMIT) {
-        this.numRetries++;
-        this.startUploading();
-      } else {
-        this.destroy(new Error('Retry limit exceeded - ' + resp.data));
-      }
-      return false;
-    }
-    if (resp.status > 499 && resp.status < 600) {
-      if (this.numRetries < RETRY_LIMIT) {
-        const randomMs = Math.round(Math.random() * 1000);
-        const waitTime = Math.pow(2, this.numRetries) * 1000 + randomMs;
-        this.numRetries++;
-        setTimeout(this.continueUploading.bind(this), waitTime);
-      } else {
-        this.destroy(new Error('Retry limit exceeded - ' + resp.data));
-      }
+    if ((this.retryableErrorFn && this.retryableErrorFn({code: resp.status})) ||
+      (resp.status === 404 || (resp.status > 499 && resp.status < 600))) {
+      
+      this.attemptDelayedRetry(resp);
       return false;
     }
 
     this.emit('response', resp);
     return true;
+  }
+
+  /**
+   * @param resp GaxiosResponse object from previous attempt
+   */
+  private attemptDelayedRetry(resp: GaxiosResponse) {
+    if (this.numRetries < this.retryLimit) {
+      if (resp.status === 404) {
+        this.startUploading();
+      } else {
+        const retryDelay = this.getRetryDelay();
+        setTimeout(this.continueUploading.bind(this), retryDelay);
+      }
+      this.numRetries++;
+    } else {
+      this.destroy(new Error('Retry limit exceeded - ' + resp.data));
+    }
+  }
+
+  /**
+   * @returns {number} the amount of time to wait before retrying the request
+   */
+  private getRetryDelay(): number {
+    const randomMs = Math.round(Math.random() * 1000);
+    const waitTime = Math.pow(this.retryDelayMultiplier, this.numRetries) * 1000 + randomMs;
+    const maxAllowableDelayMs = (this.maxRetryTotalTimeout * 1000) - (Date.now() - this.timeOfFirstRequest);
+    const maxRetryDelayMs = this.maxRetryDelay * 1000;
+    
+    return Math.min(waitTime, maxRetryDelayMs, maxAllowableDelayMs);
   }
 
   /*
