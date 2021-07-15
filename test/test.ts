@@ -1365,10 +1365,7 @@ describe('gcs-resumable-upload', () => {
       it('should handle a custom status code when passed a retry function', () => {
         const RESP = {status: 1000};
         const customHandlerFunction = (err: ApiError) => {
-          if (err.code === 1000) {
-            return true;
-          }
-          return false;
+          return err.code === 1000;
         };
         up.retryableErrorFn = customHandlerFunction;
 
