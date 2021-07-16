@@ -211,7 +211,7 @@ export interface RetryOptions {
   retryableErrorFn?: (err: ApiError) => boolean;
 }
 
-export interface ApiError {
+export interface ApiError extends Error {
   code?: number;
 }
 
@@ -696,7 +696,12 @@ export class Upload extends Pumpify {
    */
   private onResponse(resp: GaxiosResponse) {
     if (
-      (this.retryableErrorFn && this.retryableErrorFn({code: resp.status})) ||
+      (this.retryableErrorFn &&
+        this.retryableErrorFn({
+          code: resp.status,
+          message: resp.statusText,
+          name: resp.statusText,
+        })) ||
       resp.status === 404 ||
       (resp.status > 499 && resp.status < 600)
     ) {
