@@ -723,7 +723,9 @@ export class Upload extends Pumpify {
       } else {
         const retryDelay = this.getRetryDelay();
         if (retryDelay <= 0) {
-          this.destroy(new Error(`Retry total time limit exceeded - ${resp.data}`));
+          this.destroy(
+            new Error(`Retry total time limit exceeded - ${resp.data}`)
+          );
           return;
         }
         setTimeout(this.continueUploading.bind(this), retryDelay);
