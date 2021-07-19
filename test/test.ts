@@ -16,7 +16,7 @@ import * as path from 'path';
 import * as sinon from 'sinon';
 import {PassThrough, Stream} from 'stream';
 
-import {CreateUriCallback, PROTOCOL_REGEX} from '../src';
+import {ApiError, CreateUriCallback, PROTOCOL_REGEX} from '../src';
 import {GaxiosOptions, GaxiosError, GaxiosResponse} from 'gaxios';
 
 nock.disableNetConnect();
@@ -1361,6 +1361,16 @@ describe('gcs-resumable-upload', () => {
       it('should return true', () => {
         assert.strictEqual(up.onResponse(RESP), true);
       });
+
+      it('should handle a custom status code when passed a retry function', () => {
+        const RESP = {status: 1000};
+        const customHandlerFunction = (err: ApiError) => {
+          return err.code === 1000;
+        };
+        up.retryableErrorFn = customHandlerFunction;
+
+        assert.strictEqual(up.onResponse(RESP), false);
+      });
     });
   });
 
@@ -1409,6 +1419,52 @@ describe('gcs-resumable-upload', () => {
         const endpoint = up.sanitizeEndpoint(endpointWithTrailingSlashes);
         assert.strictEqual(endpoint.endsWith('/'), false);
       }
+    });
+  });
+
+  describe('#getRetryDelay', () => {
+    beforeEach(() => {
+      up.timeOfFirstRequest = Date.now();
+    });
+
+    it('should return exponential retry delay', () => {
+      const min = Math.pow(up.retryDelayMultiplier, up.numRetries) * 1000;
+      const max =
+        Math.pow(up.retryDelayMultiplier, up.numRetries) * 1000 + 1000;
+      const delayValue = up.getRetryDelay();
+
+      assert(delayValue >= min && delayValue <= max);
+    });
+
+    it('allows overriding the delay multiplier', () => {
+      [1, 2, 3].forEach(delayMultiplier => {
+        up.retryDelayMultiplier = delayMultiplier;
+        const min = Math.pow(up.retryDelayMultiplier, up.numRetries) * 1000;
+        const max =
+          Math.pow(up.retryDelayMultiplier, up.numRetries) * 1000 + 1000;
+        const delayValue = up.getRetryDelay();
+
+        assert(delayValue >= min && delayValue <= max);
+      });
+    });
+
+    it('allows overriding the number of retries', () => {
+      [1, 2, 3].forEach(numRetry => {
+        up.numRetries = numRetry;
+        const min = Math.pow(up.retryDelayMultiplier, up.numRetries) * 1000;
+        const max =
+          Math.pow(up.retryDelayMultiplier, up.numRetries) * 1000 + 1000;
+        const delayValue = up.getRetryDelay();
+
+        assert(delayValue >= min && delayValue <= max);
+      });
+    });
+
+    it('returns the value of maxRetryDelay when calculated values are larger', () => {
+      up.maxRetryDelay = 1;
+      const delayValue = up.getRetryDelay();
+
+      assert.strictEqual(delayValue, 1000);
     });
   });
 });

@@ -234,6 +234,66 @@ If you already have a resumable URI from a previously-created resumable upload, 
 
 If the bucket being accessed has `requesterPays` functionality enabled, this can be set to control which project is billed for the access of this file.
 
+##### config.retryOptions
+
+- Type: `object`
+- *Optional*
+
+Parameters used to control retrying operations.
+
+```js
+interface RetryOptions {
+  retryDelayMultiplier?: number;
+  totalTimeout?: number;
+  maxRetryDelay?: number;
+  autoRetry?: boolean;
+  maxRetries?: number;
+  retryableErrorFn?: (err: ApiError) => boolean;
+}
+```
+
+##### config.retryOptions.retryDelayMultiplier
+
+- Type: `number`
+- *Optional*
+
+Base number used for exponential backoff. Default 2.
+
+##### config.retryOptions.totalTimeout
+
+- Type: `number`
+- *Optional*
+
+Upper bound on the total amount of time to attempt retrying, in seconds. Default: 600.
+
+##### config.retryOptions.maxRetryDelay
+
+- Type: `number`
+- *Optional*
+
+The maximum time to delay between retries, in seconds. Default: 64.
+
+##### config.retryOptions.autoRetry
+
+- Type: `boolean`
+- *Optional*
+
+Whether or not errors should be retried. Default: true.
+
+##### config.retryOptions.maxRetries
+
+- Type: `number`
+- *Optional*
+
+The maximum number of retries to attempt. Default: 5.
+
+##### config.retryOptions.retryableErrorFn
+
+- Type: `function`
+- *Optional*
+
+Custom function returning a boolean inidicating whether or not to retry an error.
+
 ---
 <a name="events"></a>
 ### Events
