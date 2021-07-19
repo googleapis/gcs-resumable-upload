@@ -4,6 +4,13 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+## [3.3.0](https://www.github.com/googleapis/gcs-resumable-upload/compare/v3.2.1...v3.3.0) (2021-07-19)
+
+
+### Features
+
+* customization options for retries ([#441](https://www.github.com/googleapis/gcs-resumable-upload/issues/441)) ([2007234](https://www.github.com/googleapis/gcs-resumable-upload/commit/200723407881c24f77e5b4dc3ed4527799945133))
+
 ### [3.2.1](https://www.github.com/googleapis/gcs-resumable-upload/compare/v3.2.0...v3.2.1) (2021-06-28)
 
 
