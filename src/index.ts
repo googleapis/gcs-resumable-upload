@@ -10,7 +10,7 @@ import AbortController from 'abort-controller';
 import * as ConfigStore from 'configstore';
 import {createHash} from 'crypto';
 import * as extend from 'extend';
-import {GaxiosOptions, GaxiosPromise, GaxiosResponse} from 'gaxios';
+import {GaxiosOptions, GaxiosPromise, GaxiosResponse, GaxiosError} from 'gaxios';
 import * as gaxios from 'gaxios';
 import {GoogleAuth, GoogleAuthOptions} from 'google-auth-library';
 import * as Pumpify from 'pumpify';
@@ -364,6 +364,9 @@ export class Upload extends Pumpify {
           if (err) {
             return this.destroy(err);
           }
+          else if (uri === undefined) {
+            return this.destroy(uri);
+          }
           this.set({uri});
           this.startUploading();
         });
@@ -422,8 +425,8 @@ export class Upload extends Pumpify {
       reqOpts.headers!.Origin = this.origin;
     }
 
-    const resp = await this.makeRequest(reqOpts);
-    const uri = resp.headers.location;
+    const resp = await this.makeRequest(reqOpts, this.createURIAsync);
+    const uri = resp?.headers.location;
     this.uri = uri;
     this.offset = 0;
     return uri;
@@ -574,7 +577,7 @@ export class Upload extends Pumpify {
       headers: {'Content-Length': 0, 'Content-Range': 'bytes */*'},
     };
     try {
-      const resp = await this.makeRequest(opts);
+      const resp = await this.makeRequest(opts, this.getAndSetOffset);
       if (resp.status === RESUMABLE_INCOMPLETE_STATUS_CODE) {
         if (resp.headers.range) {
           const range = resp.headers.range as string;
@@ -608,7 +611,7 @@ export class Upload extends Pumpify {
     }
   }
 
-  private async makeRequest(reqOpts: GaxiosOptions): GaxiosPromise {
+  private async makeRequest(reqOpts: GaxiosOptions, operation: Function): GaxiosPromise {
     if (this.encryption) {
       reqOpts.headers = reqOpts.headers || {};
       reqOpts.headers['x-goog-encryption-algorithm'] = 'AES256';
@@ -635,9 +638,25 @@ export class Upload extends Pumpify {
       this.customRequestOptions,
       reqOpts
     );
-    const res = await this.authClient.request(combinedReqOpts);
-    if (res.data && res.data.error) {
-      throw res.data.error;
+
+    var res: any;
+    try {
+      res = await this.authClient.request(combinedReqOpts);
+    }
+    catch(e) {
+      if (
+        (this.retryableErrorFn &&
+          this.retryableErrorFn({
+            code: (e as any).response.status,
+            message: (e as any).response.statusText,
+            name: (e as any).response.statusText,
+          }))
+      ) {
+        this.attemptDelayedRetryForFunction(res, operation);
+      }
+      else {
+        throw res.data.error;
+      }
     }
     return res;
   }
@@ -712,6 +731,25 @@ export class Upload extends Pumpify {
     this.emit('response', resp);
     return true;
   }
+
+
+  /**
+   * @param resp GaxiosResponse object from previous attempt
+   */
+     private attemptDelayedRetryForFunction(resp: GaxiosResponse, operation: Function){
+      if (this.numRetries < this.retryLimit) {
+        const retryDelay = this.getRetryDelay();
+        if (retryDelay <= 0) {
+          this.destroy(
+            new Error(`Retry total time limit exceeded - ${resp.data}`)
+          );
+        }
+        setTimeout(operation.bind(this), retryDelay);
+        this.numRetries++;
+      } else {
+        this.destroy(new Error('Retry limit exceeded - ' + resp.data));
+      }
+    }
 
   /**
    * @param resp GaxiosResponse object from previous attempt
