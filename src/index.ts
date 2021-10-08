@@ -738,7 +738,7 @@ export class Upload extends Pumpify {
   }
 
   /**
-   * @param resp GaxiosResponse object from previous attempt
+   * @param resp GaxiosError recieved from previous attempt
    */
   private attemptDelayedRetryForFunction(
     resp: GaxiosError,
