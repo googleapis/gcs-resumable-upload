@@ -19,6 +19,9 @@ import {PassThrough, Stream} from 'stream';
 import {ApiError, CreateUriCallback, PROTOCOL_REGEX} from '../src';
 import {GaxiosOptions, GaxiosError, GaxiosResponse} from 'gaxios';
 
+import {createHook, executionAsyncId} from 'async_hooks';
+import * as fs from 'fs';
+
 nock.disableNetConnect();
 
 class AbortController {
@@ -304,7 +307,7 @@ describe('gcs-resumable-upload', () => {
       it('should create an upload', done => {
         up.startUploading = done;
         up.createURI = (callback: CreateUriCallback) => {
-          callback(null);
+          callback(null, 'http://some.fake.uri');
         };
         up.emit('writing');
       });
