@@ -653,12 +653,12 @@ export class Upload extends Pumpify {
       if (
         this.retryableErrorFn &&
         this.retryableErrorFn({
-          code: (e as any).response.status,
+          code: (e as GaxiosError).response?.status,
           message: (e as any).response.statusText,
           name: (e as any).response.statusText,
         })
       ) {
-        this.attemptDelayedRetryForFunction(res, operation);
+        this.attemptDelayedRetryForFunction(e as GaxiosError, operation);
       } else {
         throw e;
       }
@@ -741,20 +741,20 @@ export class Upload extends Pumpify {
    * @param resp GaxiosResponse object from previous attempt
    */
   private attemptDelayedRetryForFunction(
-    resp: GaxiosResponse,
+    resp: GaxiosError,
     operation: Function
   ) {
     if (this.numRetries < this.retryLimit) {
       const retryDelay = this.getRetryDelay();
       if (retryDelay <= 0) {
         this.destroy(
-          new Error(`Retry total time limit exceeded - ${resp.data}`)
+          new Error(`Retry total time limit exceeded - ${resp.message}`)
         );
       }
       setTimeout(operation.bind(this), retryDelay);
       this.numRetries++;
     } else {
-      this.destroy(new Error('Retry limit exceeded - ' + resp.data));
+      this.destroy(new Error('Retry limit exceeded - ' + resp.message));
     }
   }
 
