@@ -16,6 +16,7 @@ import {GoogleAuth, GoogleAuthOptions} from 'google-auth-library';
 import * as Pumpify from 'pumpify';
 import {PassThrough, Transform} from 'stream';
 import * as streamEvents from 'stream-events';
+import retry = require('async-retry');
 
 const TERMINATED_UPLOAD_STATUS_CODE = 410;
 const RESUMABLE_INCOMPLETE_STATUS_CODE = 308;
@@ -211,8 +212,13 @@ export interface RetryOptions {
   retryableErrorFn?: (err: ApiError) => boolean;
 }
 
+export interface GoogleInnerError {
+  reason?: string;
+}
+
 export interface ApiError extends Error {
   code?: number;
+  errors?: GoogleInnerError[];
 }
 
 export class Upload extends Pumpify {
@@ -328,7 +334,7 @@ export class Upload extends Pumpify {
     this.uriProvidedManually = !!cfg.uri;
     this.uri = cfg.uri || this.get('uri');
     this.numBytesWritten = 0;
-    this.numRetries = 0;
+    this.numRetries = 0; //counter for number of retries currently executed
 
     if (autoRetry && cfg?.retryOptions?.maxRetries !== undefined) {
       this.retryLimit = cfg.retryOptions.maxRetries;
@@ -421,9 +427,41 @@ export class Upload extends Pumpify {
     if (this.origin) {
       reqOpts.headers!.Origin = this.origin;
     }
+    const uri = await retry(
+      async (bail: (err: Error) => void) => {
+        try {
+          const res = await this.makeRequest(reqOpts);
+          return res.headers.location;
+        } catch (e) {
+          const apiError = {
+            code: e.response?.status,
+            name: e.response?.statusText,
+            message: e.response?.statusText,
+            errors: [
+              {
+                reason: e.response?.statusText,
+              },
+            ],
+          };
+          if (
+            this.retryLimit > 0 &&
+            this.retryableErrorFn &&
+            this.retryableErrorFn!(apiError)
+          ) {
+            throw new Error();
+          } else {
+            return bail(e);
+          }
+        }
+      },
+      {
+        retries: this.retryLimit,
+        factor: this.retryDelayMultiplier,
+        maxTimeout: this.maxRetryDelay! * 1000, //convert to milliseconds
+        maxRetryTime: this.maxRetryTotalTimeout! * 1000, //convert to milliseconds
+      }
+    );
 
-    const resp = await this.makeRequest(reqOpts);
-    const uri = resp.headers.location;
     this.uri = uri;
     this.offset = 0;
     return uri;

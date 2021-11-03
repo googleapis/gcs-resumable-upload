@@ -43,6 +43,7 @@
   },
   "dependencies": {
     "abort-controller": "^3.0.0",
+    "async-retry": "^1.3.3",
     "configstore": "^5.0.0",
     "extend": "^3.0.2",
     "gaxios": "^4.0.0",
@@ -52,6 +53,7 @@
   },
   "devDependencies": {
     "@compodoc/compodoc": "^1.1.7",
+    "@types/async-retry": "^1.4.3",
     "@types/configstore": "^5.0.0",
     "@types/extend": "^3.0.1",
     "@types/is-stream": "^1.1.0",
