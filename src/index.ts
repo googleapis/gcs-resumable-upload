@@ -404,8 +404,9 @@ export class Upload extends Pumpify {
     };
 
     if (metadata.contentLength) {
-      reqOpts.headers!['X-Upload-Content-Length'] =
-        metadata.contentLength.toString();
+      reqOpts.headers![
+        'X-Upload-Content-Length'
+      ] = metadata.contentLength.toString();
     }
 
     if (metadata.contentType) {
@@ -432,23 +433,25 @@ export class Upload extends Pumpify {
         try {
           const res = await this.makeRequest(reqOpts);
           return res.headers.location;
-        }
-        catch (e){
+        } catch (e) {
           const apiError = {
-            code: e.response.status,
-            name: e.response.statusText,
-            message: e.response.statusText,
+            code: e.response?.status,
+            name: e.response?.statusText,
+            message: e.response?.statusText,
             errors: [
               {
-                reason: e.response.statusText
-              }
-            ]
-          }
-          if (this.retryLimit > 0 && this.retryableErrorFn!(apiError)) {
+                reason: e.response?.statusText,
+              },
+            ],
+          };
+          if (
+            this.retryLimit > 0 &&
+            this.retryableErrorFn &&
+            this.retryableErrorFn!(apiError)
+          ) {
             throw new Error();
-          }
-          else {
-            return bail(new Error(`Failed with error ${apiError}`));
+          } else {
+            return bail(e);
           }
         }
       },
