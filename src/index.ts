@@ -448,7 +448,7 @@ export class Upload extends Pumpify {
             this.retryableErrorFn &&
             this.retryableErrorFn!(apiError)
           ) {
-            throw new Error();
+            throw e;
           } else {
             return bail(e);
           }
