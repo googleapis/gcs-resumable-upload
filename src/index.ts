@@ -475,7 +475,12 @@ export class Upload extends Pumpify {
       }
 
       if (resp.status < 200 || resp.status > 299) {
-        this.destroy(new Error('Upload failed'));
+        const err: ApiError = {
+          code: resp.status,
+          name: 'Upload failed',
+          message: 'Upload failed',
+        };
+        this.destroy(err);
         return;
       }
       if (resp && resp.data) {
