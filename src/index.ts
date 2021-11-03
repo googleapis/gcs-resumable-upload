@@ -448,7 +448,7 @@ export class Upload extends Pumpify {
             throw new Error();
           }
           else {
-            return bail(new Error(`Failed with error ${e.response}`));
+            return bail(new Error(`Failed with error ${apiError}`));
           }
         }
       },
