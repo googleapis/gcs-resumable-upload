@@ -4,6 +4,13 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+### [3.5.1](https://www.github.com/googleapis/gcs-resumable-upload/compare/v3.5.0...v3.5.1) (2021-11-04)
+
+
+### Bug Fixes
+
+* cast code to string ([#481](https://www.github.com/googleapis/gcs-resumable-upload/issues/481)) ([93d5faf](https://www.github.com/googleapis/gcs-resumable-upload/commit/93d5fafe129de9e5fd9b1f6670c109091b543c4c))
+
 ## [3.5.0](https://www.github.com/googleapis/gcs-resumable-upload/compare/v3.4.0...v3.5.0) (2021-11-04)
 
 
