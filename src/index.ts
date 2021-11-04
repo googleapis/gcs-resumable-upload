@@ -439,7 +439,7 @@ export class Upload extends Pumpify {
             message: e.response?.statusText,
             errors: [
               {
-                reason: (e.code as string),
+                reason: e.code as string,
               },
             ],
           };
