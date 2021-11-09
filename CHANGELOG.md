@@ -4,6 +4,13 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+## [3.6.0](https://www.github.com/googleapis/gcs-resumable-upload/compare/v3.5.1...v3.6.0) (2021-11-09)
+
+
+### Features
+
+* add error code to error in startUploading ([#474](https://www.github.com/googleapis/gcs-resumable-upload/issues/474)) ([1ae6987](https://www.github.com/googleapis/gcs-resumable-upload/commit/1ae69870a4ad52340eb2e67c4d3d13391002c6fa))
+
 ### [3.5.1](https://www.github.com/googleapis/gcs-resumable-upload/compare/v3.5.0...v3.5.1) (2021-11-04)
 
 
