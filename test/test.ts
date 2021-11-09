@@ -310,9 +310,15 @@ describe('gcs-resumable-upload', () => {
       });
 
       it('should destroy the stream from an error', done => {
-        const error = new Error(':(');
-        up.destroy = (err: Error) => {
+        const error: ApiError = {
+          message: ':(',
+          name: ':(',
+          code: 123,
+        };
+        up.destroy = (err: ApiError) => {
           assert(err.message.indexOf(error.message) > -1);
+          assert(err.name.indexOf(error.name) > -1);
+          assert.strictEqual(err.code, 123);
           done();
         };
         up.createURI = (callback: CreateUriCallback) => {
