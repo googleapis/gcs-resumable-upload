@@ -4,6 +4,32 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+### [3.5.1](https://www.github.com/googleapis/gcs-resumable-upload/compare/v3.5.0...v3.5.1) (2021-11-04)
+
+
+### Bug Fixes
+
+* cast code to string ([#481](https://www.github.com/googleapis/gcs-resumable-upload/issues/481)) ([93d5faf](https://www.github.com/googleapis/gcs-resumable-upload/commit/93d5fafe129de9e5fd9b1f6670c109091b543c4c))
+
+## [3.5.0](https://www.github.com/googleapis/gcs-resumable-upload/compare/v3.4.0...v3.5.0) (2021-11-04)
+
+
+### Features
+
+* retry econnreset ([#479](https://www.github.com/googleapis/gcs-resumable-upload/issues/479)) ([0d230cb](https://www.github.com/googleapis/gcs-resumable-upload/commit/0d230cbcd662ff759105e382ff5b671594776d19))
+
+## [3.4.0](https://www.github.com/googleapis/gcs-resumable-upload/compare/v3.3.1...v3.4.0) (2021-11-03)
+
+
+### Features
+
+* retry URI creation ([#475](https://www.github.com/googleapis/gcs-resumable-upload/issues/475)) ([e3d380f](https://www.github.com/googleapis/gcs-resumable-upload/commit/e3d380f892e75d95595fddac70fb9551700283e7))
+
+
+### Bug Fixes
+
+* throw informative error in the case that retries run out ([#477](https://www.github.com/googleapis/gcs-resumable-upload/issues/477)) ([4b3db66](https://www.github.com/googleapis/gcs-resumable-upload/commit/4b3db6651ae09e8c8abaa75720747e97cab79966))
+
 ### [3.3.1](https://www.github.com/googleapis/gcs-resumable-upload/compare/v3.3.0...v3.3.1) (2021-09-02)
 
 
