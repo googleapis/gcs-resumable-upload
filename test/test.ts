@@ -510,7 +510,12 @@ describe('gcs-resumable-upload', () => {
 
     it('should cork the stream on prefinish', done => {
       up.cork = done;
-      up.setPipeline = (buffer: Stream, offset: Stream, delay: Stream) => {
+      up.setPipeline = (
+        buffer: Stream,
+        chunk: Stream,
+        offset: Stream,
+        delay: Stream
+      ) => {
         setImmediate(() => {
           delay.emit('prefinish');
         });
@@ -521,7 +526,12 @@ describe('gcs-resumable-upload', () => {
     });
 
     it('should set the pipeline', done => {
-      up.setPipeline = (buffer: Stream, offset: Stream, delay: Stream) => {
+      up.setPipeline = (
+        buffer: Stream,
+        chunk: Stream,
+        offset: Stream,
+        delay: Stream
+      ) => {
         assert.strictEqual(buffer, up.bufferStream);
         assert.strictEqual(offset, up.offsetStream);
         assert.strictEqual(isStream(delay), true);
