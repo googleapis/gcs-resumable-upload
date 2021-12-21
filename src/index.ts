@@ -273,15 +273,15 @@ export class Upload extends Pumpify {
   maxRetryTotalTimeout: number = MAX_TOTAL_RETRY_TIMEOUT;
   timeOfFirstRequest: number;
   retryableErrorFn?: (err: ApiError) => boolean;
-  private offsetStream?: PassThrough;
   private upstreamChunkBuffer: Buffer = Buffer.alloc(0);
   private chunkBufferEncoding?: BufferEncoding = undefined;
+  private numChunksReadInRequest = 0;
   /**
-   * A chunk used for caching the most recent multi-chunk upload chunk.
+   * A chunk used for caching the most recent upload chunk.
    * We should not assume that the server received all bytes sent in the request.
    *  - https://cloud.google.com/storage/docs/performing-resumable-uploads#chunked-upload
    */
-  private multiChunkUploadChunk = Buffer.alloc(0);
+  private lastChunkSent = Buffer.alloc(0);
 
   constructor(cfg: UploadConfig) {
     super();
@@ -523,17 +523,25 @@ export class Upload extends Pumpify {
    * @param readCallback A callback for when the buffer has been read downstream
    */
   private writeToChunkBuffer(
-    chunk: Buffer,
+    chunk: Buffer | string,
     encoding: BufferEncoding,
     readCallback: () => void
   ) {
-    this.upstreamChunkBuffer = Buffer.concat([this.upstreamChunkBuffer, chunk]);
+    this.upstreamChunkBuffer = Buffer.concat([
+      this.upstreamChunkBuffer,
+      typeof chunk === 'string' ? Buffer.from(chunk, encoding) : chunk,
+    ]);
     this.chunkBufferEncoding = encoding;
 
     this.once('readFromChunkBuffer', readCallback);
     process.nextTick(() => this.emit('wroteToChunkBuffer'));
   }
 
+  /**
+   * Prepends data back to the upstream chunk buffer.
+   *
+   * @param chunk The data to prepend
+   */
   private unshiftChunkBuffer(chunk: Buffer) {
     this.upstreamChunkBuffer = Buffer.concat([chunk, this.upstreamChunkBuffer]);
   }
@@ -614,9 +622,9 @@ export class Upload extends Pumpify {
    * Ends when the limit has reached or no data is expected to be pushed from upstream.
    *
    * @param limit The most amount of data this iterator should return. `Infinity` is fine.
-   * @param multiChunkMode Determines if one chunk is returned, up to the limit, for the iterator
+   * @param oneChunkMode Determines if one, exhaustive chunk is yielded for the iterator
    */
-  private async *upstreamIterator(limit: number, multiChunkMode: boolean) {
+  private async *upstreamIterator(limit: number, oneChunkMode?: boolean) {
     let completeChunk = Buffer.alloc(0);
 
     // read from upstream chunk buffer
@@ -625,7 +633,7 @@ export class Upload extends Pumpify {
       const chunk = this.pullFromChunkBuffer(limit);
 
       limit -= chunk.byteLength;
-      if (multiChunkMode) {
+      if (oneChunkMode) {
         // return 1 chunk at the end of iteration
         completeChunk = Buffer.concat([completeChunk, chunk]);
       } else {
@@ -637,7 +645,7 @@ export class Upload extends Pumpify {
       }
     }
 
-    if (multiChunkMode) {
+    if (oneChunkMode) {
       yield {
         chunk: completeChunk,
         encoding: this.chunkBufferEncoding,
@@ -647,17 +655,55 @@ export class Upload extends Pumpify {
 
   async startUploading() {
     const multiChunkMode = !!this.chunkSize;
-    let expectedUploadSize: number | undefined = undefined;
+    this.numChunksReadInRequest = 0;
 
     if (!this.offset) {
       this.offset = 0;
     }
 
-    if (this.chunkSize && typeof this.contentLength === 'number') {
-      const remainingBytesToUpload = this.contentLength - this.numBytesWritten;
+    // Check if we're uploading the expected object
+    if (this.numBytesWritten === 0) {
+      const isSameObject = await this.ensureUploadingSameObject();
+      if (!isSameObject) {
+        // `ensureUploadingSameObject` will restart the upload.
+        return;
+      }
+    }
 
-      // Uploads should be no more than the `chunkSize`
-      expectedUploadSize = Math.min(this.chunkSize, remainingBytesToUpload);
+    // Check if the offset (server) is too far behind the current stream
+    if (this.offset && this.offset < this.numBytesWritten) {
+      this.emit(
+        'error',
+        new RangeError('The offset is lower than the number of bytes written')
+      );
+      return;
+    }
+
+    // Check if we should 'fast-forward' to the relevant data to upload
+    if (this.numBytesWritten < this.offset) {
+      // 'fast-forward' to the byte where we need to upload.
+      // only push data from the byte after the one we left off on
+      const fastForwardBytes = this.offset - this.numBytesWritten;
+
+      for await (const _chunk of this.upstreamIterator(fastForwardBytes)) {
+        _chunk; // discard the data up until the point we want
+      }
+    }
+
+    let expectedUploadSize: number | undefined = undefined;
+
+    // Set `expectedUploadSize` to `contentLength` if available
+    if (typeof this.contentLength === 'number') {
+      expectedUploadSize = this.contentLength - this.numBytesWritten;
+    }
+
+    // `expectedUploadSize` should be no more than the `chunkSize`.
+    // It's possible this is the last chunk request for a multiple
+    // chunk upload, thus smaller than the chunk size.
+    if (this.chunkSize) {
+      expectedUploadSize = expectedUploadSize
+        ? Math.min(this.chunkSize, expectedUploadSize)
+        : this.chunkSize;
     }
 
     // A queue for the upstream data
@@ -668,87 +714,37 @@ export class Upload extends Pumpify {
 
     // The primary read stream for this request. This stream retrieves no more
     // than the exact requested amount from upstream.
-    const leadStream = new Readable({
+    const requestStream = new Readable({
       read: async () => {
         const result = await upstreamQueue.next();
 
         if (result.value) {
-          if (this.chunkSize) {
-            // Cache the data in case the server misses some bytes in the request.
-            // We should not assume that the server received all bytes sent in the request.
-            // - https://cloud.google.com/storage/docs/performing-resumable-uploads#chunked-upload
-            this.multiChunkUploadChunk = result.value.chunk;
-          }
+          this.numChunksReadInRequest++;
+          this.lastChunkSent = result.value.chunk;
+          this.numBytesWritten += result.value.chunk.byteLength;
 
-          if (this.numBytesWritten === 0) {
-            if (!this.checkFirstChunkOfUpload(result.value.chunk)) {
-              this.unshiftChunkBuffer(result.value.chunk);
-              this.restart();
-              leadStream.push(null);
-              return;
-            }
-          }
+          this.emit('progress', {
+            bytesWritten: this.numBytesWritten,
+            contentLength: this.contentLength,
+          });
 
-          leadStream.push(result.value.chunk, result.value.encoding);
+          requestStream.push(result.value.chunk, result.value.encoding);
         }
 
         if (result.done) {
-          leadStream.push(null);
+          requestStream.push(null);
         }
       },
     });
 
-    // The offset stream allows us to analyze each incoming
-    // chunk to analyze it against what the upstream API already
-    // has stored for this upload.
-    const offsetStream = (this.offsetStream = new Transform({
-      transform: this.requestOffsetHandler.bind(this),
-    }));
-
-    // This should be 'once' as `startUploading` can be called again
-    // for multi chunk uploads.
-    const responseCallback = (resp: GaxiosResponse) => {
-      cleanupRequestListeners();
-      this.responseHandler(resp);
-    };
-
-    const restartCallback = () => {
-      cleanupRequestListeners();
-      // The upload is being re-attempted. Disconnect the request
-      // stream so it won't receive more data.
-      pipelineForRequest.unpipe(requestStreamEmbeddedStream);
-    };
-
-    // It's important to clean-up listeners as Node has a default max number of
-    // event listeners. Notably, The number of requests can be greater than the
-    // number of potential listeners.
-    // - https://nodejs.org/api/events.html#eventsdefaultmaxlisteners
-    const cleanupRequestListeners = () => {
-      // remove local response handler to avoid duplicating
-      // response handling
-      this.removeListener('response', responseCallback);
-
-      // Remove 'restart' if the other
-      this.removeListener('restart', restartCallback);
-    };
-
-    this.once('response', responseCallback);
-    this.once('restart', restartCallback);
-
-    // The request library (authClient.request()) requires the
-    // stream to be sent within the request options.
-    const requestStreamEmbeddedStream = new PassThrough();
-
-    const pipelineForRequest = pipeline(leadStream, offsetStream, error => {
-      if (error) this.emit('error', error);
-    });
-
-    pipelineForRequest.pipe(requestStreamEmbeddedStream);
-
+    // This should be 'once' as `startUploading` can be called again for
+    // multi chunk uploads and each request would have its own response.
+    this.once('response', resp => this.responseHandler(resp));
     let headers: GaxiosOptions['headers'] = {};
 
     // If using multiple chunk upload, set appropriate header
     if (multiChunkMode && expectedUploadSize) {
+      // The '-1' is because the ending byte is inclusive in the request.
       const endingByte = expectedUploadSize + this.numBytesWritten - 1;
       headers = {
         'Content-Length': expectedUploadSize,
@@ -764,7 +760,7 @@ export class Upload extends Pumpify {
       method: 'PUT',
       url: this.uri,
       headers,
-      body: requestStreamEmbeddedStream,
+      body: requestStream,
     };
 
     try {
@@ -801,15 +797,17 @@ export class Upload extends Pumpify {
 
       // We should not assume that the server received all bytes sent in the request.
       // - https://cloud.google.com/storage/docs/performing-resumable-uploads#chunked-upload
-      const missingBytes = this.numBytesWritten - this.offset - 1;
+      const missingBytes = this.numBytesWritten - this.offset;
       if (missingBytes) {
-        const dataToPrependForResending = this.multiChunkUploadChunk.slice(
+        const dataToPrependForResending = this.lastChunkSent.slice(
           -missingBytes
         );
-        // As multi-chunk uploads send one chunk per request AND pulls one
+        // As multi-chunk uploads send one chunk per request and pulls one
         // chunk into the pipeline, prepending the missing bytes back should
         // be fine for the next request.
         this.unshiftChunkBuffer(dataToPrependForResending);
+        this.numBytesWritten -= missingBytes;
+        this.lastChunkSent = Buffer.alloc(0);
       }
 
       // continue uploading next chunk
@@ -822,8 +820,8 @@ export class Upload extends Pumpify {
       };
       this.destroy(err);
     } else {
-      // remove the multi-chunk upload chunk, if used
-      this.multiChunkUploadChunk = Buffer.alloc(0);
+      // remove the last chunk sent
+      this.lastChunkSent = Buffer.alloc(0);
 
       if (resp && resp.data) {
         resp.data.size = Number(resp.data.size);
@@ -845,9 +843,24 @@ export class Upload extends Pumpify {
    * @param chunk The chunk to check against the cache
    * @returns if the request is ok to continue as-is
    */
-  private checkFirstChunkOfUpload(chunk: Buffer) {
+  private async ensureUploadingSameObject() {
+    // A queue for the upstream data
+    const upstreamQueue = this.upstreamIterator(
+      16,
+      true // we just want one chunk for this validation
+    );
+
+    const upstreamChunk = await upstreamQueue.next();
+    const chunk = upstreamChunk.value
+      ? upstreamChunk.value.chunk
+      : Buffer.alloc(0);
+
+    // Put the original chunk back into the buffer as we just wanted to 'peek'
+    // at the stream for validation.
+    this.unshiftChunkBuffer(chunk);
+
     let cachedFirstChunk = this.get('firstChunk');
-    const firstChunk = chunk.slice(0, 16).valueOf();
+    const firstChunk = chunk.valueOf();
 
     if (!cachedFirstChunk) {
       // This is a new upload. Cache the first chunk.
@@ -858,43 +871,12 @@ export class Upload extends Pumpify {
       const nextChunk = Buffer.from(firstChunk);
       if (Buffer.compare(cachedFirstChunk, nextChunk) !== 0) {
         // this data is not the same. start a new upload
+        this.restart();
         return false;
       }
     }
 
     return true;
-  }
-
-  private requestOffsetHandler(
-    chunk: Buffer,
-    enc: BufferEncoding,
-    next: (err?: Error, data?: Buffer) => void
-  ) {
-    const offset = this.offset!;
-    const numBytesWritten = this.numBytesWritten;
-
-    this.emit('progress', {
-      bytesWritten: this.numBytesWritten,
-      contentLength: this.contentLength,
-    });
-
-    let length = chunk.length;
-
-    if (typeof chunk === 'string') {
-      length = Buffer.byteLength(chunk, enc);
-    }
-    if (numBytesWritten < offset) {
-      chunk = chunk.slice(offset - numBytesWritten);
-    }
-
-    this.numBytesWritten += length;
-
-    // TODO: detemine how to resolve the following scenario:
-    // - A request exists (byte >0)
-    // - We're re-reading a file to upload (say, byte 0)
-    // - We're sending the multi-chunk payload with 'Content-Length' header
-    // only push data from the byte after the one we left off on
-    next(undefined, this.numBytesWritten > offset ? chunk : undefined);
   }
 
   private async getAndSetOffset() {
@@ -974,7 +956,8 @@ export class Upload extends Pumpify {
 
   private async makeRequestStream(reqOpts: GaxiosOptions): GaxiosPromise {
     const controller = new AbortController();
-    this.once('error', () => controller.abort());
+    const errorCallback = () => controller.abort();
+    this.once('error', errorCallback);
 
     if (this.userProject) {
       reqOpts.params = reqOpts.params || {};
@@ -991,12 +974,13 @@ export class Upload extends Pumpify {
     );
     const res = await this.authClient.request(combinedReqOpts);
     this.onResponse(res);
+    this.removeListener('error', errorCallback);
+
     return res;
   }
 
   private restart() {
-    this.emit('restart');
-    this.multiChunkUploadChunk = Buffer.alloc(0);
+    this.lastChunkSent = Buffer.alloc(0);
     this.numBytesWritten = 0;
     this.deleteConfig();
     this.createURI((err, uri) => {
@@ -1049,16 +1033,30 @@ export class Upload extends Pumpify {
    */
   private attemptDelayedRetry(resp: GaxiosResponse) {
     if (this.numRetries < this.retryLimit) {
-      if (resp.status === 404) {
+      if (resp.status === 404 && this.numChunksReadInRequest === 0) {
         this.startUploading();
       } else {
         const retryDelay = this.getRetryDelay();
+
         if (retryDelay <= 0) {
           this.destroy(
             new Error(`Retry total time limit exceeded - ${resp.data}`)
           );
           return;
         }
+
+        // Unshift the most recent chunk back in case it's needed for the next
+        // request.
+        this.numBytesWritten -= this.lastChunkSent.byteLength;
+        this.unshiftChunkBuffer(this.lastChunkSent);
+        this.lastChunkSent = Buffer.alloc(0);
+
+        // We don't know how much data has been received by the server.
+        // `continueUploading` will recheck the offset via `getAndSetOffset`.
+        // If `offset` < `numberBytesReceived` then we will raise a RangeError
+        // as we've streamed too much data that has been missed.
+        this.offset = undefined;
+
         setTimeout(this.continueUploading.bind(this), retryDelay);
       }
       this.numRetries++;
