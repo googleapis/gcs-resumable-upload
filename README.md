@@ -294,6 +294,16 @@ The maximum number of retries to attempt. Default: 5.
 
 Custom function returning a boolean inidicating whether or not to retry an error.
 
+
+##### config.chunkSize
+
+- Type: `number`
+- *Optional*
+
+Enables [Multiple chunk upload](https://cloud.google.com/storage/docs/performing-resumable-uploads#chunked-upload) mode and sets each request size to this amount.
+
+The chunk size should be a multiple of 256 KiB (256 x 1024 bytes), unless it's the last chunk that completes the upload. Larger chunk sizes typically make uploads more efficient. We recommend using at least 8 MiB for the chunk size.
+
 ---
 <a name="events"></a>
 ### Events
