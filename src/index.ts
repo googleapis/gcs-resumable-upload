@@ -10,7 +10,12 @@ import AbortController from 'abort-controller';
 import * as ConfigStore from 'configstore';
 import {createHash} from 'crypto';
 import * as extend from 'extend';
-import {GaxiosOptions, GaxiosPromise, GaxiosResponse} from 'gaxios';
+import {
+  GaxiosOptions,
+  GaxiosPromise,
+  GaxiosResponse,
+  GaxiosError,
+} from 'gaxios';
 import * as gaxios from 'gaxios';
 import {GoogleAuth, GoogleAuthOptions} from 'google-auth-library';
 import * as Pumpify from 'pumpify';
@@ -467,7 +472,8 @@ export class Upload extends Pumpify {
         try {
           const res = await this.makeRequest(reqOpts);
           return res.headers.location;
-        } catch (e) {
+        } catch (err) {
+          const e = err as GaxiosError;
           const apiError = {
             code: e.response?.status,
             name: e.response?.statusText,
@@ -481,7 +487,7 @@ export class Upload extends Pumpify {
           if (
             this.retryLimit > 0 &&
             this.retryableErrorFn &&
-            this.retryableErrorFn!(apiError)
+            this.retryableErrorFn!(apiError as ApiError)
           ) {
             throw e;
           } else {
@@ -770,7 +776,8 @@ export class Upload extends Pumpify {
 
     try {
       await this.makeRequestStream(reqOpts);
-    } catch (e) {
+    } catch (err) {
+      const e = err as Error;
       this.destroy(e);
     }
   }
@@ -900,7 +907,8 @@ export class Upload extends Pumpify {
         }
       }
       this.offset = 0;
-    } catch (err) {
+    } catch (e) {
+      const err = e as GaxiosError;
       const resp = err.response;
       // we don't return a 404 to the user if they provided the resumable
       // URI. if we're just using the configstore file to tell us that this
@@ -993,7 +1001,6 @@ export class Upload extends Pumpify {
     }
 
     this.lastChunkSent = Buffer.alloc(0);
-    this.numBytesWritten = 0;
     this.deleteConfig();
     this.createURI((err, uri) => {
       if (err) {
