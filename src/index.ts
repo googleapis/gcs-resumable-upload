@@ -283,6 +283,7 @@ export class Upload extends Pumpify {
    *  - https://cloud.google.com/storage/docs/performing-resumable-uploads#chunked-upload
    */
   private lastChunkSent = Buffer.alloc(0);
+  private upstreamEnded = false;
 
   constructor(cfg: UploadConfig) {
     super();
@@ -383,6 +384,12 @@ export class Upload extends Pumpify {
       : NaN;
     this.contentLength = isNaN(contentLength) ? '*' : contentLength;
 
+    // For backwards-compatibility with Node v10. The more convenient
+    // `this.upstream.writableEnded` is available after v12.9.0.
+    this.upstream.on('end', () => {
+      this.upstreamEnded = true;
+    });
+
     this.once('writing', () => {
       // Now that someone is writing to this object, let's attach
       // some duplexes. These duplexes enable this object to be
@@ -478,7 +485,7 @@ export class Upload extends Pumpify {
       }
 
       // The upstream writable ended, we shouldn't expect any more data.
-      if (this.upstream.writableEnded) {
+      if (this.upstreamEnded) {
         return resolve(false);
       }
 
