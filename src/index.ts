@@ -417,6 +417,144 @@ export class Upload extends Pumpify {
     write: this.writeToChunkBuffer.bind(this),
   });
 
+  /**
+   * A handler for `upstream` to write and buffer its data.
+   *
+   * @param chunk The chunk to append to the buffer
+   * @param encoding The encoding of the chunk
+   * @param readCallback A callback for when the buffer has been read downstream
+   */
+  private writeToChunkBuffer(
+    chunk: Buffer | string,
+    encoding: BufferEncoding,
+    readCallback: () => void
+  ) {
+    this.upstreamChunkBuffer = Buffer.concat([
+      this.upstreamChunkBuffer,
+      typeof chunk === 'string' ? Buffer.from(chunk, encoding) : chunk,
+    ]);
+    this.chunkBufferEncoding = encoding;
+
+    this.once('readFromChunkBuffer', readCallback);
+    process.nextTick(() => this.emit('wroteToChunkBuffer'));
+  }
+
+  /**
+   * Prepends data back to the upstream chunk buffer.
+   *
+   * @param chunk The data to prepend
+   */
+  private unshiftChunkBuffer(chunk: Buffer) {
+    this.upstreamChunkBuffer = Buffer.concat([chunk, this.upstreamChunkBuffer]);
+  }
+
+  /**
+   * Retrieves data from upstream's buffer.
+   *
+   * @param limit The maximum amount to return from the buffer.
+   * @returns The data requested.
+   */
+  private pullFromChunkBuffer(limit: number) {
+    const chunk = this.upstreamChunkBuffer.slice(0, limit);
+    this.upstreamChunkBuffer = this.upstreamChunkBuffer.slice(limit);
+
+    // notify upstream we've read from the buffer so it can potentially
+    // send more data down.
+    process.nextTick(() => this.emit('readFromChunkBuffer'));
+
+    return chunk;
+  }
+
+  /**
+   * A handler for determining if data is ready to be read from upstream.
+   *
+   * @returns If there will be more chunks to read in the future
+   */
+  private async waitForNextChunk(): Promise<boolean> {
+    const willBeMoreChunks = await new Promise<boolean>(resolve => {
+      // There's data available - it should be digested
+      if (this.upstreamChunkBuffer.byteLength) {
+        return resolve(true);
+      }
+
+      // The upstream writable ended, we shouldn't expect any more data.
+      if (this.upstream.writableEnded) {
+        return resolve(false);
+      }
+
+      // Nothing immediate seems to be determined. We need to prepare some
+      // listeners to determine next steps...
+
+      const wroteToChunkBufferCallback = () => {
+        removeListeners();
+        return resolve(true);
+      };
+
+      const upstreamFinishedCallback = () => {
+        removeListeners();
+
+        // this should be the last chunk, if there's anything there
+        if (this.upstreamChunkBuffer.length) return resolve(true);
+
+        return resolve(false);
+      };
+
+      // Remove listeners when we're ready to callback.
+      // It's important to clean-up listeners as Node has a default max number of
+      // event listeners. Notably, The number of requests can be greater than the
+      // number of potential listeners.
+      // - https://nodejs.org/api/events.html#eventsdefaultmaxlisteners
+      const removeListeners = () => {
+        this.removeListener('wroteToChunkBuffer', wroteToChunkBufferCallback);
+        this.upstream.removeListener('finish', upstreamFinishedCallback);
+      };
+
+      // If there's data recently written it should be digested
+      this.once('wroteToChunkBuffer', wroteToChunkBufferCallback);
+
+      // If the upstream finishes let's see if there's anything to grab
+      this.upstream.once('finish', upstreamFinishedCallback);
+    });
+
+    return willBeMoreChunks;
+  }
+
+  /**
+   * Reads data from upstream up to the provided `limit`.
+   * Ends when the limit has reached or no data is expected to be pushed from upstream.
+   *
+   * @param limit The most amount of data this iterator should return. `Infinity` by default.
+   * @param oneChunkMode Determines if one, exhaustive chunk is yielded for the iterator
+   */
+  private async *upstreamIterator(limit = Infinity, oneChunkMode?: boolean) {
+    let completeChunk = Buffer.alloc(0);
+
+    // read from upstream chunk buffer
+    while (limit && (await this.waitForNextChunk())) {
+      // read until end or limit has been reached
+      const chunk = this.pullFromChunkBuffer(limit);
+
+      limit -= chunk.byteLength;
+      if (oneChunkMode) {
+        // return 1 chunk at the end of iteration
+        completeChunk = Buffer.concat([completeChunk, chunk]);
+      } else {
+        // return many chunks throughout iteration
+        yield {
+          chunk,
+          encoding: this.chunkBufferEncoding,
+        };
+      }
+    }
+
+    if (oneChunkMode) {
+      yield {
+        chunk: completeChunk,
+        encoding: this.chunkBufferEncoding,
+      };
+    }
+  }
+
   createURI(): Promise<string>;
   createURI(callback: CreateUriCallback): void;
   createURI(callback?: CreateUriCallback): void | Promise<string> {
@@ -517,144 +655,6 @@ export class Upload extends Pumpify {
     this.startUploading();
   }
 
-  /**
-   * A handler for `upstream` to write and buffer its data.
-   *
-   * @param chunk The chunk to append to the buffer
-   * @param encoding The encoding of the chunk
-   * @param readCallback A callback for when the buffer has been read downstream
-   */
-  private writeToChunkBuffer(
-    chunk: Buffer | string,
-    encoding: BufferEncoding,
-    readCallback: () => void
-  ) {
-    this.upstreamChunkBuffer = Buffer.concat([
-      this.upstreamChunkBuffer,
-      typeof chunk === 'string' ? Buffer.from(chunk, encoding) : chunk,
-    ]);
-    this.chunkBufferEncoding = encoding;
-
-    this.once('readFromChunkBuffer', readCallback);
-    process.nextTick(() => this.emit('wroteToChunkBuffer'));
-  }
-
-  /**
-   * Prepends data back to the upstream chunk buffer.
-   *
-   * @param chunk The data to prepend
-   */
-  private unshiftChunkBuffer(chunk: Buffer) {
-    this.upstreamChunkBuffer = Buffer.concat([chunk, this.upstreamChunkBuffer]);
-  }
-
-  /**
-   * Retrieves data from upstream's buffer.
-   *
-   * @param limit The maximum amount to return from the buffer.
-   * @returns The data requested.
-   */
-  private pullFromChunkBuffer(limit: number) {
-    const chunk = this.upstreamChunkBuffer.slice(0, limit);
-    this.upstreamChunkBuffer = this.upstreamChunkBuffer.slice(limit);
-
-    // notify upstream we've read from the buffer so it can potentially
-    // send more data down.
-    process.nextTick(() => this.emit('readFromChunkBuffer'));
-
-    return chunk;
-  }
-
-  /**
-   * A handler for determining if data is ready to be read from upstream.
-   *
-   * @returns If there will be more chunks to read in the future
-   */
-  private async waitForNextChunk(): Promise<boolean> {
-    const willBeMoreChunks = await new Promise<boolean>(resolve => {
-      // There's data available - it should be digested
-      if (this.upstreamChunkBuffer.length) {
-        return resolve(true);
-      }
-
-      // The upstream writable ended, we shouldn't expect any more data.
-      if (this.upstream.writableEnded) {
-        return resolve(false);
-      }
-
-      // Nothing immediate seems to be determined. We need to prepare some
-      // listeners to determine next steps...
-
-      const wroteToChunkBufferCallback = () => {
-        removeListeners();
-        return resolve(true);
-      };
-
-      const upstreamFinishedCallback = () => {
-        removeListeners();
-
-        // this should be the last chunk, if there's anything there
-        if (this.upstreamChunkBuffer.length) return resolve(true);
-
-        return resolve(false);
-      };
-
-      // Remove listeners when we're ready to callback.
-      // It's important to clean-up listeners as Node has a default max number of
-      // event listeners. Notably, The number of requests can be greater than the
-      // number of potential listeners.
-      // - https://nodejs.org/api/events.html#eventsdefaultmaxlisteners
-      const removeListeners = () => {
-        this.removeListener('wroteToChunkBuffer', wroteToChunkBufferCallback);
-        this.upstream.removeListener('finish', upstreamFinishedCallback);
-      };
-
-      // If there's data recently written it should be digested
-      this.once('wroteToChunkBuffer', wroteToChunkBufferCallback);
-
-      // If the upstream finishes let's see if there's anything to grab
-      this.upstream.once('finish', upstreamFinishedCallback);
-    });
-
-    return willBeMoreChunks;
-  }
-
-  /**
-   * Reads data from upstream up to the provided `limit`.
-   * Ends when the limit has reached or no data is expected to be pushed from upstream.
-   *
-   * @param limit The most amount of data this iterator should return. `Infinity` is fine.
-   * @param oneChunkMode Determines if one, exhaustive chunk is yielded for the iterator
-   */
-  private async *upstreamIterator(limit: number, oneChunkMode?: boolean) {
-    let completeChunk = Buffer.alloc(0);
-
-    // read from upstream chunk buffer
-    while (limit && (await this.waitForNextChunk())) {
-      // read until end or limit has been reached
-      const chunk = this.pullFromChunkBuffer(limit);
-
-      limit -= chunk.byteLength;
-      if (oneChunkMode) {
-        // return 1 chunk at the end of iteration
-        completeChunk = Buffer.concat([completeChunk, chunk]);
-      } else {
-        // return many chunks throughout iteration
-        yield {
-          chunk,
-          encoding: this.chunkBufferEncoding,
-        };
-      }
-    }
-
-    if (oneChunkMode) {
-      yield {
-        chunk: completeChunk,
-        encoding: this.chunkBufferEncoding,
-      };
-    }
-  }
-
   async startUploading() {
     const multiChunkMode = !!this.chunkSize;
     let responseReceived = false;
@@ -674,7 +674,7 @@ export class Upload extends Pumpify {
     }
 
     // Check if the offset (server) is too far behind the current stream
-    if (this.offset && this.offset < this.numBytesWritten) {
+    if (this.offset < this.numBytesWritten) {
       this.emit(
         'error',
         new RangeError('The offset is lower than the number of bytes written')
@@ -713,7 +713,7 @@ export class Upload extends Pumpify {
 
     // A queue for the upstream data
     const upstreamQueue = this.upstreamIterator(
-      expectedUploadSize || Infinity,
+      expectedUploadSize,
       multiChunkMode // multi-chunk mode should return 1 chunk per request
     );
 
@@ -784,7 +784,7 @@ export class Upload extends Pumpify {
 
   // Process the API response to look for errors that came in
   // the response body.
-  responseHandler(resp: GaxiosResponse) {
+  private responseHandler(resp: GaxiosResponse) {
     if (resp.data.error) {
       this.destroy(resp.data.error);
       return;
@@ -801,11 +801,6 @@ export class Upload extends Pumpify {
       // https://cloud.google.com/storage/docs/performing-resumable-uploads#chunked-upload
       const range: string = resp.headers.range;
       this.offset = Number(range.split('-')[1]) + 1;
-
-      this.set({
-        uri: this.uri,
-        firstChunk: null, // A new request will be made - reset the firstChunk
-      });
 
       // We should not assume that the server received all bytes sent in the request.
       // - https://cloud.google.com/storage/docs/performing-resumable-uploads#chunked-upload
@@ -852,7 +847,6 @@ export class Upload extends Pumpify {
    * slice of the first chunk, then compares it with the first byte of
    * incoming data.
    *
-   * @param chunk The chunk to check against the cache
    * @returns if the request is ok to continue as-is
    */
   private async ensureUploadingSameObject() {
@@ -995,7 +989,7 @@ export class Upload extends Pumpify {
   private restart() {
     if (this.numBytesWritten) {
       const message =
-        'Attempting to restart an upload after bytes have been written. Stopping as this could result in data loss.';
+        'Attempting to restart an upload after unrecoverable bytes have been written. Stopping as this could result in data loss.';
       this.emit('error', new RangeError(message));
       return;
     }
