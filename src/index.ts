@@ -385,8 +385,6 @@ export class Upload extends Pumpify {
       : NaN;
     this.contentLength = isNaN(contentLength) ? '*' : contentLength;
 
-    // For backwards-compatibility with Node v10. The more convenient
-    // `this.upstream.writableEnded` is available after v12.9.0.
     this.upstream.on('end', () => {
       this.upstreamEnded = true;
     });
@@ -1000,8 +998,11 @@ export class Upload extends Pumpify {
 
   private restart() {
     if (this.numBytesWritten) {
-      const message =
-        'Attempting to restart an upload after unrecoverable bytes have been written. Stopping as this could result in data loss.';
+      let message =
+        'Attempting to restart an upload after unrecoverable bytes have been written from upstream. ';
+      message += 'Stopping as this could result in data loss. ';
+      message += 'Create a new upload object to continue.';
+
       this.emit('error', new RangeError(message));
       return;
     }
