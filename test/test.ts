@@ -1063,7 +1063,7 @@ describe('gcs-resumable-upload', () => {
   describe('#responseHandler', () => {
     it('should emit the metadata', done => {
       const BODY = {hi: 1};
-      const RESP = {data: BODY};
+      const RESP = {data: BODY, status: 200};
       up.on('metadata', (body: {}) => {
         assert.strictEqual(body, BODY);
         done();
@@ -1076,7 +1076,7 @@ describe('gcs-resumable-upload', () => {
       const metadata = {
         size: '0',
       };
-      const RESP = {data: metadata};
+      const RESP = {data: metadata, status: 200};
       up.on('metadata', (data: {size: number}) => {
         assert.strictEqual(Number(metadata.size), data.size);
         assert.strictEqual(typeof data.size, 'number');
@@ -1109,13 +1109,13 @@ describe('gcs-resumable-upload', () => {
     });
 
     it('should delete the config', done => {
-      const RESP = {data: ''};
+      const RESP = {data: '', status: 200};
       up.deleteConfig = done;
       up.responseHandler(RESP);
     });
 
     it('should emit `prepareFinish` when request succeeds', done => {
-      const RESP = {data: ''};
+      const RESP = {data: '', status: 200};
       up.once('prepareFinish', done);
 
       up.responseHandler(RESP);
