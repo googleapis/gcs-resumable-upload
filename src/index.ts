@@ -23,6 +23,7 @@ import {Duplex, PassThrough, Readable} from 'stream';
 import * as streamEvents from 'stream-events';
 import retry = require('async-retry');
 
+const NOT_FOUND_STATUS_CODE = 404;
 const TERMINATED_UPLOAD_STATUS_CODE = 410;
 const RESUMABLE_INCOMPLETE_STATUS_CODE = 308;
 const RETRY_LIMIT = 5;
@@ -196,7 +197,7 @@ export interface UploadConfig {
   userProject?: string;
 
   /**
-   * Configuration options for retrying retriable errors.
+   * Configuration options for retrying retryable errors.
    */
   retryOptions?: RetryOptions;
 }
@@ -826,7 +827,7 @@ export class Upload extends Pumpify {
 
       // continue uploading next chunk
       this.continueUploading();
-    } else if (resp.status < 200 || resp.status > 299) {
+    } else if (!this.isSuccessfulResponse(resp.status)) {
       const err: ApiError = {
         code: resp.status,
         name: 'Upload failed',
@@ -915,7 +916,11 @@ export class Upload extends Pumpify {
       // URI. if we're just using the configstore file to tell us that this
       // file exists, and it turns out that it doesn't (the 404), that's
       // probably stale config data.
-      if (resp && resp.status === 404 && !this.uriProvidedManually) {
+      if (
+        resp &&
+        resp.status === NOT_FOUND_STATUS_CODE &&
+        !this.uriProvidedManually
+      ) {
         this.restart();
         return;
       }
@@ -950,7 +955,7 @@ export class Upload extends Pumpify {
     // Let gaxios know we will handle a 308 error code ourselves.
     reqOpts.validateStatus = (status: number) => {
       return (
-        (status >= 200 && status < 300) ||
+        this.isSuccessfulResponse(status) ||
         status === RESUMABLE_INCOMPLETE_STATUS_CODE
       );
     };
@@ -1037,8 +1042,8 @@ export class Upload extends Pumpify {
           message: resp.statusText,
           name: resp.statusText,
         })) ||
-      resp.status === 404 ||
-      (resp.status > 499 && resp.status < 600)
+      resp.status === NOT_FOUND_STATUS_CODE ||
+      this.isServerErrorResponse(resp.status)
     ) {
       this.attemptDelayedRetry(resp);
       return false;
@@ -1053,7 +1058,10 @@ export class Upload extends Pumpify {
    */
   private attemptDelayedRetry(resp: GaxiosResponse) {
     if (this.numRetries < this.retryLimit) {
-      if (resp.status === 404 && this.numChunksReadInRequest === 0) {
+      if (
+        resp.status === NOT_FOUND_STATUS_CODE &&
+        this.numChunksReadInRequest === 0
+      ) {
         this.startUploading();
       } else {
         const retryDelay = this.getRetryDelay();
@@ -1109,6 +1117,26 @@ export class Upload extends Pumpify {
       url = `https://${url}`;
     }
     return url.replace(/\/+$/, ''); // Remove trailing slashes
+  }
+
+  /**
+   * Check if a given status code is 2xx
+   *
+   * @param status The status code to check
+   * @returns if the status is 2xx
+   */
+  public isSuccessfulResponse(status: number): boolean {
+    return status >= 200 && status < 300;
+  }
+
+  /**
+   * Check if a given status code is 5xx
+   *
+   * @param status The status code to check
+   * @returns if the status is 5xx
+   */
+  public isServerErrorResponse(status: number): boolean {
+    return status >= 500 && status < 600;
   }
 }
 
