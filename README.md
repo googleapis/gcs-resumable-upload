@@ -302,7 +302,7 @@ Custom function returning a boolean indicating whether or not to retry an error.
 
 Enables [Multiple chunk upload](https://cloud.google.com/storage/docs/performing-resumable-uploads#chunked-upload) mode and sets each request size to this amount.
 
-This only makes sense to use for larger files. The chunk size should be a multiple of 256 KiB (256 x 1024 bytes), unless it's the last chunk that completes the upload. Larger chunk sizes typically make uploads more efficient. We recommend using at least 8 MiB for the chunk size.
+This only makes sense to use for larger files. The chunk size should be a multiple of 256 KiB (256 x 1024 bytes). Larger chunk sizes typically make uploads more efficient. We recommend using at least 8 MiB for the chunk size.
 
 Review [documentation](https://cloud.google.com/storage/docs/performing-resumable-uploads) for guidance and best practices.
 
