@@ -968,7 +968,9 @@ export class Upload extends Pumpify {
       this.customRequestOptions,
       reqOpts
     );
-    const res = await this.authClient.request(combinedReqOpts);
+    const res = await this.authClient.request<{error?: object}>(
+      combinedReqOpts
+    );
     if (res.data && res.data.error) {
       throw res.data.error;
     }
