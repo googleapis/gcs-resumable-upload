@@ -98,7 +98,9 @@ export interface UploadConfig {
    * emulator context is detected.
    */
   authClient?: {
-    request: (opts: GaxiosOptions) => Promise<GaxiosResponse> | GaxiosPromise;
+    request: <T>(
+      opts: GaxiosOptions
+    ) => Promise<GaxiosResponse<T>> | GaxiosPromise<T>;
   };
 
   /**
@@ -246,7 +248,9 @@ export class Upload extends Pumpify {
    * emulator context is detected.
    */
   authClient: {
-    request: (opts: GaxiosOptions) => Promise<GaxiosResponse> | GaxiosPromise;
+    request: <T>(
+      opts: GaxiosOptions
+    ) => Promise<GaxiosResponse<T>> | GaxiosPromise<T>;
   };
   cacheKey: string;
   chunkSize?: number;
