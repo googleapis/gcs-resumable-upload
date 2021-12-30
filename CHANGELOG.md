@@ -4,6 +4,17 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+## [4.0.0](https://www.github.com/googleapis/gcs-resumable-upload/compare/v3.6.0...v4.0.0) (2021-12-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* Multiple Chunk Upload Support (#486)
+
+### Features
+
+* Multiple Chunk Upload Support ([#486](https://www.github.com/googleapis/gcs-resumable-upload/issues/486)) ([dba1a39](https://www.github.com/googleapis/gcs-resumable-upload/commit/dba1a39793d2f26e796130df55c99821e9145a21))
+
 ## [3.6.0](https://www.github.com/googleapis/gcs-resumable-upload/compare/v3.5.1...v3.6.0) (2021-11-09)
 
 
