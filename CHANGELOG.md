@@ -4,6 +4,13 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+### [4.0.1](https://www.github.com/googleapis/gcs-resumable-upload/compare/v4.0.0...v4.0.1) (2022-01-06)
+
+
+### Bug Fixes
+
+* Fix support for streams without content-length property ([#491](https://www.github.com/googleapis/gcs-resumable-upload/issues/491)) ([ac2f73b](https://www.github.com/googleapis/gcs-resumable-upload/commit/ac2f73b73e3afbc218ca99cbba3c598af4aefa9e))
+
 ## [4.0.0](https://www.github.com/googleapis/gcs-resumable-upload/compare/v3.6.0...v4.0.0) (2021-12-30)
 
 
