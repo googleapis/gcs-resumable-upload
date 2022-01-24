@@ -1,10 +1,11 @@
 {
   "name": "gcs-resumable-upload",
   "name_pretty": "Google Cloud Storage Resumable Upload",
-  "release_level": "ga",
+  "release_level": "stable",
   "language": "nodejs",
   "repo": "googleapis/gcs-resumable-upload",
   "distribution_name": "gcs-resumable-upload",
   "codeowner_team": "@googleapis/cloud-storage-dpe",
-  "client_documentation": "https://cloud.google.com/nodejs/docs/reference/gcs-resumable-upload/latest"
+  "client_documentation": "https://cloud.google.com/nodejs/docs/reference/gcs-resumable-upload/latest",
+  "library_type": "GAPIC_MANUAL"
 }
