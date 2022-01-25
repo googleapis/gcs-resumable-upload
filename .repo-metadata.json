@@ -7,5 +7,5 @@
   "distribution_name": "gcs-resumable-upload",
   "codeowner_team": "@googleapis/cloud-storage-dpe",
   "client_documentation": "https://cloud.google.com/nodejs/docs/reference/gcs-resumable-upload/latest",
-  "library_type": "GAPIC_MANUAL"
+  "library_type": "CORE"
 }
