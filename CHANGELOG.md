@@ -4,6 +4,13 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+### [4.0.2](https://github.com/googleapis/gcs-resumable-upload/compare/v4.0.1...v4.0.2) (2022-01-26)
+
+
+### Bug Fixes
+
+* Stop Duplicate Response Handlers on Retries ([#502](https://github.com/googleapis/gcs-resumable-upload/issues/502)) ([c5b3059](https://github.com/googleapis/gcs-resumable-upload/commit/c5b30594783e772c43b5eb5da01feb7cdb4d6094))
+
 ### [4.0.1](https://www.github.com/googleapis/gcs-resumable-upload/compare/v4.0.0...v4.0.1) (2022-01-06)
 
 
