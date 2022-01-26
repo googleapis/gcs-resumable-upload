@@ -13,7 +13,7 @@ import * as mockery from 'mockery';
 import * as nock from 'nock';
 import * as path from 'path';
 import * as sinon from 'sinon';
-import {PassThrough, Readable} from 'stream';
+import {Readable} from 'stream';
 
 import {ApiError, CreateUriCallback, PROTOCOL_REGEX} from '../src';
 import {GaxiosOptions, GaxiosError, GaxiosResponse} from 'gaxios';
