@@ -415,6 +415,7 @@ export class Upload extends Pumpify {
           }
           this.set({uri});
           this.startUploading();
+          return;
         });
       }
     });
@@ -1025,6 +1026,7 @@ export class Upload extends Pumpify {
       }
       this.set({uri});
       this.startUploading();
+      return;
     });
   }
 
