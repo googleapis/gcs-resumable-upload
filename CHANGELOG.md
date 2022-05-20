@@ -4,6 +4,17 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+## [5.0.0](https://github.com/googleapis/gcs-resumable-upload/compare/v4.0.2...v5.0.0) (2022-05-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* update library to use Node 12 (#520)
+
+### Build System
+
+* update library to use Node 12 ([#520](https://github.com/googleapis/gcs-resumable-upload/issues/520)) ([f90175d](https://github.com/googleapis/gcs-resumable-upload/commit/f90175d7779f69a53ee0ba584b5bf98847a1469f))
+
 ### [4.0.2](https://github.com/googleapis/gcs-resumable-upload/compare/v4.0.1...v4.0.2) (2022-01-26)
 
 
