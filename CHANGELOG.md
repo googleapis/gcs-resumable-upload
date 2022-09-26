@@ -4,6 +4,13 @@
 
 [1]: https://www.npmjs.com/package/gcs-resumable-upload?activeTab=versions
 
+## [5.0.1](https://github.com/googleapis/gcs-resumable-upload/compare/v5.0.0...v5.0.1) (2022-08-23)
+
+
+### Bug Fixes
+
+* remove pip install statements ([#1546](https://github.com/googleapis/gcs-resumable-upload/issues/1546)) ([#525](https://github.com/googleapis/gcs-resumable-upload/issues/525)) ([50a11d0](https://github.com/googleapis/gcs-resumable-upload/commit/50a11d0bea4ffbad39d71d18931c485564e81c3c))
+
 ## [5.0.0](https://github.com/googleapis/gcs-resumable-upload/compare/v4.0.2...v5.0.0) (2022-05-20)
 
 
