@@ -1,4 +1,6 @@
-# gcs-resumable-upload
+# [DEPRECATED] gcs-resumable-upload
+***This repository has been deprecated. Support will end on November 1, 2023.***
+
 > Upload a file to Google Cloud Storage with built-in resumable behavior
 
 ```sh
