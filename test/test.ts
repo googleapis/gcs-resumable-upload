@@ -1537,7 +1537,7 @@ describe('gcs-resumable-upload', () => {
       const scope = nock(REQ_OPTS.url!).get(queryPath).reply(500, {error});
       await assert.rejects(up.makeRequest(REQ_OPTS), (err: GaxiosError) => {
         scope.done();
-        assert.strictEqual(err.code, '500');
+        assert.strictEqual(err.status, 500);
         return true;
       });
     });
@@ -1554,7 +1554,7 @@ describe('gcs-resumable-upload', () => {
       const scope = nock(REQ_OPTS.url!).get(queryPath).reply(500, {error});
       await assert.rejects(up.makeRequest(REQ_OPTS), (err: GaxiosError) => {
         scope.done();
-        assert.deepStrictEqual(err.code, '500');
+        assert.deepStrictEqual(err.status, 500);
         return true;
       });
     });

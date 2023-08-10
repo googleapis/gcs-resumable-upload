@@ -36,7 +36,7 @@ const AUTO_RETRY_VALUE = true;
 export const PROTOCOL_REGEX = /^(\w*):\/\//;
 
 export interface ErrorWithCode extends Error {
-  code: number;
+  status: number;
 }
 
 export type CreateUriCallback = (err: Error | null, uri?: string) => void;

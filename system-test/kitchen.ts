@@ -130,7 +130,7 @@ describe('end to end', () => {
         })
       )
       .on('error', (err: ErrorWithCode) => {
-        assert.strictEqual(err.code, '400');
+        assert.strictEqual(err.status, 400);
         done();
       });
   });
