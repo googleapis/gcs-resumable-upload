@@ -1525,7 +1525,7 @@ describe('gcs-resumable-upload', () => {
       up.makeRequest(REQ_OPTS);
     });
 
-    it.only('should execute the callback with a body error & response', async () => {
+    it('should execute the callback with a body error & response', async () => {
       const error = new GaxiosError('Error message', {}, {
         config: {},
         data: {},
